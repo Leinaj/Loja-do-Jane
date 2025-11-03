@@ -2,327 +2,350 @@
 
 import { useMemo, useState } from 'react';
 
-/** ====== CONFIGURAÇÕES DA LOJA ====== */
-const WHATSAPP_E164 = '5544988606483'; // +55 44 98860-6483
-const PIX_KEY = '44988606483';
-
-/** ====== PRODUTOS ======
- * Troque os nomes dos arquivos de imagem pelos que você subiu em /public/images
- * Dica: clique no arquivo no GitHub e copie o nome EXATO (com .jpg ou .jpeg)
- */
 type Product = {
   id: string;
   name: string;
-  price: number;
-  image: string; // caminho relativo à pasta /public
+  price: number;     // preço atual
+  oldPrice?: number; // preço antigo (riscado)
+  image: string;     // caminho em /public/images
+  brand?: string;
+  tags?: string[];   // ex.: ["novo", "promo"]
 };
 
+/** === CONFIGURÁVEIS RÁPIDOS === */
+const WHATSAPP_E164 = '5544988606483';
+const PIX_KEY = '44988606483';
+
+// ATUALIZE AQUI os caminhos das suas fotos em /public/images
 const PRODUCTS: Product[] = [
   {
     id: 'camiseta-preta',
     name: 'Camiseta Preta',
     price: 69.9,
-    image: '/images/IMG-20251004-WA0000.jpg',
+    oldPrice: 89.9,
+    image: '/images/camiseta-preta.jpg', // troque pelo nome real do arquivo
+    brand: 'Jane',
+    tags: ['promo'],
   },
   {
     id: 'camiseta-branca',
     name: 'Camiseta Branca',
     price: 69.9,
-    image: '/images/IMG-20251004-WA0003.jpg',
+    image: '/images/camiseta-branca.jpg',
+    brand: 'Jane',
+    tags: ['novo'],
   },
   {
     id: 'moletom',
     name: 'Moletom',
     price: 159.9,
-    image: '/images/file_00000000dbd061f6a.jpg', // ajuste se o nome for diferente
+    oldPrice: 179.9,
+    image: '/images/moletom.jpg',
+    brand: 'Jane',
   },
   {
     id: 'bone',
     name: 'Boné',
     price: 59.9,
-    image: '/images/file_00000000ee8071f58.jpg', // ajuste se o nome for diferente
+    image: '/images/bone.jpg',
+    brand: 'Jane',
   },
 ];
 
-/** ====== COMPONENTE ====== */
 export default function Home() {
   const [cart, setCart] = useState<Record<string, number>>({});
 
-  function addToCart(id: string) {
-    setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
-  }
+  const productById = useMemo(() => {
+    const map: Record<string, Product> = {};
+    PRODUCTS.forEach(p => (map[p.id] = p));
+    return map;
+  }, []);
 
-  function removeFromCart(id: string) {
-    setCart((c) => {
-      const qty = (c[id] ?? 0) - 1;
-      const next = { ...c };
-      if (qty <= 0) {
-        delete next[id];
-      } else {
-        next[id] = qty;
-      }
+  const items = useMemo(
+    () => Object.entries(cart).filter(([, q]) => q > 0),
+    [cart]
+  );
+
+  const total = useMemo(
+    () =>
+      items.reduce((sum, [id, q]) => {
+        const p = productById[id];
+        return sum + p.price * q;
+      }, 0),
+    [items, productById]
+  );
+
+  function add(id: string) {
+    setCart(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+  }
+  function remove(id: string) {
+    setCart(prev => {
+      const curr = prev[id] ?? 0;
+      const next = { ...prev };
+      if (curr <= 1) delete next[id];
+      else next[id] = curr - 1;
       return next;
     });
   }
+  function clearCart() {
+    setCart({});
+  }
 
-  const items = useMemo(() => {
-    return Object.entries(cart).map(([id, qty]) => {
-      const p = PRODUCTS.find((x) => x.id === id)!;
-      return { ...p, qty };
-    });
-  }, [cart]);
+  function copyPix() {
+    navigator.clipboard.writeText(PIX_KEY).then(() =>
+      alert('Chave Pix copiada!')
+    );
+  }
 
-  const total = useMemo(
-    () => items.reduce((sum, it) => sum + it.price * it.qty, 0),
-    [items]
-  );
+  function whatsCheckout() {
+    if (!items.length) return;
+    const list = items
+      .map(([id, q]) => {
+        const p = productById[id];
+        const line = `- ${p.name} x${q} — R$ ${p.price.toFixed(2)}`;
+        return line;
+      })
+      .join('\n');
 
-  function openWhatsAppCheckout() {
-    if (items.length === 0) return;
-
-    const lines = [
-      'Olá! Quero fazer um pedido 🛍️',
-      '',
-      ...items.map(
-        (it) => `• ${it.name} x${it.qty} — R$ ${formatBRL(it.price * it.qty)}`
-      ),
-      '',
-      `Total: *R$ ${formatBRL(total)}*`,
-      '',
-      `Formas de pagamento:`,
-      `• Pix (chave: ${PIX_KEY})`,
-      `• Cartão/Dinheiro, combinamos pelo WhatsApp`,
-    ];
-
-    const waText = encodeURIComponent(lines.join('\n'));
-    const url = `https://wa.me/${WHATSAPP_E164}?text=${waText}`;
+    const msg = `Olá! Quero finalizar esse pedido:%0A%0A${list}%0A%0ATotal: R$ ${total
+      .toFixed(2)
+      .replace('.', ',')}.%0AChave Pix: ${PIX_KEY}`;
+    const url = `https://wa.me/${WHATSAPP_E164}?text=${msg}`;
     window.open(url, '_blank');
   }
 
-  async function copyPix() {
-    try {
-      await navigator.clipboard.writeText(PIX_KEY);
-      alert('Chave Pix copiada!');
-    } catch {
-      alert('Não foi possível copiar. Tente selecionar e copiar manualmente.');
-    }
-  }
-
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        background: '#0b0b0d',
-        color: '#e6e6e6',
-        padding: 16,
-        fontFamily:
-          'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
-      }}
-    >
-      {/* HEADER */}
-      <header style={{ padding: 12, marginBottom: 8 }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>Loja da Jane</h1>
-        <p style={{ opacity: 0.8, marginTop: 4 }}>Catálogo com carrinho 💚</p>
+    <main>
+      {/* TOP BAR */}
+      <div className="bg-zinc-800 border-b border-zinc-700">
+        <div className="container flex h-10 items-center justify-between text-xs">
+          <div className="opacity-80">
+            Bem-vinda à <strong>Loja da Jane</strong> ✨
+          </div>
+          <div className="flex gap-4 opacity-80">
+            <span>Suporte: WhatsApp</span>
+            <span>Pix: {PIX_KEY}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* NAV */}
+      <header className="bg-zinc-900 sticky top-0 z-40 border-b border-zinc-800/80 backdrop-blur">
+        <div className="container h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-emerald-600 grid place-items-center font-bold">
+              U
+            </div>
+            <span className="text-lg font-semibold">commerce</span>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <a href="#">Home</a>
+            <a href="#catalogo">Catálogo</a>
+            <a href="#contato">Contato</a>
+          </nav>
+
+          <div className="text-sm">
+            <span className="badge">Carrinho: R$ {total.toFixed(2)}</span>
+          </div>
+        </div>
       </header>
 
-      {/* CATÁLOGO */}
-      <section style={{ padding: 12 }}>
-        <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>Catálogo</h2>
+      {/* HERO / BANNER */}
+      <section className="border-b border-zinc-800">
+        <div className="container py-10 md:py-16 grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold leading-tight">
+              iPhone 6 <span className="text-emerald-400">Plus</span>
+            </h1>
+            <p className="mt-3 text-zinc-300/90">
+              Exemplo de banner. Você pode trocar por uma imagem sua aqui.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <a href="#catalogo" className="btn btn-primary">Ver produtos</a>
+              <button className="btn btn-ghost" onClick={whatsCheckout}>
+                Finalizar no WhatsApp
+              </button>
+            </div>
+          </div>
+          {/* imagem do banner — use sua própria se quiser */}
+          <div className="hidden md:block">
+            <img
+              src="/images/camiseta-preta.jpg"
+              alt="Banner"
+              className="w-full h-72 object-cover rounded-2xl border border-zinc-700"
+            />
+          </div>
+        </div>
+      </section>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 12,
-          }}
-        >
-          {PRODUCTS.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                background: '#141418',
-                border: '1px solid #23232a',
-                borderRadius: 12,
-                padding: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  aspectRatio: '1 / 1',
-                  background: '#0f0f13',
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 10,
-                }}
-              >
-                {/* usar <img> comum pra não depender de config do next/image */}
+      {/* FEATURE STRIP */}
+      <section className="container py-6 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { icon: '↩️', title: '30 dias para troca' },
+          { icon: '🚚', title: 'Frete grátis*' },
+          { icon: '🔒', title: 'Pagamentos seguros' },
+          { icon: '🎁', title: 'Novidades toda semana' },
+        ].map((f, i) => (
+          <div key={i} className="card p-4 flex items-center gap-3">
+            <div className="text-2xl">{f.icon}</div>
+            <div className="font-medium">{f.title}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* LATEST PRODUCTS */}
+      <section id="catalogo" className="container py-8">
+        <h2 className="section-title">Últimos Produtos</h2>
+        <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {PRODUCTS.map(p => (
+            <article key={p.id} className="card overflow-hidden">
+              <div className="aspect-[4/5] bg-zinc-700/40">
                 <img
                   src={p.image}
                   alt={p.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
+                  className="w-full h-full object-cover"
                 />
               </div>
-
-              <div style={{ display: 'grid', gap: 6 }}>
-                <strong style={{ fontSize: 14 }}>{p.name}</strong>
-                <span style={{ opacity: 0.9, fontSize: 13 }}>
-                  R$ {formatBRL(p.price)}
-                </span>
-
-                <button
-                  onClick={() => addToCart(p.id)}
-                  style={btnStyle}
-                  aria-label={`Adicionar ${p.name}`}
-                >
-                  Adicionar
-                </button>
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">{p.name}</h3>
+                  <div className="flex gap-1">
+                    {p.tags?.map(t => (
+                      <span key={t} className="badge">{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-1 text-sm">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-emerald-400 font-semibold">
+                      R$ {p.price.toFixed(2)}
+                    </span>
+                    {p.oldPrice && (
+                      <span className="text-zinc-400 line-through">
+                        R$ {p.oldPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button className="btn btn-primary w-full" onClick={() => add(p.id)}>
+                    Adicionar
+                  </button>
+                  {cart[p.id] ? (
+                    <button className="btn btn-ghost" title="Remover 1" onClick={() => remove(p.id)}>
+                      −
+                    </button>
+                  ) : null}
+                </div>
+                {cart[p.id] ? (
+                  <div className="mt-2 text-xs opacity-80">
+                    No carrinho: {cart[p.id]}
+                  </div>
+                ) : null}
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* CARRINHO */}
-      <section style={{ padding: 12 }}>
-        <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>Carrinho</h2>
-
-        {items.length === 0 ? (
-          <p style={{ opacity: 0.75 }}>Seu carrinho está vazio.</p>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: 10,
-              maxWidth: 720,
-            }}
-          >
-            {items.map((it) => (
-              <div
-                key={it.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto auto',
-                  gap: 8,
-                  alignItems: 'center',
-                  background: '#141418',
-                  border: '1px solid #23232a',
-                  borderRadius: 10,
-                  padding: 10,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{it.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    {it.qty} × R$ {formatBRL(it.price)}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: 13, opacity: 0.9 }}>
-                  R$ {formatBRL(it.price * it.qty)}
-                </div>
-
-                <button onClick={() => removeFromCart(it.id)} style={btnGhost}>
-                  Remover
-                </button>
-              </div>
-            ))}
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: 4,
-                paddingTop: 8,
-                borderTop: '1px dashed #2b2b33',
-              }}
-            >
-              <strong>Total</strong>
-              <strong>R$ {formatBRL(total)}</strong>
-            </div>
-
-            <button onClick={openWhatsAppCheckout} style={btnCTA}>
-              Finalizar pedido no WhatsApp
-            </button>
-          </div>
-        )}
+      {/* BRAND STRIP (pode trocar por logos) */}
+      <section className="container py-8">
+        <div className="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 place-items-center text-zinc-300">
+          <span className="font-semibold opacity-80">NOKIA</span>
+          <span className="font-semibold opacity-80">Canon</span>
+          <span className="font-semibold opacity-80">Samsung</span>
+          <span className="font-semibold opacity-80">Apple</span>
+        </div>
       </section>
 
-      {/* CONTATO / PAGAMENTO */}
-      <section style={{ padding: 12, marginTop: 8 }}>
-        <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>Pagamento & Contato</h2>
-
-        <div style={{ display: 'grid', gap: 10, maxWidth: 720 }}>
-          <div
-            style={{
-              background: '#141418',
-              border: '1px solid #23232a',
-              borderRadius: 10,
-              padding: 12,
-            }}
-          >
-            <div style={{ marginBottom: 6 }}>
-              <strong>WhatsApp: </strong>
-              <a
-                href={`https://wa.me/${WHATSAPP_E164}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: '#a0e9a5', textDecoration: 'underline' }}
-              >
-                +55 44 98860-6483
-              </a>
+      {/* CART + PAGAMENTO */}
+      <section id="contato" className="container py-10">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="card p-4">
+            <h3 className="text-lg font-semibold">Carrinho</h3>
+            {!items.length ? (
+              <p className="mt-2 text-sm opacity-80">Seu carrinho está vazio.</p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {items.map(([id, q]) => {
+                  const p = productById[id];
+                  return (
+                    <li key={id} className="flex items-center justify-between">
+                      <span>
+                        {p.name} <span className="opacity-60">x{q}</span>
+                      </span>
+                      <span>R$ {(p.price * q).toFixed(2)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="mt-3 flex items-center justify-between font-semibold">
+              <span>Total</span>
+              <span>R$ {total.toFixed(2)}</span>
             </div>
 
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <div>
-                <strong>Chave Pix:</strong> {PIX_KEY}
-              </div>
-              <button onClick={copyPix} style={btnStyle}>
-                Copiar chave
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                className="btn btn-primary"
+                disabled={!items.length}
+                onClick={whatsCheckout}
+              >
+                Finalizar no WhatsApp
+              </button>
+              <button
+                className="btn btn-ghost"
+                disabled={!items.length}
+                onClick={clearCart}
+              >
+                Limpar carrinho
               </button>
             </div>
+          </div>
 
-            <p style={{ opacity: 0.75, marginTop: 8, fontSize: 13 }}>
-              Aceitamos <b>Pix</b>, <b>Cartão</b> e <b>Dinheiro</b>.
-              Entrega/retirada combinada no WhatsApp.
-            </p>
+          <div className="card p-4">
+            <h3 className="text-lg font-semibold">Pagamento & Contato</h3>
+            <div className="mt-3 space-y-3 text-sm">
+              <div>
+                <div className="opacity-80">WhatsApp:</div>
+                <a
+                  className="text-emerald-400"
+                  href={`https://wa.me/${WHATSAPP_E164}`}
+                  target="_blank"
+                >
+                  +55 (44) 98860-6483
+                </a>
+              </div>
+              <div>
+                <div className="opacity-80">Chave Pix:</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono">{PIX_KEY}</span>
+                  <button className="btn btn-ghost" onClick={copyPix}>
+                    Copiar chave
+                  </button>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-zinc-700">
+                <div className="opacity-80">Aceitamos:</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="badge">Pix</span>
+                  <span className="badge">Cartão</span>
+                  <span className="badge">Dinheiro</span>
+                  <span className="badge">Entrega combinada</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-    </div>
+
+      {/* FOOTER */}
+      <footer className="border-t border-zinc-800">
+        <div className="container py-6 text-sm opacity-80">
+          © {new Date().getFullYear()} Loja da Jane — todos os direitos reservados.
+        </div>
+      </footer>
+    </main>
   );
-}
-
-/** ====== ESTILOS DE BOTÕES ====== */
-const btnStyle: React.CSSProperties = {
-  background: '#1e1e25',
-  border: '1px solid #2b2b33',
-  color: '#e6e6e6',
-  borderRadius: 8,
-  padding: '8px 10px',
-  fontSize: 13,
-  cursor: 'pointer',
-};
-
-const btnGhost: React.CSSProperties = {
-  ...btnStyle,
-  background: 'transparent',
-};
-
-const btnCTA: React.CSSProperties = {
-  ...btnStyle,
-  background: '#1d3b26',
-  borderColor: '#2a5a38',
-};
-
-/** ====== UTILS ====== */
-function formatBRL(v: number) {
-  return v.toFixed(2).replace('.', ',');
 }
