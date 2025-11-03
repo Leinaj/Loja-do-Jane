@@ -1,32 +1,15 @@
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;font-family:system-ui,Arial,sans-serif;background:#0b0c10;color:#e6e6e6}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.container{max-width:1080px;margin:0 auto;padding:16px}
-.header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
-.brand{font-weight:800;font-size:20px;letter-spacing:.5px}
-.cartBtn{background:#00d084;color:#0b0c10;border:0;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
-
-.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:12px}
-.card{background:#111319;border:1px solid #1d2030;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-.card img{width:100%;height:160px;object-fit:cover;background:#0f1117}
-.card .info{padding:12px;display:flex;flex-direction:column;gap:8px}
-.price{font-weight:800;color:#9be9c7}
-.addBtn{background:#1f6feb;color:#fff;border:0;padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer}
-.addBtn:active{transform:translateY(1px)}
-.badge{background:#00d084;color:#0b0c10;font-weight:800;border-radius:999px;padding:4px 8px;font-size:12px}
-
-.drawer{position:fixed;top:0;right:0;height:100dvh;width:92%;max-width:420px;background:#0f1117;border-left:1px solid #20222e;transform:translateX(100%);transition:.25s ease;z-index:50;display:flex;flex-direction:column}
-.drawer.show{transform:translateX(0)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);z-index:40}
-.drawerHeader{padding:14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #20222e}
-.items{padding:12px;display:flex;flex-direction:column;gap:10px;overflow:auto}
-.item{display:flex;align-items:center;gap:10px;background:#0b0c10;border:1px solid #1d2030;border-radius:12px;padding:10px}
-.item img{width:64px;height:64px;object-fit:cover;border-radius:10px}
-.qty{display:flex;align-items:center;gap:8px}
-.qty button{background:#1f6feb;color:white;border:0;width:28px;height:28px;border-radius:8px;font-weight:800}
-.remove{background:#ff4d4f;color:white;border:0;padding:6px 10px;border-radius:10px}
-
-.total{padding:12px;border-top:1px solid #20222e;display:flex;flex-direction:column;gap:10px}
-.checkout{background:#00d084;color:#0b0c10;border:0;padding:12px;border-radius:10px;font-weight:900}
-.clear{background:#20222e;color:#e6e6e6;border:0;padding:10px;border-radius:10px}
-.empty{text-align:center;opacity:.8;padding:30px 12px}
+/* basezinha */
+:root { color-scheme: dark; }
+body { @apply bg-zinc-900 text-zinc-100; }
+a { @apply underline-offset-2 hover:underline; }
+.container { @apply max-w-6xl mx-auto px-4; }
+.section-title { @apply text-2xl font-semibold tracking-tight; }
+.card { @apply bg-zinc-800/60 border border-zinc-700 rounded-xl shadow-sm; }
+.btn  { @apply inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition; }
+.btn-primary { @apply bg-emerald-600 hover:bg-emerald-500 text-white; }
+.btn-ghost   { @apply bg-zinc-700/60 hover:bg-zinc-700; }
+.badge { @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs bg-zinc-700 text-zinc-200; }
