@@ -3,13 +3,14 @@ export const metadata = {
   description: 'Catálogo simples com carrinho e WhatsApp',
 };
 
+// 👇 ISSO É O QUE FALTAVA
+import './globals.css';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <body className="bg-zinc-900 text-zinc-100 antialiased">
-        <div className="min-h-screen">
-          {children}
-        </div>
+        <div className="min-h-screen">{children}</div>
       </body>
     </html>
   );
