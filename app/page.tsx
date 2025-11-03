@@ -1,351 +1,203 @@
 'use client';
 
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;     // preço atual
-  oldPrice?: number; // preço antigo (riscado)
-  image: string;     // caminho em /public/images
-  brand?: string;
-  tags?: string[];   // ex.: ["novo", "promo"]
-};
+const WHATSAPP = '5544988606483'; // com DDI 55
+const PIX = '44988606483';
 
-/** === CONFIGURÁVEIS RÁPIDOS === */
-const WHATSAPP_E164 = '5544988606483';
-const PIX_KEY = '44988606483';
-
-// ATUALIZE AQUI os caminhos das suas fotos em /public/images
-const PRODUCTS: Product[] = [
-  {
-    id: 'camiseta-preta',
-    name: 'Camiseta Preta',
-    price: 69.9,
-    oldPrice: 89.9,
-    image: '/images/camiseta-preta.jpg', // troque pelo nome real do arquivo
-    brand: 'Jane',
-    tags: ['promo'],
-  },
-  {
-    id: 'camiseta-branca',
-    name: 'Camiseta Branca',
-    price: 69.9,
-    image: '/images/camiseta-branca.jpg',
-    brand: 'Jane',
-    tags: ['novo'],
-  },
-  {
-    id: 'moletom',
-    name: 'Moletom',
-    price: 159.9,
-    oldPrice: 179.9,
-    image: '/images/moletom.jpg',
-    brand: 'Jane',
-  },
-  {
-    id: 'bone',
-    name: 'Boné',
-    price: 59.9,
-    image: '/images/bone.jpg',
-    brand: 'Jane',
-  },
+const PRODUCTS = [
+  { id: 'camiseta-preta',  name: 'Camiseta Preta',  price: 69.9,  img: '/images/camiseta-preta.jpg' },
+  { id: 'camiseta-branca', name: 'Camiseta Branca', price: 69.9,  img: '/images/camiseta-branca.jpg' },
+  { id: 'moletom',         name: 'Moletom',         price: 159.9, img: '/images/moletom.jpg' },
+  { id: 'bone',            name: 'Boné',            price: 59.9,  img: '/images/bone.jpg' },
 ];
+
+const BENEFITS = [
+  { title: '30 dias para troca', desc: 'Sem estresse' },
+  { title: 'Frete grátis*',     desc: 'Consulte condições' },
+  { title: 'Pagamentos seguros',desc: 'Pix, Cartão' },
+  { title: 'Novidades semanais',desc: 'Sempre tem coisa nova' },
+];
+
+const brl = (v:number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 export default function Home() {
   const [cart, setCart] = useState<Record<string, number>>({});
-
-  const productById = useMemo(() => {
-    const map: Record<string, Product> = {};
-    PRODUCTS.forEach(p => (map[p.id] = p));
-    return map;
-  }, []);
-
-  const items = useMemo(
-    () => Object.entries(cart).filter(([, q]) => q > 0),
-    [cart]
+  const productMap = useMemo(
+    () => Object.fromEntries(PRODUCTS.map(p => [p.id, p])),
+    []
   );
 
-  const total = useMemo(
-    () =>
-      items.reduce((sum, [id, q]) => {
-        const p = productById[id];
-        return sum + p.price * q;
-      }, 0),
-    [items, productById]
-  );
+  const items = Object.entries(cart).map(([id, qty]) => ({
+    ...productMap[id],
+    qty,
+    subtotal: productMap[id].price * qty,
+  }));
 
-  function add(id: string) {
+  const total = items.reduce((s, it) => s + it.subtotal, 0);
+
+  function addToCart(id: string) {
     setCart(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
   }
-  function remove(id: string) {
+  function removeFromCart(id: string) {
     setCart(prev => {
-      const curr = prev[id] ?? 0;
-      const next = { ...prev };
-      if (curr <= 1) delete next[id];
-      else next[id] = curr - 1;
-      return next;
+      const q = (prev[id] ?? 0) - 1;
+      const n = { ...prev };
+      if (q <= 0) delete n[id]; else n[id] = q;
+      return n;
     });
   }
-  function clearCart() {
-    setCart({});
-  }
 
-  function copyPix() {
-    navigator.clipboard.writeText(PIX_KEY).then(() =>
-      alert('Chave Pix copiada!')
-    );
-  }
-
-  function whatsCheckout() {
-    if (!items.length) return;
-    const list = items
-      .map(([id, q]) => {
-        const p = productById[id];
-        const line = `- ${p.name} x${q} — R$ ${p.price.toFixed(2)}`;
-        return line;
-      })
-      .join('\n');
-
-    const msg = `Olá! Quero finalizar esse pedido:%0A%0A${list}%0A%0ATotal: R$ ${total
-      .toFixed(2)
-      .replace('.', ',')}.%0AChave Pix: ${PIX_KEY}`;
-    const url = `https://wa.me/${WHATSAPP_E164}?text=${msg}`;
-    window.open(url, '_blank');
-  }
+  const waText = encodeURIComponent(
+    [
+      'Olá! Quero finalizar meu pedido 😄',
+      '',
+      ...items.map(it => `• ${it.name} x${it.qty} — ${brl(it.subtotal)}`),
+      '',
+      `Total: ${brl(total)}`,
+      `Chave Pix: ${PIX}`,
+    ].join('\n'),
+  );
+  const waLink = `https://wa.me/${WHATSAPP}?text=${waText}`;
 
   return (
-    <main>
-      {/* TOP BAR */}
-      <div className="bg-zinc-800 border-b border-zinc-700">
-        <div className="container flex h-10 items-center justify-between text-xs">
-          <div className="opacity-80">
-            Bem-vinda à <strong>Loja da Jane</strong> ✨
-          </div>
-          <div className="flex gap-4 opacity-80">
-            <span>Suporte: WhatsApp</span>
-            <span>Pix: {PIX_KEY}</span>
-          </div>
-        </div>
-      </div>
+    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 space-y-8">
 
-      {/* NAV */}
-      <header className="bg-zinc-900 sticky top-0 z-40 border-b border-zinc-800/80 backdrop-blur">
-        <div className="container h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-emerald-600 grid place-items-center font-bold">
-              U
-            </div>
-            <span className="text-lg font-semibold">commerce</span>
+        {/* HEADER */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="rounded bg-emerald-600/20 text-emerald-400 px-2 py-1 text-xs">U</div>
+            <span className="font-semibold">commerce</span>
           </div>
-
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#">Home</a>
+          <nav className="hidden md:flex gap-6 text-sm text-zinc-300">
+            <a href="#home">Home</a>
             <a href="#catalogo">Catálogo</a>
             <a href="#contato">Contato</a>
           </nav>
+          <div className="text-sm">Carrinho: {items.length} itens — {brl(total)}</div>
+        </header>
 
-          <div className="text-sm">
-            <span className="badge">Carrinho: R$ {total.toFixed(2)}</span>
-          </div>
-        </div>
-      </header>
-
-      {/* HERO / BANNER */}
-      <section className="border-b border-zinc-800">
-        <div className="container py-10 md:py-16 grid md:grid-cols-2 gap-6 items-center">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-              iPhone 6 <span className="text-emerald-400">Plus</span>
-            </h1>
-            <p className="mt-3 text-zinc-300/90">
-              Exemplo de banner. Você pode trocar por uma imagem sua aqui.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <a href="#catalogo" className="btn btn-primary">Ver produtos</a>
-              <button className="btn btn-ghost" onClick={whatsCheckout}>
-                Finalizar no WhatsApp
-              </button>
+        {/* HERO SIMPLES */}
+        <section id="home" className="rounded-xl border border-zinc-800 p-6 bg-gradient-to-br from-zinc-900 to-zinc-950">
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold">iPhone 6 Plus</h1>
+              <p className="text-zinc-300 mt-2">
+                Exemplo de banner. Você pode trocar por uma imagem sua aqui.
+              </p>
+              <div className="mt-4 flex gap-3">
+                <a href="#catalogo" className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
+                  Ver produtos
+                </a>
+                <a href={waLink} target="_blank" className="px-4 py-2 rounded border border-zinc-700 text-sm">
+                  Finalizar no WhatsApp
+                </a>
+              </div>
+            </div>
+            <div className="flex-1 w-full h-40 md:h-48 rounded-lg overflow-hidden border border-zinc-800">
+              {/* se quiser, troque por uma imagem de banner */}
+              <div className="w-full h-full bg-zinc-900 grid place-items-center text-zinc-500 text-sm">
+                espaço do banner
+              </div>
             </div>
           </div>
-          {/* imagem do banner — use sua própria se quiser */}
-          <div className="hidden md:block">
-            <img
-              src="/images/camiseta-preta.jpg"
-              alt="Banner"
-              className="w-full h-72 object-cover rounded-2xl border border-zinc-700"
-            />
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FEATURE STRIP */}
-      <section className="container py-6 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: '↩️', title: '30 dias para troca' },
-          { icon: '🚚', title: 'Frete grátis*' },
-          { icon: '🔒', title: 'Pagamentos seguros' },
-          { icon: '🎁', title: 'Novidades toda semana' },
-        ].map((f, i) => (
-          <div key={i} className="card p-4 flex items-center gap-3">
-            <div className="text-2xl">{f.icon}</div>
-            <div className="font-medium">{f.title}</div>
-          </div>
-        ))}
-      </section>
+        {/* BENEFÍCIOS */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {BENEFITS.map(b => (
+            <div key={b.title} className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40">
+              <div className="font-medium">{b.title}</div>
+              <div className="text-zinc-400 text-sm">{b.desc}</div>
+            </div>
+          ))}
+        </section>
 
-      {/* LATEST PRODUCTS */}
-      <section id="catalogo" className="container py-8">
-        <h2 className="section-title">Últimos Produtos</h2>
-        <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {PRODUCTS.map(p => (
-            <article key={p.id} className="card overflow-hidden">
-              <div className="aspect-[4/5] bg-zinc-700/40">
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">{p.name}</h3>
-                  <div className="flex gap-1">
-                    {p.tags?.map(t => (
-                      <span key={t} className="badge">{t}</span>
-                    ))}
-                  </div>
+        {/* CATÁLOGO */}
+        <section id="catalogo" className="space-y-4">
+          <h2 className="text-lg font-semibold">Últimos Produtos</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {PRODUCTS.map(p => (
+              <div key={p.id} className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-900/40">
+                <div className="relative w-full h-40">
+                  <Image src={p.img} alt={p.name} fill className="object-cover" />
                 </div>
-                <div className="mt-1 text-sm">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-emerald-400 font-semibold">
-                      R$ {p.price.toFixed(2)}
-                    </span>
-                    {p.oldPrice && (
-                      <span className="text-zinc-400 line-through">
-                        R$ {p.oldPrice.toFixed(2)}
-                      </span>
+                <div className="p-3 space-y-1">
+                  <div className="text-sm">{p.name}</div>
+                  <div className="text-zinc-400 text-sm">{brl(p.price)}</div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      className="px-2 py-1 text-xs rounded bg-emerald-600 hover:bg-emerald-500"
+                      onClick={() => addToCart(p.id)}
+                    >
+                      Adicionar
+                    </button>
+                    {(cart[p.id] ?? 0) > 0 && (
+                      <button
+                        className="px-2 py-1 text-xs rounded border border-zinc-700"
+                        onClick={() => removeFromCart(p.id)}
+                      >
+                        Remover
+                      </button>
                     )}
                   </div>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <button className="btn btn-primary w-full" onClick={() => add(p.id)}>
-                    Adicionar
-                  </button>
-                  {cart[p.id] ? (
-                    <button className="btn btn-ghost" title="Remover 1" onClick={() => remove(p.id)}>
-                      −
-                    </button>
-                  ) : null}
-                </div>
-                {cart[p.id] ? (
-                  <div className="mt-2 text-xs opacity-80">
-                    No carrinho: {cart[p.id]}
-                  </div>
-                ) : null}
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* BRAND STRIP (pode trocar por logos) */}
-      <section className="container py-8">
-        <div className="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 place-items-center text-zinc-300">
-          <span className="font-semibold opacity-80">NOKIA</span>
-          <span className="font-semibold opacity-80">Canon</span>
-          <span className="font-semibold opacity-80">Samsung</span>
-          <span className="font-semibold opacity-80">Apple</span>
-        </div>
-      </section>
-
-      {/* CART + PAGAMENTO */}
-      <section id="contato" className="container py-10">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="card p-4">
-            <h3 className="text-lg font-semibold">Carrinho</h3>
-            {!items.length ? (
-              <p className="mt-2 text-sm opacity-80">Seu carrinho está vazio.</p>
-            ) : (
-              <ul className="mt-3 space-y-2 text-sm">
-                {items.map(([id, q]) => {
-                  const p = productById[id];
-                  return (
-                    <li key={id} className="flex items-center justify-between">
-                      <span>
-                        {p.name} <span className="opacity-60">x{q}</span>
-                      </span>
-                      <span>R$ {(p.price * q).toFixed(2)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <div className="mt-3 flex items-center justify-between font-semibold">
-              <span>Total</span>
-              <span>R$ {total.toFixed(2)}</span>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                className="btn btn-primary"
-                disabled={!items.length}
-                onClick={whatsCheckout}
-              >
-                Finalizar no WhatsApp
-              </button>
-              <button
-                className="btn btn-ghost"
-                disabled={!items.length}
-                onClick={clearCart}
-              >
-                Limpar carrinho
-              </button>
-            </div>
+            ))}
           </div>
+        </section>
 
-          <div className="card p-4">
-            <h3 className="text-lg font-semibold">Pagamento & Contato</h3>
-            <div className="mt-3 space-y-3 text-sm">
-              <div>
-                <div className="opacity-80">WhatsApp:</div>
-                <a
-                  className="text-emerald-400"
-                  href={`https://wa.me/${WHATSAPP_E164}`}
-                  target="_blank"
-                >
-                  +55 (44) 98860-6483
+        {/* CARRINHO */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Carrinho</h2>
+          {items.length === 0 ? (
+            <p className="text-zinc-400 text-sm">Seu carrinho está vazio.</p>
+          ) : (
+            <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40 space-y-2">
+              {items.map(it => (
+                <div key={it.id} className="flex justify-between text-sm">
+                  <span>{it.name} x{it.qty}</span>
+                  <span>{brl(it.subtotal)}</span>
+                </div>
+              ))}
+              <div className="border-t border-zinc-800 pt-2 flex justify-between font-medium">
+                <span>Total</span><span>{brl(total)}</span>
+              </div>
+              <div className="pt-2">
+                <a href={waLink} target="_blank" className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
+                  Finalizar no WhatsApp
                 </a>
               </div>
-              <div>
-                <div className="opacity-80">Chave Pix:</div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono">{PIX_KEY}</span>
-                  <button className="btn btn-ghost" onClick={copyPix}>
-                    Copiar chave
-                  </button>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-zinc-700">
-                <div className="opacity-80">Aceitamos:</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="badge">Pix</span>
-                  <span className="badge">Cartão</span>
-                  <span className="badge">Dinheiro</span>
-                  <span className="badge">Entrega combinada</span>
-                </div>
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          )}
+        </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-zinc-800">
-        <div className="container py-6 text-sm opacity-80">
-          © {new Date().getFullYear()} Loja da Jane — todos os direitos reservados.
-        </div>
-      </footer>
+        {/* PAGAMENTO & CONTATO */}
+        <section id="contato" className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40 space-y-2">
+          <div className="text-sm">
+            WhatsApp:{' '}
+            <a className="underline" target="_blank" href={`https://wa.me/${WHATSAPP}`}>
+              +55 44 98860-6483
+            </a>
+          </div>
+          <div className="text-sm flex items-center gap-2">
+            Chave Pix: <code className="bg-zinc-800 px-2 py-0.5 rounded">{PIX}</code>
+            <button
+              onClick={() => navigator.clipboard?.writeText(PIX)}
+              className="text-xs px-2 py-1 rounded border border-zinc-700"
+            >
+              Copiar chave
+            </button>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Aceitamos Pix e Cartão. Entrega/retirada combinadas via WhatsApp.
+          </p>
+        </section>
+
+      </div>
     </main>
   );
 }
