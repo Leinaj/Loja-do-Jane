@@ -7,11 +7,11 @@ type Product = { id: string; name: string; price: number; image: string };
 const PIX_KEY = '44988606483';
 const WHATS_NUM = '5544988606483'; // +55 44 98860-6483
 
-const PRODUCTS: Product[] = [
-  { id: 'camiseta-preta',  name: 'Camiseta Preta',  price: 69.9,  image: '/images/camiseta-preta.jpg' },
-  { id: 'camiseta-branca', name: 'Camiseta Branca', price: 69.9,  image: '/images/camiseta-branca.jpg' },
-  { id: 'moletom',         name: 'Moletom',         price: 159.9, image: '/images/moletom.jpg' },
-  { id: 'bone',            name: 'Boné',            price: 59.9,  image: '/images/bone.jpg' },
+const products = [
+  { id: 'camiseta-preta',  name: 'Camiseta Preta',  price: 69.9,  image: '/images/IMG-20251004-WA0000.jpg' },
+  { id: 'camiseta-branca', name: 'Camiseta Branca', price: 69.9,  image: '/images/IMG-20251004-WA0003.jpg' },
+  { id: 'moletom',         name: 'Moletom',         price: 159.9, image: '/images/file_00000000dbd061f6a...jpg' },
+  { id: 'bone',            name: 'Boné',            price: 59.9,  image: '/images/file_00000000ee8071f58...jpg' },
 ];
 
 function money(n: number) {
