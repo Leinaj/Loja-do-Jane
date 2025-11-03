@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* basezinha */
+/* opcionalzinho que usamos */
 :root { color-scheme: dark; }
 body { @apply bg-zinc-900 text-zinc-100; }
 a { @apply underline-offset-2 hover:underline; }
