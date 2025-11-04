@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BRANDS, money, PRODUCTS, Product } from "@/lib/products";
 
-// ====== CONFIG RÁPIDA ======
-const WHATSAPP_E164 = "5544988606483"; // troque se precisar
-const PIX_CHAVE = "44988606483";       // troque se precisar
-// ===========================
+// ====== CONFIG por .env (tem fallback) ======
+const STORE_NAME    = process.env.NEXT_PUBLIC_STORE_NAME ?? "Loja da Jane";
+const WHATSAPP_E164 = process.env.NEXT_PUBLIC_WHATSAPP_E164 ?? "5544988606483";
+const PIX_CHAVE     = process.env.NEXT_PUBLIC_PIX_CHAVE ?? "44988606483";
+// ============================================
 
 type Cart = Record<string, number>;
 
@@ -24,13 +25,8 @@ type Address = {
 };
 
 const emptyAddress: Address = {
-  cep: "",
-  rua: "",
-  numero: "",
-  complemento: "",
-  bairro: "",
-  cidade: "",
-  uf: "",
+  cep: "", rua: "", numero: "", complemento: "",
+  bairro: "", cidade: "", uf: "",
 };
 
 const addrToText = (a: Address) => {
@@ -49,12 +45,15 @@ export default function HomePage() {
   // PIX
   const [copiouPix, setCopiouPix] = useState(false);
 
-  // Endereços separadinhos
+  // Nome do cliente
+  const [customerName, setCustomerName] = useState("");
+
+  // Endereços
   const [shipping, setShipping] = useState<Address>({ ...emptyAddress });
   const [billing, setBilling]   = useState<Address>({ ...emptyAddress });
   const [sameAsShipping, setSameAsShipping] = useState(true);
 
-  // Carrega do localStorage
+  // Carregar do localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem("cart");
@@ -68,53 +67,48 @@ export default function HomePage() {
 
       const same = localStorage.getItem("sameAsShipping");
       if (same) setSameAsShipping(JSON.parse(same));
+
+      const nm = localStorage.getItem("customerName");
+      if (nm) setCustomerName(nm);
     } catch {}
   }, []);
 
-  // Salva carrinho
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+  // Persistir no localStorage
+  useEffect(() => { localStorage.setItem("cart", JSON.stringify(cart)); }, [cart]);
+  useEffect(() => { localStorage.setItem("shippingAddr", JSON.stringify(shipping)); }, [shipping]);
+  useEffect(() => { localStorage.setItem("billingAddr", JSON.stringify(billing)); }, [billing]);
+  useEffect(() => { localStorage.setItem("sameAsShipping", JSON.stringify(sameAsShipping)); }, [sameAsShipping]);
+  useEffect(() => { localStorage.setItem("customerName", customerName); }, [customerName]);
 
-  // Salva endereços
-  useEffect(() => {
-    localStorage.setItem("shippingAddr", JSON.stringify(shipping));
-  }, [shipping]);
-
-  useEffect(() => {
-    localStorage.setItem("billingAddr", JSON.stringify(billing));
-  }, [billing]);
-
-  useEffect(() => {
-    localStorage.setItem("sameAsShipping", JSON.stringify(sameAsShipping));
-  }, [sameAsShipping]);
-
-  const totalCents = useMemo(() => {
-    return Object.entries(cart).reduce((acc, [id, qty]) => {
+  const totalCents = useMemo(() =>
+    Object.entries(cart).reduce((acc, [id, qty]) => {
       const p = PRODUCTS.find(pr => pr.id === id);
       return p ? acc + p.price * qty : acc;
-    }, 0);
-  }, [cart]);
+    }, 0), [cart]);
 
-  const itemsList = useMemo(() => {
-    return Object.entries(cart)
+  const itemsList = useMemo(() =>
+    Object.entries(cart)
       .map(([id, qty]) => {
         const p = PRODUCTS.find(pr => pr.id === id);
         return p ? `• ${p.name} x${qty} — ${money(p.price * qty)}` : null;
       })
       .filter(Boolean)
-      .join("\n");
-  }, [cart]);
+      .join("\n"), [cart]);
 
   const finalizarDisabled =
+    !customerName.trim() ||
     Object.keys(cart).length === 0 ||
     !shipping.cep || !shipping.rua || !shipping.numero || !shipping.cidade || !shipping.uf ||
     (!sameAsShipping && (!billing.cep || !billing.rua || !billing.numero || !billing.cidade || !billing.uf));
 
   const waText = useMemo(() => {
     const linhas: string[] = [];
-    linhas.push("*Pedido - Loja da Jane*");
+    linhas.push(`*Pedido - ${STORE_NAME}*`);
+    if (customerName.trim()) {
+      linhas.push(`Cliente: *${customerName.trim()}*`);
+    }
     linhas.push("");
+
     if (itemsList) {
       linhas.push(itemsList);
       linhas.push(`Total: *${money(totalCents)}*`);
@@ -133,11 +127,11 @@ export default function HomePage() {
     }
 
     return linhas.join("\n");
-  }, [itemsList, totalCents, shipping, billing, sameAsShipping]);
+  }, [itemsList, totalCents, shipping, billing, sameAsShipping, customerName]);
 
   const waLink = `https://wa.me/${WHATSAPP_E164}?text=${encodeURIComponent(waText)}`;
 
-  // CEP → auto-preencher via ViaCEP
+  // CEP auto-completar (ViaCEP)
   const fetchCEP = async (cep: string, target: "shipping" | "billing") => {
     const clean = cep.replace(/\D/g, "");
     if (clean.length !== 8) return;
@@ -157,7 +151,7 @@ export default function HomePage() {
       };
       if (target === "shipping") setShipping(prev => ({ ...prev, ...next }));
       else setBilling(prev => ({ ...prev, ...next }));
-    } catch { /* silencioso */ }
+    } catch {}
   };
 
   const copyPix = async () => {
@@ -171,11 +165,8 @@ export default function HomePage() {
   const inc = (p: Product) => setCart(c => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
   const dec = (id: string) =>
     setCart(c => {
-      const q = (c[id] ?? 0) - 1;
-      const n = { ...c };
-      if (q <= 0) delete n[id];
-      else n[id] = q;
-      return n;
+      const q = (c[id] ?? 0) - 1; const n = { ...c };
+      if (q <= 0) delete n[id]; else n[id] = q; return n;
     });
 
   const setAddr = (which: "shipping" | "billing", field: keyof Address, v: string) => {
@@ -183,21 +174,12 @@ export default function HomePage() {
     set(prev => ({ ...prev, [field]: v }));
   };
 
-  // Se marcar "mesmo endereço", espelha visualmente (mensagem já trata)
-  useEffect(() => {
-    if (sameAsShipping) {
-      // nada a persistir no billing; só não mostrar os campos
-    }
-  }, [sameAsShipping, shipping]);
-
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Topbar */}
       <div className="border-b border-zinc-800 bg-black/60">
         <div className="mx-auto max-w-6xl px-4 py-2 flex items-center justify-between text-sm">
-          <div>
-            Bem-vinda à <b>Loja da Jane</b> ✨
-          </div>
+          <div>Bem-vinda à <b>{STORE_NAME}</b> ✨</div>
           <div className="hidden sm:flex gap-6 text-zinc-400">
             <Link href="/" className="hover:text-zinc-200">Home</Link>
             <a href="#catalogo" className="hover:text-zinc-200">Catálogo</a>
@@ -327,8 +309,23 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Endereço de ENTREGA */}
+        {/* Nome do cliente */}
         <section className="mt-10">
+          <h2 className="text-2xl font-semibold mb-3">Seus dados</h2>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+            <label className="block text-sm text-zinc-400 mb-1">Nome completo</label>
+            <input
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800"
+              placeholder="Ex.: Jane Doe"
+            />
+            <p className="text-xs text-zinc-500 mt-2">Usamos seu nome no pedido do WhatsApp.</p>
+          </div>
+        </section>
+
+        {/* Endereço de ENTREGA */}
+        <section className="mt-6">
           <h2 className="text-2xl font-semibold mb-3">Endereço de Entrega</h2>
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 grid sm:grid-cols-2 gap-4">
             <div>
@@ -513,14 +510,14 @@ export default function HomePage() {
 
         {/* Rodapé */}
         <footer className="text-center text-zinc-400 py-10">
-          © {new Date().getFullYear()} Loja da Jane — feito com amor 💚
+          © {new Date().getFullYear()} {STORE_NAME} — feito com amor 💚
         </footer>
       </div>
     </main>
   );
 }
 
-// ====== helpers locais ======
+// ====== helpers ======
 function maskCEP(v: string) {
   const n = v.replace(/\D/g, "").slice(0, 8);
   if (n.length <= 5) return n;
