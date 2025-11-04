@@ -1,237 +1,306 @@
+// app/page.tsx
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
-type Cart = Record<string, number>;
-
+/** ====== CONFIG RÁPIDA ====== */
 const WHATSAPP = "+5544988606483";
 const PIX_KEY = "44988606483";
 
-const PRODUCTS = [
-  { id: "camiseta-preta", name: "Camiseta Preta", price: 69.9, image: "/images/camiseta-preta.jpg" },
-  { id: "camiseta-branca", name: "Camiseta Branca", price: 69.9, image: "/images/camiseta-branca.jpg" },
-  { id: "moletom", name: "Moletom", price: 159.9, image: "/images/moletom.jpg" },
-  { id: "bone", name: "Boné", price: 59.9, image: "/images/bone.jpg" }
+type Product = {
+  id: string;
+  name: string;
+  price: number; // em reais
+  image: string; // caminho dentro de /public
+};
+
+const PRODUCTS: Product[] = [
+  { id: "camiseta-preta",  name: "Camiseta Preta",  price: 69.9,  image: "/images/camiseta-preta.jpg" },
+  { id: "camiseta-branca", name: "Camiseta Branca", price: 69.9,  image: "/images/camiseta-branca.jpg" },
+  { id: "moletom",         name: "Moletom",         price: 159.9, image: "/images/moletom.jpg" },
+  { id: "bone",            name: "Boné",            price: 59.9,  image: "/images/bone.jpg" },
 ];
 
-const BRANDS = ["nokia", "canon", "samsung", "apple"];
-
-function brl(n: number) {
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function formatBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export default function Page() {
-  const [cart, setCart] = useState<Cart>({});
+  // carrinho: id -> quantidade
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [copied, setCopied] = useState(false);
 
-  const items = Object.entries(cart)
-    .filter(([, qty]) => qty > 0)
-    .map(([id, qty]) => {
-      const p = PRODUCTS.find((x) => x.id === id)!;
-      return { ...p, qty, subtotal: p.price * qty };
-    });
+  const addToCart = (id: string) => {
+    setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
+  };
 
-  const total = items.reduce((acc, i) => acc + i.subtotal, 0);
+  const items = useMemo(() => {
+    // junta dados do produto + qtd
+    return Object.entries(cart)
+      .map(([id, qty]) => {
+        const p = PRODUCTS.find((x) => x.id === id);
+        if (!p) return null;
+        return { ...p, qty };
+      })
+      .filter(Boolean) as (Product & { qty: number })[];
+  }, [cart]);
 
-  function add(id: string) {
-    setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
+  const total = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * it.qty, 0),
+    [items]
+  );
+
+  const waText = useMemo(() => {
+    if (items.length === 0) return "Olá! Quero fazer um pedido.";
+    const linhas = items.map(
+      (it) => `- ${it.name} x${it.qty} = ${formatBRL(it.price * it.qty)}`
+    );
+    linhas.push(`Total: ${formatBRL(total)}`);
+    return `Olá! Segue meu pedido:\n${linhas.join("\n")}`;
+  }, [items, total]);
+
+  const waLink = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(
+    waText
+  )}`;
+
+  async function handleCopyPix() {
+    try {
+      await navigator.clipboard.writeText(PIX_KEY);
+      setCopied(true);
+      // volta para "Copiar chave" depois de 2s
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback simples
+      alert("Não foi possível copiar automaticamente. Sua chave: " + PIX_KEY);
+    }
   }
-
-  function remove(id: string) {
-    setCart((c) => {
-      const next: Cart = { ...c };
-      if (!next[id]) return c;
-      next[id] = next[id] - 1;
-      if (next[id] <= 0) delete next[id];
-      return next;
-    });
-  }
-
-  const waNumber = WHATSAPP.replace(/\D/g, "");
-  const waMsg = "Olá! Quero finalizar meu pedido:\n\n"
-    + items.map((i) => "• " + i.name + " x" + i.qty + " — " + brl(i.subtotal)).join("\n")
-    + "\n\nTotal: " + brl(total);
-  const waLink = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waMsg);
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Topbar */}
-      <div className="border-b border-zinc-900 bg-zinc-950/70 text-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2">
-          <span className="hidden sm:block">Bem-vinda à <b>Loja da Jane</b> ✨</span>
-          <a href={"https://wa.me/" + waNumber} target="_blank" className="opacity-80 hover:opacity-100">
-            Suporte: WhatsApp {WHATSAPP}
-          </a>
-          <span className="opacity-70">Carrinho: {items.length} itens — {brl(total)}</span>
+    <main className="min-h-screen bg-[#0b0f0e] text-zinc-100">
+      {/* Barra de topo */}
+      <div className="border-b border-white/5 bg-black/40 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-2 text-xs sm:text-sm flex items-center justify-between">
+          <div>
+            Bem-vinda à <span className="font-semibold">Loja da Jane</span> ✨
+          </div>
+          <div className="hidden sm:block">
+            Suporte: WhatsApp{" "}
+            <Link
+              className="text-emerald-400 hover:underline"
+              href={`https://wa.me/${WHATSAPP.replace(/\D/g, "")}`}
+              target="_blank"
+            >
+              {WHATSAPP}
+            </Link>
+          </div>
+          <div className="opacity-80">
+            Carrinho: {items.length} itens — {formatBRL(total)}
+          </div>
         </div>
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-zinc-900 bg-zinc-950/70 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4">
-          <a href="/" className="font-bold text-xl whitespace-nowrap">
-            <span className="bg-gradient-to-r from-emerald-400 to-green-600 bg-clip-text text-transparent">u</span>commerce
-          </a>
-          <div className="hidden gap-6 sm:flex">
-            <a href="#" className="hover:text-emerald-400">Home</a>
-            <a href="#catalogo" className="hover:text-emerald-400">Catálogo</a>
-            <a href="#contato" className="hover:text-emerald-400">Contato</a>
-          </div>
-        </nav>
+      {/* Header simples */}
+      <header className="sticky top-0 z-20 border-b border-white/5 bg-black/60 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-6">
+          <span className="text-lg font-semibold">
+            <span className="text-emerald-400">u</span>commerce
+          </span>
+          <nav className="ml-auto flex gap-6 text-sm">
+            <a className="opacity-80 hover:opacity-100" href="#home">Home</a>
+            <a className="opacity-80 hover:opacity-100" href="#catalogo">Catálogo</a>
+            <a className="opacity-80 hover:opacity-100" href="#contato">Contato</a>
+          </nav>
+        </div>
       </header>
 
-      {/* Herói */}
-      <section className="mx-auto max-w-6xl px-4 pt-6">
-        <div className="overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-900/40">
-          <div className="grid gap-6 p-6 md:grid-cols-2 md:gap-10 md:p-10">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                iPhone 6 <span className="text-emerald-400">Plus</span>
-              </h1>
-              <p className="mt-3 max-w-xl text-zinc-300">
-                Exemplo de banner. Para trocar, substitua o arquivo{" "}
-                <code className="rounded bg-zinc-800 px-2 py-1 text-zinc-200">/public/banner.jpg</code>.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a href="#catalogo" className="inline-flex items-center rounded-md bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700">
-                  Ver produtos
-                </a>
-                <a href={waLink} target="_blank" className="inline-flex items-center rounded-md border border-zinc-700 px-6 py-3 font-medium hover:bg-zinc-900">
-                  Finalizar no WhatsApp
-                </a>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="relative h-56 w-full overflow-hidden rounded-xl border border-zinc-800 shadow-inner md:h-64 lg:h-80">
-                <Image src="/banner.jpg" alt="Banner da loja" fill priority className="object-cover" />
-              </div>
+      {/* Hero / Banner */}
+      <section id="home" className="mx-auto max-w-6xl px-4 py-6">
+        <div className="rounded-2xl border border-white/10 overflow-hidden bg-neutral-900">
+          <Image
+            src="/banner.jpg"
+            alt="Promoção"
+            width={1600}
+            height={500}
+            className="w-full h-auto object-cover"
+            priority
+          />
+          <div className="p-6 sm:p-8">
+            <h1 className="text-3xl font-semibold">
+              iPhone 6 <span className="text-emerald-400">Plus</span>
+            </h1>
+            <p className="mt-2 text-zinc-300">
+              Exemplo de banner. Para trocar, substitua o arquivo{" "}
+              <code className="px-2 py-1 rounded bg-black/50 border border-white/10">
+                /public/banner.jpg
+              </code>
+              .
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#catalogo"
+                className="rounded-md bg-emerald-600 hover:bg-emerald-700 px-6 py-3 text-sm font-medium"
+              >
+                Ver produtos
+              </a>
+              <a
+                href={waLink}
+                target="_blank"
+                className="rounded-md border border-white/10 hover:border-white/20 px-6 py-3 text-sm font-medium"
+              >
+                Finalizar no WhatsApp
+              </a>
             </div>
           </div>
         </div>
       </section>
 
       {/* Benefícios */}
-      <section className="mx-auto max-w-6xl px-4 pb-2 pt-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-zinc-800 p-5 bg-sky-900/40">
-            <div className="text-lg font-semibold">30 dias para troca</div>
-            <div className="mt-1 text-zinc-300">Sem estresse</div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 p-5 bg-amber-900/40">
-            <div className="text-lg font-semibold">Frete grátis*</div>
-            <div className="mt-1 text-zinc-300">Consulte condições</div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 p-5 bg-rose-900/40">
-            <div className="text-lg font-semibold">Pagamentos seguros</div>
-            <div className="mt-1 text-zinc-300">Pix, Cartão</div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 p-5 bg-emerald-900/40">
-            <div className="text-lg font-semibold">Novidades semanais</div>
-            <div className="mt-1 text-zinc-300">Sempre tem coisa nova</div>
-          </div>
+      <section className="mx-auto max-w-6xl px-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-2xl border border-white/10 bg-[#08202B] p-5">
+          <div className="text-xl font-semibold">30 dias para troca</div>
+          <div className="opacity-75">Sem estresse</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#2A1E07] p-5">
+          <div className="text-xl font-semibold">Frete grátis*</div>
+          <div className="opacity-75">Consulte condições</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#2A0E13] p-5">
+          <div className="text-xl font-semibold">Pagamentos seguros</div>
+          <div className="opacity-75">Pix, Cartão</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#0A1F1C] p-5">
+          <div className="text-xl font-semibold">Novidades semanais</div>
+          <div className="opacity-75">Sempre tem coisa nova</div>
         </div>
       </section>
 
       {/* Marcas */}
-      <section className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="rounded-2xl border border-zinc-900 bg-zinc-900/40 p-6">
-          <div className="grid grid-cols-2 items-center gap-6 sm:grid-cols-4">
-            {BRANDS.map((b) => (
-              <Image key={b} src={"/brands/" + b + ".png"} alt={b} width={160} height={80} className="mx-auto h-10 w-auto object-contain opacity-80" />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Catálogo */}
-      <section id="catalogo" className="mx-auto max-w-6xl px-4 pb-12 pt-10">
-        <h2 className="mb-4 text-2xl font-semibold tracking-tight">Últimos Produtos</h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PRODUCTS.map((p) => (
-            <div key={p.id} className="overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-900/40">
-              <div className="relative h-56 w-full">
-                <Image src={p.image} alt={p.name} fill className="object-cover" />
-              </div>
-              <div className="p-4">
-                <div className="text-lg font-medium">{p.name}</div>
-                <div className="mt-1 text-xl font-semibold">{brl(p.price)}</div>
-                <div className="mt-4 flex items-center gap-3">
-                  <button onClick={() => add(p.id)} className="flex-1 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700">
-                    Adicionar
-                  </button>
-                  <button onClick={() => remove(p.id)} className="rounded-md border border-zinc-700 px-3 py-3 hover:bg-zinc-900" title="Remover 1 do carrinho">
-                    −
-                  </button>
-                </div>
-              </div>
+      <section className="mx-auto max-w-6xl px-4 mt-8">
+        <div className="rounded-2xl border border-white/10 bg-neutral-900 p-6 grid grid-cols-2 sm:grid-cols-4 gap-6 place-items-center">
+          {[
+            { src: "/brands/nokia.png", alt: "Nokia" },
+            { src: "/brands/canon.png", alt: "Canon" },
+            { src: "/brands/samsung.png", alt: "Samsung" },
+            { src: "/brands/apple.png", alt: "Apple" },
+          ].map((b) => (
+            <div key={b.alt} className="relative h-12 w-32 opacity-80">
+              <Image src={b.src} alt={b.alt} fill className="object-contain" />
             </div>
           ))}
         </div>
       </section>
 
-      {/* Carrinho */}
-      <section className="mx-auto max-w-6xl px-4 pb-12">
-        <h2 className="mb-3 text-2xl font-semibold tracking-tight">Carrinho</h2>
-        <div className="rounded-2xl border border-zinc-900 bg-zinc-900/40 p-4">
-          {items.length === 0 ? (
-            <p className="text-zinc-300">Seu carrinho está vazio.</p>
-          ) : (
-            <>
-              <ul className="space-y-2">
-                {items.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between gap-3">
-                    <span className="text-zinc-200">{i.name} x{i.qty}</span>
-                    <span className="tabular-nums">{brl(i.subtotal)}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
-                <span className="text-lg font-semibold">Total</span>
-                <span className="text-lg font-semibold tabular-nums">{brl(total)}</span>
+      {/* Catálogo */}
+      <section id="catalogo" className="mx-auto max-w-6xl px-4 mt-10">
+        <h2 className="text-2xl font-semibold">Últimos Produtos</h2>
+        <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {PRODUCTS.map((p) => (
+            <article
+              key={p.id}
+              className="rounded-2xl border border-white/10 bg-neutral-900 overflow-hidden"
+            >
+              <div className="relative aspect-[4/3]">
+                <Image src={p.image} alt={p.name} fill className="object-cover" />
               </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <a href={waLink} target="_blank" className="inline-flex items-center rounded-md bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700">
-                  Finalizar no WhatsApp
-                </a>
-                <button onClick={() => setCart({})} className="inline-flex items-center rounded-md border border-zinc-700 px-6 py-3 font-medium hover:bg-zinc-900">
-                  Limpar carrinho
+              <div className="p-5">
+                <h3 className="font-medium">{p.name}</h3>
+                <div className="mt-1 text-lg">{formatBRL(p.price)}</div>
+                <button
+                  onClick={() => addToCart(p.id)}
+                  className="mt-4 w-full rounded-md bg-emerald-600 hover:bg-emerald-700 px-4 py-3 text-sm font-medium"
+                >
+                  Adicionar
                 </button>
               </div>
-            </>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Carrinho */}
+      <section className="mx-auto max-w-6xl px-4 mt-10">
+        <h2 className="text-2xl font-semibold">Carrinho</h2>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-900 p-5">
+          {items.length === 0 ? (
+            <div className="opacity-70">Seu carrinho está vazio.</div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <div className="opacity-90">
+                    {it.name} <span className="opacity-60">x{it.qty}</span>
+                  </div>
+                  <div>{formatBRL(it.price * it.qty)}</div>
+                </div>
+              ))}
+              <div className="border-t border-white/10 pt-3 flex items-center justify-between font-medium">
+                <span>Total</span>
+                <span>{formatBRL(total)}</span>
+              </div>
+              <div className="pt-2">
+                <a
+                  href={waLink}
+                  target="_blank"
+                  className="inline-flex items-center justify-center rounded-md bg-emerald-600 hover:bg-emerald-700 px-6 py-3 text-sm font-medium"
+                >
+                  Finalizar no WhatsApp
+                </a>
+              </div>
+            </div>
           )}
         </div>
       </section>
 
-      {/* Contato */}
-      <section id="contato" className="mx-auto max-w-6xl px-4 pb-20 pt-2 text-zinc-200">
-        <h2 className="mb-3 text-2xl font-semibold tracking-tight">Pagamento & Contato</h2>
-        <div className="rounded-2xl border border-zinc-900 bg-zinc-900/40 p-5">
-          <div className="grid gap-6 sm:grid-cols-[1.2fr,1fr]">
-            <div>
-              <div className="mb-1 text-sm text-zinc-400">WhatsApp</div>
-              <a href={"https://wa.me/" + waNumber} target="_blank" className="text-lg font-medium text-emerald-400 hover:underline">
-                {WHATSAPP}
-              </a>
+      {/* Pagamento & Contato */}
+      <section id="contato" className="mx-auto max-w-6xl px-4 mt-10 pb-16">
+        <h2 className="text-2xl font-semibold">Pagamento & Contato</h2>
 
-              <div className="mt-5 text-sm text-zinc-400">Chave PIX</div>
-              <div className="mt-1 flex items-center gap-3">
-                <span className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono">{PIX_KEY}</span>
-                <button onClick={() => navigator.clipboard.writeText(PIX_KEY)} className="rounded-md border border-zinc-700 px-3 py-2 hover:bg-zinc-900">
-                  Copiar chave
-                </button>
-              </div>
-
-              <p className="mt-4 text-zinc-300">Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.</p>
-            </div>
-
-            <div className="rounded-xl border border-zinc-800 p-4 text-sm text-zinc-400">
-              Personalize as imagens em <code className="rounded bg-zinc-800 px-1">/public</code> (banner, logos) e em{" "}
-              <code className="rounded bg-zinc-800 px-1">/images</code> (produtos).
-            </div>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-900 p-5 space-y-4">
+          <div>
+            <div className="text-sm opacity-70">WhatsApp</div>
+            <Link
+              href={`https://wa.me/${WHATSAPP.replace(/\D/g, "")}`}
+              target="_blank"
+              className="text-emerald-400 hover:underline text-lg font-medium"
+            >
+              {WHATSAPP}
+            </Link>
           </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <div className="text-sm opacity-70">Chave PIX</div>
+              <div className="mt-1 rounded-md bg-black/50 border border-white/10 px-4 py-2 font-mono">
+                {PIX_KEY}
+              </div>
+            </div>
+            <button
+              onClick={handleCopyPix}
+              disabled={copied}
+              className={`mt-6 sm:mt-8 rounded-md px-4 py-2 text-sm font-medium border ${
+                copied
+                  ? "bg-emerald-700 border-emerald-700 cursor-default"
+                  : "bg-transparent border-white/15 hover:border-white/30"
+              }`}
+              aria-live="polite"
+            >
+              {copied ? "Copiado!" : "Copiar chave"}
+            </button>
+          </div>
+
+          <p className="opacity-75">
+            Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
+          </p>
         </div>
 
-        <p className="mt-8 text-center text-zinc-400">© 2025 Loja da Jane — feito com amor 💚</p>
+        <footer className="mt-8 pb-6 text-center opacity-70">
+          © 2025 Loja da Jane — feito com amor 💚
+        </footer>
       </section>
     </main>
   );
