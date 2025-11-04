@@ -5,8 +5,7 @@ import { useState } from "react";
 
 type Cart = Record<string, number>;
 
-// ====== CONFIG RÁPIDA ======
-const WHATSAPP = "+5544988606483"; // seu número (DDI+DDD)
+const WHATSAPP = "+5544988606483";
 const PIX_KEY = "44988606483";
 
 const PRODUCTS = [
@@ -49,12 +48,10 @@ export default function Page() {
   }
 
   const waNumber = WHATSAPP.replace(/\D/g, "");
-  const waMsg = encodeURIComponent(
-    "Olá! Quero finalizar meu pedido:\n\n" +
-      items.map((i) => "• " + i.name + " x" + i.qty + " — " + brl(i.subtotal)).join("\n") +
-      "\n\nTotal: " + brl(total)
-  );
-  const waLink = "https://wa.me/" + waNumber + "?text=" + waMsg;
+  const waMsg = "Olá! Quero finalizar meu pedido:\n\n"
+    + items.map((i) => "• " + i.name + " x" + i.qty + " — " + brl(i.subtotal)).join("\n")
+    + "\n\nTotal: " + brl(total);
+  const waLink = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waMsg);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
