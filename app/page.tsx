@@ -1,34 +1,23 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { PRODUCTS, BRANDS, money } from "../lib/products";
 
-type Product = { id: string; name: string; price: number; image: string };
+type Product = (typeof PRODUCTS)[number];
 
 const BASE_URL = "https://loja-do-jane.vercel.app";
 const WHATSAPP_NUMBER = "5544988606483"; // só números
 const PIX_KEY = "44988606483";
 
-const PRODUCTS: Product[] = [
-  { id: "camiseta-preta", name: "Camiseta Preta", price: 69.9, image: "/images/camiseta-preta.jpg" },
-  { id: "camiseta-branca", name: "Camiseta Branca", price: 69.9, image: "/images/camiseta-branca.jpg" },
-  { id: "moletom", name: "Moletom", price: 159.9, image: "/images/moletom.jpg" },
-  { id: "bone", name: "Boné", price: 59.9, image: "/images/bone.jpg" },
-];
-
-const BRANDS = ["nokia", "canon", "samsung", "apple"];
-
-const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 export default function Page() {
-  // ---- state
   const [cart, setCart] = useState<Record<string, number>>({});
   const [q, setQ] = useState("");
   const [copiado, setCopiado] = useState(false);
   const [cliente, setCliente] = useState({ nome: "", cep: "", endereco: "" });
   const [utm, setUtm] = useState<{ source?: string; medium?: string; campaign?: string }>({});
 
-  // ---- persistência do carrinho
   useEffect(() => {
     try {
       const raw = localStorage.getItem("cart");
@@ -41,7 +30,6 @@ export default function Page() {
     } catch {}
   }, [cart]);
 
-  // ---- capturar UTM
   useEffect(() => {
     if (typeof window === "undefined") return;
     const p = new URLSearchParams(window.location.search);
@@ -52,14 +40,12 @@ export default function Page() {
     });
   }, []);
 
-  // ---- produtos filtrados
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return PRODUCTS;
     return PRODUCTS.filter((p) => p.name.toLowerCase().includes(s));
   }, [q]);
 
-  // ---- itens do carrinho
   const items = useMemo(() => {
     return Object.entries(cart)
       .filter(([, qty]) => qty > 0)
@@ -72,7 +58,6 @@ export default function Page() {
   const cartCount = items.reduce((a, i) => a + i.qty, 0);
   const total = items.reduce((a, i) => a + i.subtotal, 0);
 
-  // ---- mensagem do WhatsApp
   const origem =
     utm.source || utm.medium || utm.campaign
       ? "\n\nOrigem do contato:\n"
@@ -98,15 +83,12 @@ export default function Page() {
 
   const waLink = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(waMsg);
 
-  // ---- ações
   function addToCart(id: string) {
     setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
   }
-
   function clearCart() {
     setCart({});
   }
-
   async function copiarPix() {
     try {
       await navigator.clipboard.writeText(PIX_KEY);
@@ -121,7 +103,6 @@ export default function Page() {
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
   }
-
   async function buscarCepAuto() {
     const cep = cliente.cep.replace(/\D/g, "");
     if (cep.length !== 8) return;
@@ -139,7 +120,6 @@ export default function Page() {
 
   const finalizarDisabled = items.length === 0;
 
-  // ---- UI
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       {/* Topbar */}
@@ -256,21 +236,23 @@ export default function Page() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((p) => (
             <div key={p.id} className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-3">
-              <div className="overflow-hidden rounded-xl relative h-56 w-full">
-                <Image
-                  src={p.image}
-                  alt={p.name}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  className="object-cover"
-                />
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="text-lg font-medium">{p.name}</div>
-                <div className="text-2xl font-bold">{money(p.price)}</div>
-              </div>
+              <Link href={"/p/" + p.id} className="group block">
+                <div className="overflow-hidden rounded-xl relative h-56 w-full">
+                  <Image
+                    src={p.image}
+                    alt={p.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </div>
+                <div className="mt-3 space-y-1">
+                  <div className="text-lg font-medium">{p.name}</div>
+                  <div className="text-2xl font-bold">{money(p.price)}</div>
+                </div>
+              </Link>
               <button
-                onClick={() => addToCart(p.id)}
+                onClick={() => setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }))}
                 className="mt-3 w-full rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-500"
               >
                 Adicionar
@@ -394,7 +376,7 @@ export default function Page() {
         </footer>
       </section>
 
-      {/* JSON-LD de Produtos (SEO) */}
+      {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -410,10 +392,10 @@ export default function Page() {
                 priceCurrency: "BRL",
                 price: p.price.toFixed(2),
                 availability: "http://schema.org/InStock",
-                url: BASE_URL + "/#catalogo"
-              }
+                url: BASE_URL + "/#catalogo",
+              },
             }))
-          )
+          ),
         }}
       />
     </main>
