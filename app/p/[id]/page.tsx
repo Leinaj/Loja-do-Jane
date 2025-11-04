@@ -1,89 +1,82 @@
-
+// app/p/[id]/page.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { findProduct, money } from "../../../lib/products";
+import { findProduct, money, Product } from "@/lib/products";
 
-const WHATSAPP_NUMBER = "5544988606483";
-const PIX_KEY = "44988606483";
+type Props = { params: { id: string } };
 
-export default function ProductPage({ params }: { params: { id: string } }) {
-  const product = findProduct(params.id);
-  const [cart, setCart] = useState<Record<string, number>>({});
+export default function ProductPage({ params }: Props) {
+  const [product, setProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("cart");
-      if (raw) setCart(JSON.parse(raw));
-    } catch {}
-  }, []);
+    setProduct(findProduct(params.id) ?? null);
+  }, [params.id]);
+
+  const addToCart = () => {
+    if (!product) return;
+    const raw = localStorage.getItem("cart");
+    const cart: Record<string, number> = raw ? JSON.parse(raw) : {};
+    cart[product.id] = (cart[product.id] ?? 0) + 1;
+    localStorage.setItem("cart", JSON.stringify(cart));
+    alert("Produto adicionado ao carrinho ✅");
+  };
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-2xl font-semibold">Produto não encontrado</p>
-          <Link href="/" className="mt-4 inline-block rounded-lg border border-neutral-700 px-4 py-2 hover:bg-neutral-800">
-            Voltar para a loja
-          </Link>
+      <main className="min-h-screen bg-zinc-950 text-zinc-200">
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <p>Produto não encontrado.</p>
+          <Link href="/" className="text-emerald-400 underline">Voltar</Link>
         </div>
       </main>
     );
   }
 
-  const waMsg =
-    `Olá! Tenho interesse em: ${product.name} — ${money(product.price)}\n\n` +
-    `Chave PIX: ${PIX_KEY}`;
-
-  const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMsg)}`;
-
-  function add() {
-    setCart((c) => {
-      const next = { ...c, [product.id]: (c[product.id] ?? 0) + 1 };
-      try { localStorage.setItem("cart", JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }
-
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <Link href="/" className="text-sm text-neutral-300 hover:underline">← Voltar</Link>
+    <main className="min-h-screen bg-zinc-950 text-zinc-200">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <nav className="mb-6 text-sm">
+          <Link href="/" className="text-zinc-400 hover:text-zinc-200">Home</Link>
+          <span className="mx-2">/</span>
+          <span className="text-zinc-300">{product.name}</span>
+        </nav>
 
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
-          <div className="relative h-80 w-full overflow-hidden rounded-2xl border border-neutral-800">
-            <Image src={product.image} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="w-full h-auto"
+              priority
+            />
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold">{product.name}</h1>
-            <div className="mt-2 text-3xl font-extrabold">{money(product.price)}</div>
-            {product.description && (
-              <p className="mt-3 text-neutral-300">{product.description}</p>
-            )}
+            <h1 className="text-3xl font-semibold mb-2">{product.name}</h1>
+            <div className="text-2xl text-emerald-400 font-bold mb-4">
+              {money(product.price)}
+            </div>
+            <p className="text-zinc-300 mb-6">{product.description}</p>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="flex gap-3">
               <button
-                onClick={add}
-                className="rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-500"
+                onClick={addToCart}
+                className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white"
               >
                 Adicionar ao carrinho
               </button>
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-neutral-700 px-5 py-2 font-medium text-neutral-200 hover:bg-neutral-800"
+              <Link
+                href="/"
+                className="px-5 py-3 rounded-xl border border-zinc-700 hover:bg-zinc-800"
               >
-                Comprar no WhatsApp
-              </a>
+                Voltar para a loja
+              </Link>
             </div>
-
-            <p className="mt-3 text-sm text-neutral-400">
-              Carrinho salvo no dispositivo. Para finalizar vários itens, volte à Home.
-            </p>
           </div>
         </div>
       </div>
