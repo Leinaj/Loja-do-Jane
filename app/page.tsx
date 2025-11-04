@@ -1,70 +1,68 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-/* ========== CONFIG RÁPIDA ========== */
-const WHATSAPP = "+5544988606483"; // seu número com DDI e DDD
+type Cart = Record<string, number>;
+
+// ====== CONFIG RÁPIDA ======
+const WHATSAPP = "+5544988606483"; // seu número (DDI+DDD)
 const PIX_KEY = "44988606483";
 
-// imagens dos produtos em /public/images
 const PRODUCTS = [
   { id: "camiseta-preta", name: "Camiseta Preta", price: 69.9, image: "/images/camiseta-preta.jpg" },
   { id: "camiseta-branca", name: "Camiseta Branca", price: 69.9, image: "/images/camiseta-branca.jpg" },
-  { id: "moletom",         name: "Moletom",         price: 159.9, image: "/images/moletom.jpg" },
-  { id: "bone",            name: "Boné",            price: 59.9,  image: "/images/bone.jpg" },
+  { id: "moletom", name: "Moletom", price: 159.9, image: "/images/moletom.jpg" },
+  { id: "bone", name: "Boné", price: 59.9, image: "/images/bone.jpg" }
 ];
 
-// logos em /public/brands
 const BRANDS = ["nokia", "canon", "samsung", "apple"];
 
-type Cart = Record<string, number>;
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function brl(n: number) {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function Page() {
   const [cart, setCart] = useState<Cart>({});
 
-  const items = useMemo(() => {
-    return Object.entries(cart)
-      .filter(([, q]) => q > 0)
-      .map(([id, qty]) => {
-        const p = PRODUCTS.find((x) => x.id === id)!;
-        return { ...p, qty, subtotal: p.price * qty };
-      });
-  }, [cart]);
+  const items = Object.entries(cart)
+    .filter(([, qty]) => qty > 0)
+    .map(([id, qty]) => {
+      const p = PRODUCTS.find((x) => x.id === id)!;
+      return { ...p, qty, subtotal: p.price * qty };
+    });
 
-  const total = useMemo(() => items.reduce((a, i) => a + i.subtotal, 0), [items]);
+  const total = items.reduce((acc, i) => acc + i.subtotal, 0);
 
   function add(id: string) {
-    setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
+    setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
   }
+
   function remove(id: string) {
     setCart((c) => {
-      const next = { ...c };
+      const next: Cart = { ...c };
       if (!next[id]) return c;
-      next[id]--;
+      next[id] = next[id] - 1;
       if (next[id] <= 0) delete next[id];
       return next;
     });
   }
 
-  const waText = encodeURIComponent(
-    `Olá! Quero finalizar meu pedido:\n\n${items
-      .map((i) => `• ${i.name} x${i.qty} — ${brl(i.subtotal)}`)
-      .join("\n")}\n\nTotal: ${brl(total)}`
+  const waNumber = WHATSAPP.replace(/\D/g, "");
+  const waMsg = encodeURIComponent(
+    "Olá! Quero finalizar meu pedido:\n\n" +
+      items.map((i) => "• " + i.name + " x" + i.qty + " — " + brl(i.subtotal)).join("\n") +
+      "\n\nTotal: " + brl(total)
   );
-  const waLink = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${waText}`;
+  const waLink = "https://wa.me/" + waNumber + "?text=" + waMsg;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Topbar */}
       <div className="border-b border-zinc-900 bg-zinc-950/70 text-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2">
-          <span className="hidden sm:block">
-            Bem-vinda à <b>Loja da Jane</b> ✨
-          </span>
-          <a href={`https://wa.me/${WHATSAPP.replace(/\D/g, "")}`} target="_blank" className="opacity-80 hover:opacity-100">
+          <span className="hidden sm:block">Bem-vinda à <b>Loja da Jane</b> ✨</span>
+          <a href={"https://wa.me/" + waNumber} target="_blank" className="opacity-80 hover:opacity-100">
             Suporte: WhatsApp {WHATSAPP}
           </a>
           <span className="opacity-70">Carrinho: {items.length} itens — {brl(total)}</span>
@@ -74,9 +72,9 @@ export default function Page() {
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-zinc-900 bg-zinc-950/70 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4">
-          <Link href="/" className="font-bold text-xl whitespace-nowrap">
+          <a href="/" className="font-bold text-xl whitespace-nowrap">
             <span className="bg-gradient-to-r from-emerald-400 to-green-600 bg-clip-text text-transparent">u</span>commerce
-          </Link>
+          </a>
           <div className="hidden gap-6 sm:flex">
             <a href="#" className="hover:text-emerald-400">Home</a>
             <a href="#catalogo" className="hover:text-emerald-400">Catálogo</a>
@@ -106,7 +104,6 @@ export default function Page() {
                 </a>
               </div>
             </div>
-
             <div className="relative">
               <div className="relative h-56 w-full overflow-hidden rounded-xl border border-zinc-800 shadow-inner md:h-64 lg:h-80">
                 <Image src="/banner.jpg" alt="Banner da loja" fill priority className="object-cover" />
@@ -119,17 +116,22 @@ export default function Page() {
       {/* Benefícios */}
       <section className="mx-auto max-w-6xl px-4 pb-2 pt-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { title: "30 dias para troca", sub: "Sem estresse", cls: "bg-sky-900/40" },
-            { title: "Frete grátis*",     sub: "Consulte condições", cls: "bg-amber-900/40" },
-            { title: "Pagamentos seguros", sub: "Pix, Cartão", cls: "bg-rose-900/40" },
-            { title: "Novidades semanais", sub: "Sempre tem coisa nova", cls: "bg-emerald-900/40" },
-          ].map((b) => (
-            <div key={b.title} className={`rounded-2xl border border-zinc-800 p-5 ${b.cls}`}>
-              <div className="text-lg font-semibold">{b.title}</div>
-              <div className="mt-1 text-zinc-300">{b.sub}</div>
-            </div>
-          ))}
+          <div className="rounded-2xl border border-zinc-800 p-5 bg-sky-900/40">
+            <div className="text-lg font-semibold">30 dias para troca</div>
+            <div className="mt-1 text-zinc-300">Sem estresse</div>
+          </div>
+          <div className="rounded-2xl border border-zinc-800 p-5 bg-amber-900/40">
+            <div className="text-lg font-semibold">Frete grátis*</div>
+            <div className="mt-1 text-zinc-300">Consulte condições</div>
+          </div>
+          <div className="rounded-2xl border border-zinc-800 p-5 bg-rose-900/40">
+            <div className="text-lg font-semibold">Pagamentos seguros</div>
+            <div className="mt-1 text-zinc-300">Pix, Cartão</div>
+          </div>
+          <div className="rounded-2xl border border-zinc-800 p-5 bg-emerald-900/40">
+            <div className="text-lg font-semibold">Novidades semanais</div>
+            <div className="mt-1 text-zinc-300">Sempre tem coisa nova</div>
+          </div>
         </div>
       </section>
 
@@ -138,7 +140,7 @@ export default function Page() {
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/40 p-6">
           <div className="grid grid-cols-2 items-center gap-6 sm:grid-cols-4">
             {BRANDS.map((b) => (
-              <Image key={b} src={`/brands/${b}.png`} alt={b} width={160} height={80} className="mx-auto h-10 w-auto object-contain opacity-80" />
+              <Image key={b} src={"/brands/" + b + ".png"} alt={b} width={160} height={80} className="mx-auto h-10 w-auto object-contain opacity-80" />
             ))}
           </div>
         </div>
@@ -210,7 +212,7 @@ export default function Page() {
           <div className="grid gap-6 sm:grid-cols-[1.2fr,1fr]">
             <div>
               <div className="mb-1 text-sm text-zinc-400">WhatsApp</div>
-              <a href={`https://wa.me/${WHATSAPP.replace(/\D/g, "")}`} target="_blank" className="text-lg font-medium text-emerald-400 hover:underline">
+              <a href={"https://wa.me/" + waNumber} target="_blank" className="text-lg font-medium text-emerald-400 hover:underline">
                 {WHATSAPP}
               </a>
 
