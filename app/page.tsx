@@ -6,11 +6,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BRANDS, money, PRODUCTS, Product } from "@/lib/products";
 
-// ====== CONFIG por .env (tem fallback) ======
+// ====== CONFIG (.env tem preferência) ======
 const STORE_NAME    = process.env.NEXT_PUBLIC_STORE_NAME ?? "Loja da Jane";
 const WHATSAPP_E164 = process.env.NEXT_PUBLIC_WHATSAPP_E164 ?? "5544988606483";
 const PIX_CHAVE     = process.env.NEXT_PUBLIC_PIX_CHAVE ?? "44988606483";
-// ============================================
+// ===========================================
 
 type Cart = Record<string, number>;
 
@@ -25,27 +25,32 @@ type Address = {
 };
 
 const emptyAddress: Address = {
-  cep: "", rua: "", numero: "", complemento: "",
-  bairro: "", cidade: "", uf: "",
+  cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
 };
 
-const addrToText = (a: Address) => {
+const addrToText = (a: Address, name?: string) => {
   const linhas = [
+    name?.trim() ? `Nome: ${name.trim()}` : undefined,
     `CEP: ${a.cep}`,
     `${a.rua}, ${a.numero}${a.complemento ? " - " + a.complemento : ""}`,
     `Bairro: ${a.bairro}`,
     `${a.cidade} - ${a.uf}`
-  ];
+  ].filter(Boolean) as string[];
   return linhas.join("\n");
 };
 
 export default function HomePage() {
   // Carrinho
   const [cart, setCart] = useState<Cart>({});
-  // PIX
-  const [copiouPix, setCopiouPix] = useState(false);
+  // Toast
+  const [toast, setToast] = useState<string | null>(null);
+  const notify = (msg: string) => {
+    setToast(msg);
+    window.clearTimeout((notify as any)._t);
+    (notify as any)._t = window.setTimeout(() => setToast(null), 1800);
+  };
 
-  // Nome do cliente
+  // Nome do cliente (fica na seção de entrega)
   const [customerName, setCustomerName] = useState("");
 
   // Endereços
@@ -56,24 +61,14 @@ export default function HomePage() {
   // Carregar do localStorage
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("cart");
-      if (raw) setCart(JSON.parse(raw));
-
-      const s = localStorage.getItem("shippingAddr");
-      if (s) setShipping(JSON.parse(s));
-
-      const b = localStorage.getItem("billingAddr");
-      if (b) setBilling(JSON.parse(b));
-
-      const same = localStorage.getItem("sameAsShipping");
-      if (same) setSameAsShipping(JSON.parse(same));
-
-      const nm = localStorage.getItem("customerName");
-      if (nm) setCustomerName(nm);
+      const raw = localStorage.getItem("cart");          if (raw) setCart(JSON.parse(raw));
+      const s   = localStorage.getItem("shippingAddr");  if (s) setShipping(JSON.parse(s));
+      const b   = localStorage.getItem("billingAddr");   if (b) setBilling(JSON.parse(b));
+      const same= localStorage.getItem("sameAsShipping");if (same) setSameAsShipping(JSON.parse(same));
+      const nm  = localStorage.getItem("customerName");  if (nm) setCustomerName(nm);
     } catch {}
   }, []);
-
-  // Persistir no localStorage
+  // Persistir
   useEffect(() => { localStorage.setItem("cart", JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem("shippingAddr", JSON.stringify(shipping)); }, [shipping]);
   useEffect(() => { localStorage.setItem("billingAddr", JSON.stringify(billing)); }, [billing]);
@@ -104,19 +99,14 @@ export default function HomePage() {
   const waText = useMemo(() => {
     const linhas: string[] = [];
     linhas.push(`*Pedido - ${STORE_NAME}*`);
-    if (customerName.trim()) {
-      linhas.push(`Cliente: *${customerName.trim()}*`);
-    }
     linhas.push("");
-
     if (itemsList) {
       linhas.push(itemsList);
       linhas.push(`Total: *${money(totalCents)}*`);
       linhas.push("");
     }
     linhas.push("*ENDEREÇO DE ENTREGA*");
-    linhas.push(addrToText(shipping));
-
+    linhas.push(addrToText(shipping, customerName));
     if (sameAsShipping) {
       linhas.push("");
       linhas.push("_Endereço de cobrança igual ao de entrega._");
@@ -125,13 +115,12 @@ export default function HomePage() {
       linhas.push("*ENDEREÇO DE COBRANÇA*");
       linhas.push(addrToText(billing));
     }
-
     return linhas.join("\n");
   }, [itemsList, totalCents, shipping, billing, sameAsShipping, customerName]);
 
   const waLink = `https://wa.me/${WHATSAPP_E164}?text=${encodeURIComponent(waText)}`;
 
-  // CEP auto-completar (ViaCEP)
+  // CEP (ViaCEP)
   const fetchCEP = async (cep: string, target: "shipping" | "billing") => {
     const clean = cep.replace(/\D/g, "");
     if (clean.length !== 8) return;
@@ -139,7 +128,6 @@ export default function HomePage() {
       const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
       const data = await res.json();
       if (data?.erro) return;
-
       const next: Address = {
         cep: formatCEP(clean),
         rua: data.logradouro ?? "",
@@ -154,20 +142,25 @@ export default function HomePage() {
     } catch {}
   };
 
+  // PIX
+  const [copiouPix, setCopiouPix] = useState(false);
   const copyPix = async () => {
     try {
       await navigator.clipboard.writeText(PIX_CHAVE);
       setCopiouPix(true);
-      setTimeout(() => setCopiouPix(false), 2000);
+      window.setTimeout(() => setCopiouPix(false), 1500);
     } catch {}
   };
 
-  const inc = (p: Product) => setCart(c => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
+  const inc = (p: Product) => { setCart(c => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 })); notify("Produto adicionado ao carrinho ✅"); };
   const dec = (id: string) =>
     setCart(c => {
       const q = (c[id] ?? 0) - 1; const n = { ...c };
       if (q <= 0) delete n[id]; else n[id] = q; return n;
     });
+  const removeItem = (id: string) =>
+    setCart(c => { const n = { ...c }; delete n[id]; return n; });
+  const clearCart = () => setCart({});
 
   const setAddr = (which: "shipping" | "billing", field: keyof Address, v: string) => {
     const set = which === "shipping" ? setShipping : setBilling;
@@ -277,7 +270,15 @@ export default function HomePage() {
 
         {/* Carrinho */}
         <section className="mt-10">
-          <h2 className="text-2xl font-semibold mb-3">Carrinho</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-2xl font-semibold">Carrinho</h2>
+            {Object.keys(cart).length > 0 && (
+              <button onClick={clearCart} className="text-sm px-3 py-2 rounded-lg border border-zinc-700 hover:bg-zinc-800">
+                Esvaziar carrinho
+              </button>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
             {Object.keys(cart).length === 0 ? (
               <div className="text-zinc-400">Seu carrinho está vazio.</div>
@@ -297,6 +298,9 @@ export default function HomePage() {
                       <div className="flex items-center gap-2">
                         <button onClick={() => dec(id)} className="px-3 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800">-</button>
                         <button onClick={() => inc(p)} className="px-3 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800">+</button>
+                        <button onClick={() => removeItem(id)} className="px-3 py-1 rounded-lg border border-red-600 text-red-400 hover:bg-red-950/30">
+                          Remover
+                        </button>
                       </div>
                     </li>
                   );
@@ -309,25 +313,20 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Nome do cliente */}
+        {/* Endereço de ENTREGA (com Nome aqui dentro) */}
         <section className="mt-10">
-          <h2 className="text-2xl font-semibold mb-3">Seus dados</h2>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-            <label className="block text-sm text-zinc-400 mb-1">Nome completo</label>
-            <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800"
-              placeholder="Ex.: Jane Doe"
-            />
-            <p className="text-xs text-zinc-500 mt-2">Usamos seu nome no pedido do WhatsApp.</p>
-          </div>
-        </section>
-
-        {/* Endereço de ENTREGA */}
-        <section className="mt-6">
           <h2 className="text-2xl font-semibold mb-3">Endereço de Entrega</h2>
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm text-zinc-400 mb-1">Nome completo</label>
+              <input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800"
+                placeholder="Ex.: Jane Doe"
+              />
+            </div>
+
             <div>
               <label className="block text-sm text-zinc-400 mb-1">CEP</label>
               <input
@@ -399,11 +398,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-2xl font-semibold">Endereço de Cobrança</h2>
             <label className="ml-auto flex items-center gap-2 text-sm text-zinc-300">
-              <input
-                type="checkbox"
-                checked={sameAsShipping}
-                onChange={(e) => setSameAsShipping(e.target.checked)}
-              />
+              <input type="checkbox" checked={sameAsShipping} onChange={(e) => setSameAsShipping(e.target.checked)} />
               Usar mesmo endereço da entrega
             </label>
           </div>
@@ -491,19 +486,12 @@ export default function HomePage() {
             <div>
               <div className="text-zinc-400 text-sm mb-1">Chave PIX</div>
               <div className="flex gap-2 items-center">
-                <code className="px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800">
-                  {PIX_CHAVE}
-                </code>
-                <button
-                  onClick={copyPix}
-                  className="px-4 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800"
-                >
+                <code className="px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800">{PIX_CHAVE}</code>
+                <button onClick={copyPix} className="px-4 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800">
                   {copiouPix ? "Copiado ✔" : "Copiar chave"}
                 </button>
               </div>
-              <p className="text-zinc-400 mt-2">
-                Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
-              </p>
+              <p className="text-zinc-400 mt-2">Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.</p>
             </div>
           </div>
         </section>
@@ -513,6 +501,13 @@ export default function HomePage() {
           © {new Date().getFullYear()} {STORE_NAME} — feito com amor 💚
         </footer>
       </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-700 shadow-lg">
+          {toast}
+        </div>
+      )}
     </main>
   );
 }
