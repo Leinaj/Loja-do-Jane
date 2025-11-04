@@ -1,357 +1,222 @@
-'use client';
+'use client'
 
-import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import Image from 'next/image'
+import { useMemo, useState } from 'react'
 
-// ====== CONFIG BÁSICA ======
-const WHATSAPP_NUMBER = '5544988606483'; // +55 44 98860-6483 (no formato internacional)
-const PIX_KEY = '44988606483';
+/** CONFIG SIMPLES */
+const WHATSAPP = '5544988606483'        // +55 44 98860-6483 (sem sinal)
+const PIX_KEY  = '44988606483'
 
-// Se os nomes dos arquivos forem diferentes, troque os caminhos abaixo
+/** PRODUTOS (mantenha os caminhos das imagens que você já usou) */
 const PRODUCTS = [
-  {
-    id: 'camiseta-preta',
-    name: 'Camiseta Preta',
-    price: 69.9,
-    img: '/images/camiseta-preta.jpg', // ex.: 'IMG-20251004-WA0000.jpg'
-  },
-  {
-    id: 'camiseta-branca',
-    name: 'Camiseta Branca',
-    price: 69.9,
-    img: '/images/camiseta-branca.jpg', // ex.: 'IMG-20251004-WA0003.jpg'
-  },
-  {
-    id: 'moletom',
-    name: 'Moletom',
-    price: 159.9,
-    img: '/images/moletom.jpg', // ex.: 'file_00000000dbd061f6a.jpg'
-  },
-  {
-    id: 'bone',
-    name: 'Boné',
-    price: 59.9,
-    img: '/images/bone.jpg', // ex.: 'file_00000000ee8071f58.jpg'
-  },
-] as const;
+  { id: 'camiseta-preta',  name: 'Camiseta Preta',  price: 69.9,  img: '/images/camiseta-preta.jpg' },
+  { id: 'camiseta-branca', name: 'Camiseta Branca', price: 69.9,  img: '/images/camiseta-branca.jpg' },
+  { id: 'moletom',         name: 'Moletom',         price: 159.9, img: '/images/moletom.jpg' },
+  { id: 'bone',            name: 'Boné',            price: 59.9,  img: '/images/bone.jpg' },
+]
 
-// ====== HELPERS ======
-const money = (v: number) =>
-  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+/** MARCAS — coloque os arquivos em /public/brands com estes nomes */
+const BRANDS = [
+  { name: 'Nokia',   src: '/brands/nokia.png' },
+  { name: 'Canon',   src: '/brands/canon.png' },
+  { name: 'Samsung', src: '/brands/samsung.png' },
+  { name: 'Apple',   src: '/brands/apple.png' },
+]
 
-type Cart = Record<string, number>;
+type Cart = Record<string, number>
 
-// ====== PÁGINA ======
-export default function Home() {
-  const [cart, setCart] = useState<Cart>({});
-  const [copied, setCopied] = useState(false);
+export default function Page() {
+  const [cart, setCart] = useState<Cart>({})
 
-  const totalItems = useMemo(
-    () => Object.values(cart).reduce((a, b) => a + b, 0),
-    [cart]
-  );
+  const add = (id: string) =>
+    setCart(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
 
-  const cartLines = useMemo(() => {
-    return Object.entries(cart)
-      .filter(([, qty]) => qty > 0)
-      .map(([id, qty]) => {
-        const p = PRODUCTS.find((x) => x.id === id)!;
-        return { ...p, qty, lineTotal: p.price * qty };
-      });
-  }, [cart]);
+  const remove = (id: string) =>
+    setCart(prev => {
+      const q = (prev[id] ?? 0) - 1
+      if (q <= 0) {
+        const { [id]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [id]: q }
+    })
 
-  const cartTotal = useMemo(
-    () => cartLines.reduce((acc, l) => acc + l.lineTotal, 0),
-    [cartLines]
-  );
+  const cartItems = useMemo(() => Object.entries(cart)
+    .map(([id, qty]) => {
+      const p = PRODUCTS.find(x => x.id === id)!
+      return { ...p, qty, subtotal: p.price * qty }
+    }), [cart])
 
-  const addToCart = (id: string) =>
-    setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
+  const total = cartItems.reduce((s, i) => s + i.subtotal, 0)
 
-  const decFromCart = (id: string) =>
-    setCart((c) => {
-      const next = { ...c, [id]: Math.max((c[id] || 0) - 1, 0) };
-      if (next[id] === 0) delete next[id];
-      return next;
-    });
-
-  const removeFromCart = (id: string) =>
-    setCart((c) => {
-      const next = { ...c };
-      delete next[id];
-      return next;
-    });
-
-  const waHref = useMemo(() => {
-    if (cartLines.length === 0)
-      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-        'Olá! Vim da Loja da Jane.'
-      )}`;
-
-    const itemsTxt = cartLines
-      .map(
-        (l) =>
-          `• ${l.name} x${l.qty} — ${money(l.lineTotal)}`
-      )
-      .join('\n');
-
-    const text = `Olá! Vim da Loja da Jane.%0A%0AQuero finalizar este pedido:%0A${itemsTxt}%0A%0ATotal: ${money(
-      cartTotal
-    )}`;
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
-  }, [cartLines, cartTotal]);
-
-  const copyPix = async () => {
-    try {
-      await navigator.clipboard.writeText(PIX_KEY);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {}
-  };
+  const waText = encodeURIComponent(
+    `Olá! Quero finalizar meu pedido:\n\n${
+      cartItems.map(i => `• ${i.qty}x ${i.name} — R$ ${i.subtotal.toFixed(2).replace('.', ',')}`).join('\n')
+    }\n\nTotal: R$ ${total.toFixed(2).replace('.', ',')}\n\nChave PIX: ${PIX_KEY}`
+  )
+  const waLink = `https://wa.me/${WHATSAPP}?text=${waText}`
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* TOP BAR */}
-      <div className="w-full border-b border-zinc-800 text-xs">
-        <div className="mx-auto max-w-6xl px-4 py-2 flex items-center justify-between">
-          <div className="opacity-70">Bem-vinda à <b>Loja da Jane</b> ✨</div>
-          <div className="flex gap-4 opacity-70">
-            <div>Suporte: WhatsApp {WHATSAPP_NUMBER.replace('55', '+55 ')}</div>
-            <div>
-              Carrinho: {totalItems} {totalItems === 1 ? 'item' : 'itens'} —{' '}
-              {money(cartTotal)}
-            </div>
-          </div>
+    <div className="min-h-dvh bg-zinc-950 text-zinc-200">
+      {/* BARRA SUPERIOR */}
+      <div className="w-full bg-zinc-900/80 text-xs sm:text-sm border-b border-zinc-800">
+        <div className="mx-auto max-w-6xl px-4 py-2 flex flex-wrap gap-x-6 gap-y-1 justify-between">
+          <div>Bem-vinda à <b>Loja da Jane</b> ✨</div>
+          <div className="opacity-80">Suporte: WhatsApp <b>+55 {WHATSAPP.replace('55','').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3')}</b></div>
+          <div className="opacity-80">Carrinho: <b>{cartItems.length} itens</b> — R$ {total.toFixed(2).replace('.', ',')}</div>
         </div>
       </div>
 
-      {/* NAV SIMPLES */}
-      <header className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur border-b border-zinc-800">
-        <div className="mx-auto max-w-6xl px-4 h-12 flex items-center justify-between">
-          <div className="font-semibold tracking-wide">u<span className="text-emerald-500">commerce</span></div>
-          <nav className="text-sm flex gap-6 opacity-90">
-            <a href="#" className="hover:text-emerald-400">Home</a>
-            <a href="#catalogo" className="hover:text-emerald-400">Catálogo</a>
-            <a href="#contato" className="hover:text-emerald-400">Contato</a>
-          </nav>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-        {/* ===== BANNER ===== */}
-        <section className="rounded-xl overflow-hidden border border-zinc-800">
-          <div className="relative w-full h-40 md:h-64">
-            <Image
-              src="/banner.jpg"
-              alt="Banner da loja"
-              fill
-              className="object-cover"
-              priority
-            />
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8 space-y-10">
+        {/* NAV */}
+        <nav className="flex items-center justify-between">
+          <div className="text-2xl font-extrabold tracking-tight">
+            <span className="text-zinc-300">Loja da </span>
+            <span className="bg-gradient-to-r from-emerald-400 to-green-600 bg-clip-text text-transparent">Jane</span>
           </div>
-          <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4 bg-zinc-900/60">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">iPhone 6 <span className="text-emerald-400">Plus</span></h1>
-              <p className="text-zinc-300 mt-2">
-                Exemplo de banner. Você pode trocar por uma imagem sua em <code className="bg-zinc-800 rounded px-1">/public/banner.jpg</code>.
+          <ul className="hidden sm:flex gap-6 text-zinc-300">
+            <li className="hover:text-white cursor-pointer">Home</li>
+            <li className="hover:text-white cursor-pointer">Catálogo</li>
+            <li className="hover:text-white cursor-pointer">Contato</li>
+          </ul>
+        </nav>
+
+        {/* HERO */}
+        <section className="grid md:grid-cols-[1.4fr,1fr] gap-6 items-stretch">
+          <div className="rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
+            <div className="relative">
+              <Image
+                src="/banner.jpg" alt="Banner"
+                width={1200} height={500} priority
+                className="w-full h-56 sm:h-72 md:h-[320px] object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/40 to-transparent" />
+            </div>
+            <div className="p-5 sm:p-6">
+              <h1 className="text-2xl sm:text-3xl font-semibold">
+                iPhone 6 <span className="text-emerald-400">Plus</span>
+              </h1>
+              <p className="mt-2 text-zinc-400">
+                Exemplo de banner. Para trocar, substitua o arquivo <code className="bg-zinc-800 px-2 py-0.5 rounded">/public/banner.jpg</code>.
               </p>
-            </div>
-            <div className="flex gap-3">
-              <a href="#catalogo" className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
-                Ver produtos
-              </a>
-              <a
-                href={waHref}
-                target="_blank"
-                className="px-4 py-2 rounded border border-zinc-700 text-sm"
-              >
-                Finalizar no WhatsApp
-              </a>
+              <div className="mt-4 flex gap-3 flex-wrap">
+                <a href="#catalogo" className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-white">Ver produtos</a>
+                <a href={waLink} target="_blank" className="rounded-lg border border-zinc-700 hover:border-zinc-500 px-4 py-2">Finalizar no WhatsApp</a>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ===== PLAQUINHAS ===== */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-lg border p-4 bg-sky-600/15 text-sky-300 border-sky-700/40">
-            <div className="font-medium">30 dias para troca</div>
-            <div className="text-sm opacity-80">Sem estresse</div>
-          </div>
-          <div className="rounded-lg border p-4 bg-yellow-600/15 text-yellow-300 border-yellow-700/40">
-            <div className="font-medium">Frete grátis*</div>
-            <div className="text-sm opacity-80">Consulte condições</div>
-          </div>
-          <div className="rounded-lg border p-4 bg-rose-600/15 text-rose-300 border-rose-700/40">
-            <div className="font-medium">Pagamentos seguros</div>
-            <div className="text-sm opacity-80">Pix, Cartão</div>
-          </div>
-          <div className="rounded-lg border p-4 bg-teal-600/15 text-teal-300 border-teal-700/40">
-            <div className="font-medium">Novidades semanais</div>
-            <div className="text-sm opacity-80">Sempre tem coisa nova</div>
-          </div>
-        </section>
-
-        {/* ===== LOGOS MARCAS ===== */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-6 place-items-center py-6 rounded-lg border border-zinc-800 bg-zinc-900/40">
-          <div className="relative w-28 h-10 opacity-80">
-            <Image src="/brands/nokia.png" alt="Nokia" fill className="object-contain" />
-          </div>
-          <div className="relative w-28 h-10 opacity-80">
-            <Image src="/brands/canon.png" alt="Canon" fill className="object-contain" />
-          </div>
-          <div className="relative w-28 h-10 opacity-80">
-            <Image src="/brands/samsung.png" alt="Samsung" fill className="object-contain" />
-          </div>
-          <div className="relative w-28 h-10 opacity-80">
-            <Image src="/brands/apple.png" alt="Apple" fill className="object-contain" />
-          </div>
-        </section>
-
-        {/* ===== CATÁLOGO ===== */}
-        <section id="catalogo" className="space-y-4">
-          <h2 className="text-lg font-semibold">Últimos Produtos</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {PRODUCTS.map((p) => (
-              <div key={p.id} className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-900/40">
-                <div className="relative w-full aspect-[4/3]">
-                  <Image
-                    src={p.img}
-                    alt={p.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-3">
-                  <div className="text-sm opacity-80">{p.name}</div>
-                  <div className="font-semibold">{money(p.price)}</div>
-                  <button
-                    onClick={() => addToCart(p.id)}
-                    className="mt-2 w-full text-sm px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500"
-                  >
-                    Adicionar
-                  </button>
-                </div>
+          {/* BENEFÍCIOS */}
+          <div className="grid grid-cols-1 gap-4">
+            {[
+              { t: '30 dias para troca', s: 'Sem estresse',        bg: 'bg-sky-950/50',    border: 'border-sky-900/60' },
+              { t: 'Frete grátis*',     s: 'Consulte condições',   bg: 'bg-amber-950/40',  border: 'border-amber-900/60' },
+              { t: 'Pagamentos seguros',s: 'Pix, Cartão',          bg: 'bg-rose-950/40',   border: 'border-rose-900/60' },
+              { t: 'Novidades semanais',s: 'Sempre tem coisa nova',bg: 'bg-emerald-950/40',border: 'border-emerald-900/60' },
+            ].map((b,i)=>(
+              <div key={i} className={`rounded-2xl ${b.bg} border ${b.border} px-5 py-4`}>
+                <div className="text-lg font-medium">{b.t}</div>
+                <div className="text-zinc-400 text-sm">{b.s}</div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ===== CARRINHO ===== */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Carrinho</h2>
-
-          {cartLines.length === 0 ? (
-            <div className="text-sm opacity-70">Seu carrinho está vazio.</div>
-          ) : (
-            <div className="space-y-2">
-              {cartLines.map((l) => (
-                <div
-                  key={l.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded border border-zinc-800 bg-zinc-900/40"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-14 h-14 rounded overflow-hidden border border-zinc-800">
-                      <Image src={l.img} alt={l.name} fill className="object-cover" />
-                    </div>
-                    <div>
-                      <div className="text-sm">{l.name}</div>
-                      <div className="text-xs opacity-70">{money(l.price)} un.</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => decFromCart(l.id)}
-                      className="px-2 py-1 rounded border border-zinc-700"
-                    >
-                      −
-                    </button>
-                    <div className="w-6 text-center">{l.qty}</div>
-                    <button
-                      onClick={() => addToCart(l.id)}
-                      className="px-2 py-1 rounded border border-zinc-700"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="w-28 text-right font-medium">
-                    {money(l.lineTotal)}
-                  </div>
-
-                  <button
-                    onClick={() => removeFromCart(l.id)}
-                    className="text-xs px-2 py-1 rounded border border-zinc-700"
-                  >
-                    Remover
-                  </button>
-                </div>
-              ))}
-
-              <div className="flex items-center justify-between border-t border-zinc-800 pt-3">
-                <div className="opacity-80 text-sm">
-                  {totalItems} {totalItems === 1 ? 'item' : 'itens'}
-                </div>
-                <div className="text-lg font-semibold">{money(cartTotal)}</div>
+        {/* MARCAS */}
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 place-items-center">
+            {BRANDS.map(b => (
+              <div key={b.name} className="opacity-80 hover:opacity-100 transition">
+                <Image src={b.src} alt={b.name} width={120} height={60} className="object-contain" />
               </div>
-
-              <div className="flex gap-3">
-                <a
-                  href={waHref}
-                  target="_blank"
-                  className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  Finalizar no WhatsApp
-                </a>
-                <button
-                  onClick={() => setCart({})}
-                  className="px-4 py-2 rounded border border-zinc-700"
-                >
-                  Limpar carrinho
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* ===== CONTATO / PAGAMENTO ===== */}
-        <section id="contato" className="mt-8">
-          <h2 className="text-lg font-semibold mb-2">Pagamento & Contato</h2>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40">
-              <div className="text-sm opacity-70">WhatsApp</div>
-              <a
-                href={`https://wa.me/${WHATSAPP_NUMBER}`}
-                target="_blank"
-                className="block mt-1 text-emerald-400 hover:underline"
-              >
-                +55 (44) 98860-6483
-              </a>
-            </div>
-
-            <div className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40">
-              <div className="text-sm opacity-70">Chave PIX</div>
-              <div className="mt-1 flex items-center gap-3">
-                <code className="bg-zinc-800 px-2 py-1 rounded">{PIX_KEY}</code>
-                <button
-                  onClick={copyPix}
-                  className="text-xs px-2 py-1 rounded border border-zinc-700"
-                >
-                  {copied ? 'Copiado!' : 'Copiar chave'}
-                </button>
-              </div>
-              <div className="text-xs opacity-60 mt-2">
-                Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
-        <footer className="py-8 text-center text-xs opacity-60">
+        {/* CATÁLOGO */}
+        <section id="catalogo" className="space-y-4">
+          <h2 className="text-xl font-semibold">Últimos Produtos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+            {PRODUCTS.map(p => (
+              <article key={p.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+                {/* IMAGEM com altura fixa (todas iguais) */}
+                <div className="relative aspect-[4/5] w-full">
+                  <Image src={p.img} alt={p.name} fill className="object-cover" />
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="font-medium">{p.name}</h3>
+                  <div className="text-lg font-semibold">R$ {p.price.toFixed(2).replace('.', ',')}</div>
+                  <button onClick={() => add(p.id)} className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 py-2 text-white">
+                    Adicionar
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* CARRINHO */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Carrinho</h2>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+            {cartItems.length === 0 ? (
+              <div className="text-zinc-400">Seu carrinho está vazio.</div>
+            ) : (
+              <div className="space-y-3">
+                {cartItems.map(i => (
+                  <div key={i.id} className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div>{i.name}</div>
+                      <div className="text-sm text-zinc-400">{i.qty}x — R$ {i.subtotal.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => remove(i.id)} className="px-2 py-1 rounded border border-zinc-700">-</button>
+                      <button onClick={() => add(i.id)}    className="px-2 py-1 rounded bg-emerald-600 text-white">+</button>
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
+                  <b>Total</b>
+                  <b>R$ {total.toFixed(2).replace('.', ',')}</b>
+                </div>
+                <a href={waLink} target="_blank" className="inline-flex justify-center w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 py-2 text-white">
+                  Finalizar no WhatsApp
+                </a>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* PAGAMENTO & CONTATO */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Pagamento & Contato</h2>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+            <div>
+              <div className="text-zinc-400">WhatsApp</div>
+              <a className="text-emerald-400 hover:underline" href={`https://wa.me/${WHATSAPP}`} target="_blank">
+                +55 (44) 98860-6483
+              </a>
+            </div>
+            <div>
+              <div className="text-zinc-400">Chave PIX</div>
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-2 rounded-lg bg-zinc-800 font-mono">{PIX_KEY}</div>
+                <button
+                  onClick={() => navigator.clipboard.writeText(PIX_KEY)}
+                  className="rounded-lg border border-zinc-700 hover:border-zinc-500 px-3 py-2"
+                >
+                  Copiar chave
+                </button>
+              </div>
+            </div>
+            <p className="text-zinc-400">Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.</p>
+          </div>
+        </section>
+
+        <footer className="py-10 text-center text-zinc-500">
           © {new Date().getFullYear()} Loja da Jane — feito com amor 💚
         </footer>
-      </div>
-    </main>
-  );
+      </main>
+    </div>
+  )
 }
