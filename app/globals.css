@@ -1,15 +1,7 @@
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* opcionalzinho que usamos */
-:root { color-scheme: dark; }
-body { @apply bg-zinc-900 text-zinc-100; }
-a { @apply underline-offset-2 hover:underline; }
-.container { @apply max-w-6xl mx-auto px-4; }
-.section-title { @apply text-2xl font-semibold tracking-tight; }
-.card { @apply bg-zinc-800/60 border border-zinc-700 rounded-xl shadow-sm; }
-.btn  { @apply inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition; }
-.btn-primary { @apply bg-emerald-600 hover:bg-emerald-500 text-white; }
-.btn-ghost   { @apply bg-zinc-700/60 hover:bg-zinc-700; }
-.badge { @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs bg-zinc-700 text-zinc-200; }
+/* ajustes básicos */
+html, body { @apply bg-neutral-950 text-neutral-200; }
