@@ -1,10 +1,10 @@
-
 // lib/products.ts
 export type Product = {
   id: string;
   name: string;
-  price: number;
-  image: string;
+  price: number; // em centavos
+  image: string; // caminho em /public/images
+  brand?: string;
   description?: string;
 };
 
@@ -12,37 +12,46 @@ export const PRODUCTS: Product[] = [
   {
     id: "camiseta-preta",
     name: "Camiseta Preta",
-    price: 69.9,
+    price: 6990,
     image: "/images/camiseta-preta.jpg",
-    description: "Camiseta 100% algodão, caimento clássico."
+    brand: "generic",
+    description: "Camiseta 100% algodão, corte unissex, confortável e leve."
   },
   {
     id: "camiseta-branca",
     name: "Camiseta Branca",
-    price: 69.9,
+    price: 6990,
     image: "/images/camiseta-branca.jpg",
-    description: "Básica, confortável e versátil."
+    brand: "generic",
+    description: "Clássica, combina com tudo. Malha premium."
   },
   {
     id: "moletom",
     name: "Moletom",
-    price: 159.9,
+    price: 15990,
     image: "/images/moletom.jpg",
-    description: "Moletom com capuz, super macio."
+    brand: "generic",
+    description: "Moletom com capuz, interior flanelado, super macio."
   },
   {
     id: "bone",
     name: "Boné",
-    price: 59.9,
+    price: 5990,
     image: "/images/bone.jpg",
-    description: "Boné ajustável, estilo casual."
-  },
+    brand: "generic",
+    description: "Boné aba curva, regulável, acabamento de qualidade."
+  }
 ];
 
-export const BRANDS = ["nokia", "canon", "samsung", "apple"];
+// Marcas mostradas na faixa de logos
+export const BRANDS = [
+  { name: "Nokia",   logo: "/brands/nokia.png" },
+  { name: "Canon",   logo: "/brands/canon.png" },
+  { name: "Samsung", logo: "/brands/samsung.png" },
+  { name: "Apple",   logo: "/brands/apple.png" },
+];
 
-export const money = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export const money = (cents: number) =>
+  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export const findProduct = (id: string) =>
-  PRODUCTS.find((p) => p.id === id);
+export const findProduct = (id: string) => PRODUCTS.find(p => p.id === id);
