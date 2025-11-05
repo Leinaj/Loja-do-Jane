@@ -5,9 +5,12 @@ import { useState } from "react";
 export default function Pix() {
   const [ok, setOk] = useState(false);
   const pix = "44988606483";
+
   return (
     <div className="flex items-center gap-3">
-      <code className="rounded-xl bg-zinc-800 px-3 py-2 text-lg text-zinc-100">{pix}</code>
+      <code className="rounded-xl bg-zinc-800 px-3 py-2 text-lg text-zinc-100">
+        {pix}
+      </code>
       <button
         onClick={async () => {
           await navigator.clipboard.writeText(pix);
