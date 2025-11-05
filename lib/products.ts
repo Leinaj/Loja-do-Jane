@@ -1,10 +1,12 @@
-export type Product = { id: string; name: string; price: number };
+// lib/products.ts
+export type Product = {
+  id: string;
+  title: string;
+  price: number;
+  image: string; // caminho em /public/products
+};
 
 export const products: Product[] = [
-  { id: "bone", name: "Boné", price: 59.9 },
-  { id: "camiseta", name: "Camiseta", price: 79.9 }
+  { id: "moletom", title: "Moletom", price: 159.9, image: "/products/moletom.jpg" },
+  { id: "bone", title: "Boné", price: 59.9, image: "/products/bone.jpg" },
 ];
-
-export function getProductById(id: string) {
-  return products.find((p) => p.id === id);
-}
