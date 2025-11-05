@@ -1,57 +1,56 @@
-// lib/products.ts
 export type Product = {
   id: string;
+  slug: string;
   name: string;
   price: number; // em centavos
-  image: string; // caminho em /public/images
+  image: string; // caminho em /public
+  description: string;
   brand?: string;
-  description?: string;
+  badges?: string[];
 };
 
-export const PRODUCTS: Product[] = [
+export const products: Product[] = [
   {
-    id: "camiseta-preta",
-    name: "Camiseta Preta",
-    price: 6990,
-    image: "/images/camiseta-preta.jpg",
-    brand: "generic",
-    description: "Camiseta 100% algodão, corte unissex, confortável e leve."
-  },
-  {
-    id: "camiseta-branca",
-    name: "Camiseta Branca",
-    price: 6990,
-    image: "/images/camiseta-branca.jpg",
-    brand: "generic",
-    description: "Clássica, combina com tudo. Malha premium."
+    id: "bone",
+    slug: "bone",
+    name: "Boné",
+    price: 5990,
+    image: "/bone.jpg",
+    description: "Boné aba curva, regulável, acabamento de qualidade.",
+    brand: "Genérico",
   },
   {
     id: "moletom",
+    slug: "moletom",
     name: "Moletom",
     price: 15990,
-    image: "/images/moletom.jpg",
-    brand: "generic",
-    description: "Moletom com capuz, interior flanelado, super macio."
+    image: "/moletom.jpg",
+    description: "Moletom felpado, confortável e estiloso.",
+    brand: "Genérico",
   },
   {
-    id: "bone",
-    name: "Boné",
-    price: 5990,
-    image: "/images/bone.jpg",
-    brand: "generic",
-    description: "Boné aba curva, regulável, acabamento de qualidade."
-  }
+    id: "camiseta-preta",
+    slug: "camiseta-preta",
+    name: "Camiseta Preta",
+    price: 6990,
+    image: "/camiseta-preta.jpg",
+    description: "Camiseta 100% algodão, malha premium.",
+    brand: "Genérico",
+  },
+  {
+    id: "camiseta-branca",
+    slug: "camiseta-branca",
+    name: "Camiseta Branca",
+    price: 6990,
+    image: "/camiseta-branca.jpg",
+    description: "Camiseta 100% algodão, respirável.",
+    brand: "Genérico",
+  },
 ];
 
-// Marcas mostradas na faixa de logos
-export const BRANDS = [
-  { name: "Nokia",   logo: "/brands/nokia.png" },
-  { name: "Canon",   logo: "/brands/canon.png" },
-  { name: "Samsung", logo: "/brands/samsung.png" },
-  { name: "Apple",   logo: "/brands/apple.png" },
-];
-
-export const money = (cents: number) =>
+// helper
+export const formatBRL = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export const findProduct = (id: string) => PRODUCTS.find(p => p.id === id);
+export const findBySlug = (slug: string) =>
+  products.find((p) => p.slug === slug);
