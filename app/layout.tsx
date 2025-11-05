@@ -1,20 +1,9 @@
-// app/layout.tsx
-import type { Metadata } from "next";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Loja da Jane",
-  description: "Sua loja simples e segura com pagamento por PIX e Cartão.",
-  metadataBase: new URL("https://loja-do-jane.vercel.app"),
-  openGraph: {
-    title: "Loja da Jane",
-    description: "Compre fácil, pague no PIX e receba em Maringá/PR.",
-    url: "https://loja-do-jane.vercel.app",
-    siteName: "Loja da Jane",
-    locale: "pt_BR",
-    type: "website",
-  },
+  description: "Loja simples e rápida com Next.js",
 };
 
 export default function RootLayout({
@@ -23,11 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
-        {children}
-        <Analytics />
-      </body>
+    <html lang="pt-BR">
+      <body>{children}</body>
     </html>
   );
 }
