@@ -1,16 +1,20 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/react";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
 const title = "Loja da Jane";
-const description = "Sua loja online: produtos variados, pagamento seguro (PIX/Cartão) e entrega combinada pelo WhatsApp.";
+const description =
+  "Produtos variados com pagamento seguro (PIX/Cartão) e entrega combinada pelo WhatsApp.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: title, template: `%s • ${title}` },
   description,
   alternates: { canonical: "/" },
+  manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
     url: "/",
@@ -33,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <body className="bg-zinc-950 text-zinc-100 antialiased">
         {children}
+        <Analytics />
       </body>
     </html>
   );
