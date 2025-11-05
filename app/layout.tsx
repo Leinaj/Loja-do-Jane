@@ -1,45 +1,39 @@
 // app/layout.tsx
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
 
-const siteName = process.env.NEXT_PUBLIC_STORE_NAME ?? "Loja da Jane";
-const baseUrl  = "https://loja-do-jane.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
+const title = "Loja da Jane";
+const description = "Sua loja online: produtos variados, pagamento seguro (PIX/Cartão) e entrega combinada pelo WhatsApp.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(baseUrl),
-  title: {
-    default: siteName,
-    template: `%s · ${siteName}`,
-  },
-  description:
-    "Moda básica que combina com tudo. Entregas rápidas, pagamento por Pix e Cartão. Fale com a gente no WhatsApp.",
-  keywords: ["roupas", "camiseta", "moletom", "boné", "loja", "Maringá"],
+  metadataBase: new URL(siteUrl),
+  title: { default: title, template: `%s • ${title}` },
+  description,
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    url: baseUrl,
-    siteName,
-    title: siteName,
-    description:
-      "Moda básica que combina com tudo. Entregas rápidas, pagamento por Pix e Cartão.",
-    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: siteName }],
+    url: "/",
+    siteName: title,
+    title,
+    description,
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: title }],
+    locale: "pt_BR",
   },
   twitter: {
     card: "summary_large_image",
-    title: siteName,
-    description:
-      "Moda básica que combina com tudo. Entregas rápidas, pagamento por Pix e Cartão.",
+    title,
+    description,
     images: ["/og.jpg"],
-  },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-zinc-950">{children}</body>
+      <body className="bg-zinc-950 text-zinc-100 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
