@@ -14,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-black text-zinc-100">{children}</body>
+      <body className="bg-black text-zinc-100">
+        {children}
+      </body>
     </html>
   );
 }
