@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import Pix from "../components/Pix"; // caminho relativo, sem alias
+import Pix from "../components/Pix"; // usa caminho relativo
 
 type Product = { slug: string; name: string; price: number; image: string };
 
@@ -12,7 +12,6 @@ const products: Product[] = [
 export default function Page() {
   return (
     <main className="min-h-dvh bg-zinc-950 text-zinc-100">
-      {/* Header */}
       <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="font-semibold tracking-tight">
@@ -36,7 +35,6 @@ export default function Page() {
         </div>
       </header>
 
-      {/* Produtos */}
       <section className="mx-auto max-w-6xl px-4 py-10">
         <h1 className="mb-6 text-3xl font-bold">Produtos</h1>
 
@@ -62,7 +60,6 @@ export default function Page() {
                 <p className="text-emerald-400">
                   {p.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </p>
-
                 <div className="flex gap-3">
                   <Link
                     href={`/p/${p.slug}`}
@@ -77,7 +74,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Pagamento & Contato */}
       <section className="mx-auto max-w-6xl px-4 pb-12">
         <h2 className="mb-4 text-2xl font-semibold">Pagamento & Contato</h2>
 
