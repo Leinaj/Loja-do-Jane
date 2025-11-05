@@ -7,10 +7,13 @@ import Link from "next/link";
 type Props = {
   id: string;
   title: string;
-  price: number; // em reais
-  image: string; // caminho em /public
+  price: number;
+  image: string;
   onAdd?: () => void;
 };
+
+const toBRL = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function ProductCard({ id, title, price, image, onAdd }: Props) {
   return (
@@ -19,10 +22,8 @@ export default function ProductCard({ id, title, price, image, onAdd }: Props) {
         <Image src={image} alt={title} fill className="object-cover" />
       </div>
 
-      <h3 className="mt-3 line-clamp-1 text-lg font-semibold text-white">
-        {title}
-      </h3>
-      <p className="text-emerald-400">R$ {price.toFixed(2).replace(".", ",")}</p>
+      <h3 className="mt-3 line-clamp-1 text-lg font-semibold text-white">{title}</h3>
+      <p className="text-emerald-400">{toBRL(price)}</p>
 
       <div className="mt-3 flex gap-3">
         <button
