@@ -1,11 +1,9 @@
-import type { Metadata } from "next";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Loja da Jane",
-  description: "E-commerce simples da Loja da Jane",
+  title: "Loja do Jane",
+  description: "E-commerce simples rodando em Next.js",
 };
 
 export default function RootLayout({
@@ -15,12 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-neutral-950 text-neutral-50 antialiased">
-        {children}
-        {/* Métricas da Vercel */}
-        <Analytics />
-        <SpeedInsights />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
