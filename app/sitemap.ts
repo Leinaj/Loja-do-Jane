@@ -1,13 +1,19 @@
-// app/sitemap.ts
 import type { MetadataRoute } from "next";
-import { PRODUCTS } from "@/lib/products";
+import { products } from "@/lib/products";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
-  const now = new Date();
-  return [
-    { url: `${base}/`, lastModified: now },
-    ...PRODUCTS.map(p => ({ url: `${base}/p/${p.id}`, lastModified: now })),
-    { url: `${base}/conta`, lastModified: now },
+
+  const staticRoutes: MetadataRoute.Sitemap = [
+    { url: `${base}/`, lastModified: new Date() },
+    { url: `${base}/politica-privacidade`, lastModified: new Date() },
+    { url: `${base}/trocas`, lastModified: new Date() }
   ];
+
+  const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
+    url: `${base}/p/${p.slug}`,
+    lastModified: new Date(),
+  }));
+
+  return [...staticRoutes, ...productRoutes];
 }
