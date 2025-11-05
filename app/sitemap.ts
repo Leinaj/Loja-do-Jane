@@ -1,5 +1,7 @@
-// antes
-// import { products } from "@/lib/products";
+import type { MetadataRoute } from "next";
 
-// depois
-import { products } from "../lib/products";
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
+    { url: "https://loja-do-jane.vercel.app/", lastModified: new Date() },
+  ];
+}
