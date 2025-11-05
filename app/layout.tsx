@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"] });
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Loja da Jane",
-  description: "Sua loja online com PIX e entrega combinada no WhatsApp."
+  description: "E-commerce simples da Loja da Jane",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className}>
+      <body className="bg-neutral-950 text-neutral-50 antialiased">
         {children}
+        {/* Métricas da Vercel */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
