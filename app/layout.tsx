@@ -1,20 +1,18 @@
-// app/layout.tsx
-import "./globals.css";
 import type { Metadata } from "next";
+import "./globals.css";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Loja da Jane",
-  description: "Loja simples e rápida com Next.js",
+  description: "Sua loja online com PIX e entrega combinada no WhatsApp."
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-black text-zinc-100">
+      <body className={inter.className}>
         {children}
       </body>
     </html>
