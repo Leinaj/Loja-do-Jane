@@ -1,0 +1,59 @@
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { products, formatBRL } from "@/lib/products";
+
+type Props = { params: { slug: string } };
+
+export default function ProductPage({ params }: Props) {
+  const product = products[params.slug];
+  if (!product) return notFound();
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-8">
+      <nav className="mb-6 text-sm text-zinc-400">
+        <Link href="/" className="hover:text-emerald-400">Home</Link>
+        <span className="mx-2">/</span>
+        <span className="text-zinc-200">{product.title}</span>
+      </nav>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-zinc-800">
+          <Image
+            src={product.image}
+            alt={product.title}
+            width={900}
+            height={700}
+            sizes="(max-width: 768px) 100vw, 700px"
+            className="h-auto w-full object-cover"
+            priority
+          />
+        </div>
+
+        <div>
+          <h1 className="text-3xl font-bold">{product.title}</h1>
+          <p className="mt-2 text-emerald-400 text-2xl">{formatBRL(product.price)}</p>
+          <p className="mt-4 text-zinc-300">{product.description}</p>
+
+          <div className="mt-6 flex gap-3">
+            <a
+              href={`https://wa.me/5544988606483?text=Oi! Tenho interesse em ${encodeURIComponent(
+                product.title
+              )} (${formatBRL(product.price)}).`}
+              target="_blank"
+              className="rounded-xl bg-emerald-600 px-5 py-2.5 font-semibold text-white hover:bg-emerald-500"
+            >
+              Chamar no WhatsApp
+            </a>
+            <Link
+              href="/"
+              className="rounded-xl border border-zinc-700 px-5 py-2.5 font-medium hover:bg-zinc-800"
+            >
+              Voltar
+            </Link>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
