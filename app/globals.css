@@ -2,7 +2,4 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Seus estilos globais aqui se quiser */
-html, body {
-  height: 100%;
-}
+html, body { min-height: 100%; background: #0b0b0b; color: #e5e5e5; }
