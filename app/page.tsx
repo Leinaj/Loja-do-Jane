@@ -1,102 +1,165 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
-import Badges from "@/components/Badges";
-import BrandGrid from "@/components/BrandGrid";
+import { useMemo, useState } from "react";
+import { PRODUCTS, Product } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
 import PixCopy from "@/components/PixCopy";
-import { products } from "@/lib/products";
 
-export default function Home() {
+type Address = {
+  cep?: string; rua?: string; numero?: string; complemento?: string;
+  bairro?: string; cidade?: string; uf?: string;
+};
+
+export default function Page() {
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [addr, setAddr] = useState<Address>({});
+  const pixKey = "44988606483"; // sua chave PIX
+
+  const add = (p: Product) =>
+    setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
+  const inc = (id: string) =>
+    setCart((c) => ({ ...c, [id]: (c[id] ?? 1) + 1 }));
+  const dec = (id: string) =>
+    setCart((c) => {
+      const n = Math.max((c[id] ?? 1) - 1, 0);
+      const { [id]: _, ...rest } = n === 0 ? c : { ...c, [id]: n };
+      return n === 0 ? rest : { ...c, [id]: n };
+    });
+
+  const items = useMemo(
+    () => PRODUCTS.filter(p => cart[p.id]).map(p => ({ p, q: cart[p.id] })),
+    [cart]
+  );
+
+  const total = items.reduce((sum, it) => sum + it.p.price * it.q, 0);
+
+  const msg = useMemo(() => {
+    const linhas = [
+      "🛒 *Pedido Loja da Jane*",
+      ...items.map(it => `• ${it.p.name} x${it.q} — R$ ${((it.p.price*it.q)/100).toFixed(2)}`),
+      `*Total:* R$ ${(total/100).toFixed(2)}`,
+      "",
+      "📦 *Endereço de Entrega*",
+      `CEP: ${addr.cep ?? ""}`,
+      `Rua: ${addr.rua ?? ""}, Nº ${addr.numero ?? ""}`,
+      `Compl.: ${addr.complemento ?? ""}`,
+      `Bairro: ${addr.bairro ?? ""}`,
+      `Cidade/UF: ${addr.cidade ?? ""}/${addr.uf ?? ""}`
+    ];
+    return linhas.join("\n").trim();
+  }, [items, total, addr]);
+
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6">
-      {/* Barra superior igual ao antigo */}
-      <header className="mb-6 flex items-center justify-between">
-        <div className="text-xl font-semibold">Loja da Jane</div>
-        <nav className="hidden gap-6 sm:flex">
-          <Link href="#produtos" className="text-zinc-300 hover:text-white">Catálogo</Link>
-          <Link href="#contato" className="text-zinc-300 hover:text-white">Contato</Link>
-        </nav>
-        <a
-          href="https://wa.me/5544988606483"
-          target="_blank"
-          className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-500"
-        >
-          WhatsApp
-        </a>
-      </header>
-
-      {/* Banner (como antes) — mantém altura “natural” para não ocupar a tela toda */}
-      <section className="mb-6">
-        <div className="overflow-hidden rounded-2xl border border-zinc-800">
+    <div className="space-y-10">
+      {/* HERO */}
+      <section className="hero-wrap">
+        <div className="hero-img">
           <Image
-            src="/banner.jpg"               // troque pela sua imagem
-            alt="SALE"
-            width={1200}
-            height={480}
-            sizes="(max-width: 640px) 100vw, 1200px"
-            className="h-auto w-full"
+            src="/banner.jpg" /* troque por sua imagem */
+            alt="Promoções"
+            width={1600}
+            height={600}
             priority
           />
         </div>
+        <div className="mt-4">
+          <h1>iPhone 6 <span className="text-emerald-500">Plus</span></h1>
+          <p className="text-zinc-400">
+            Exemplo de banner. Para trocar, substitua o arquivo <code>/public/banner.jpg</code>.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <a href="#catalogo" className="btn btn-primary">Ver produtos</a>
+            <a href={`https://wa.me/5544988606483?text=${encodeURIComponent("Quero comprar!")}`} target="_blank" className="btn btn-ghost">Finalizar no WhatsApp</a>
+          </div>
+        </div>
       </section>
 
-      {/* Benefícios */}
-      <section className="mb-6">
-        <Badges />
+      {/* FEATURES */}
+      <section className="grid sm:grid-cols-3 gap-4">
+        <div className="card"><div className="text-xl">30 dias para troca</div><div className="text-zinc-400">Sem estresse</div></div>
+        <div className="card"><div className="text-xl">Frete grátis*</div><div className="text-zinc-400">Consulte condições</div></div>
+        <div className="card"><div className="text-xl">Pagamentos seguros</div><div className="text-zinc-400">Pix, Cartão</div></div>
       </section>
 
-      {/* Marcas (remova se não tiver as logos) */}
-      <section className="mb-8">
-        <BrandGrid />
-      </section>
-
-      {/* Produtos */}
-      <section id="produtos" className="mb-10">
-        <h2 className="mb-4 text-3xl font-bold">Produtos</h2>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {products.map((p) => (
-            <ProductCard
-              key={p.slug}
-              title={p.title}
-              price={p.price}
-              image={p.image}
-              href={`/produto/${p.slug}`}
-            />
+      {/* CATÁLOGO */}
+      <section id="catalogo" className="space-y-4">
+        <h2>Produtos</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {PRODUCTS.map(p => (
+            <ProductCard key={p.id} p={p} onAdd={add} />
           ))}
         </div>
       </section>
 
-      {/* Pagamento & Contato */}
-      <section
-        id="contato"
-        className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
-      >
-        <h2 className="mb-4 text-2xl font-semibold">Pagamento & Contato</h2>
-
-        <div className="mb-4">
-          <p className="mb-1 text-sm text-zinc-400">WhatsApp</p>
-          <a
-            href="https://wa.me/5544988606483"
-            target="_blank"
-            className="inline-block border-b-2 border-emerald-500 pb-0.5 text-lg font-medium text-emerald-400"
-          >
-            +55 (44) 98860-6483
-          </a>
-        </div>
-
-        <div className="mb-2">
-          <p className="mb-2 text-sm text-zinc-400">Chave PIX</p>
-          <PixCopy pix="44988606483" />
-        </div>
-
-        <p className="mt-3 text-zinc-400">
-          Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
-        </p>
+      {/* CARRINHO */}
+      <section className="space-y-3">
+        <h2>Carrinho</h2>
+        {items.length === 0 ? (
+          <div className="card text-zinc-400">Seu carrinho está vazio.</div>
+        ) : (
+          <div className="card space-y-3">
+            {items.map(({ p, q }) => (
+              <div key={p.id} className="flex items-center justify-between">
+                <div>{p.name} <span className="text-zinc-400">— R$ {(p.price/100).toFixed(2)}</span></div>
+                <div className="flex items-center gap-2">
+                  <button className="btn btn-ghost" onClick={() => dec(p.id)}>-</button>
+                  <div className="w-8 text-center">{q}</div>
+                  <button className="btn btn-ghost" onClick={() => inc(p.id)}>+</button>
+                </div>
+              </div>
+            ))}
+            <div className="pt-2 flex justify-between border-t border-zinc-800">
+              <div className="font-semibold">Total:</div>
+              <div className="font-bold text-emerald-400">R$ {(total/100).toFixed(2)}</div>
+            </div>
+          </div>
+        )}
       </section>
 
-      <footer className="mx-auto mt-8 max-w-6xl px-2 py-8 text-center text-zinc-400">
-        © 2025 Loja da Jane — feito com amor 💚
-      </footer>
-    </main>
+      {/* ENDEREÇO */}
+      <section className="space-y-3">
+        <h2>Endereço de Entrega</h2>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <input placeholder="CEP" className="card" onChange={e=>setAddr(a=>({...a,cep:e.target.value}))} />
+          <input placeholder="Rua" className="card" onChange={e=>setAddr(a=>({...a,rua:e.target.value}))} />
+          <input placeholder="Número" className="card" onChange={e=>setAddr(a=>({...a,numero:e.target.value}))} />
+          <input placeholder="Complemento" className="card" onChange={e=>setAddr(a=>({...a,complemento:e.target.value}))} />
+          <input placeholder="Bairro" className="card" onChange={e=>setAddr(a=>({...a,bairro:e.target.value}))} />
+          <input placeholder="Cidade" className="card" onChange={e=>setAddr(a=>({...a,cidade:e.target.value}))} />
+          <input placeholder="UF" className="card" onChange={e=>setAddr(a=>({...a,uf:e.target.value}))} />
+        </div>
+      </section>
+
+      {/* CONTATO & PIX */}
+      <section id="contato" className="space-y-4">
+        <h2>Pagamento & Contato</h2>
+        <div className="card space-y-4">
+          <div>
+            <div className="text-zinc-400">WhatsApp</div>
+            <a className="text-emerald-400 underline" target="_blank" href="https://wa.me/5544988606483">
+              +55 (44) 98860-6483
+            </a>
+          </div>
+
+          <div>
+            <div className="text-zinc-400 mb-2">Chave PIX</div>
+            <PixCopy pix={pixKey} />
+          </div>
+
+          <p className="text-zinc-400">
+            Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
+          </p>
+
+          <a
+            className="btn btn-primary w-full sm:w-auto"
+            target="_blank"
+            href={`https://wa.me/5544988606483?text=${encodeURIComponent(msg)}`}
+          >
+            Finalizar no WhatsApp
+          </a>
+        </div>
+      </section>
+    </div>
   );
 }
