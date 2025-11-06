@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* utilitários simples */
+/* teste duro pra confirmar que o CSS carregou */
+body { background: #0a0a0a; color: #e5e5e5; }
+
+/* utilitários da página */
 .card { @apply bg-[#121212] rounded-2xl p-4 border border-zinc-800; }
 .btn { @apply rounded-xl px-4 py-2 border border-zinc-800; }
 .btn-primary { @apply bg-emerald-600 text-white hover:bg-emerald-500; }
