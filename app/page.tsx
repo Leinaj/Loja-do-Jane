@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import { useState } from "react";
 
@@ -12,16 +11,10 @@ const produtos = [
 
 export default function Home() {
   const [ok, setOk] = useState(false);
-
-  const copiarPix = async () => {
-    await navigator.clipboard.writeText("44988606483");
-    setOk(true);
-    setTimeout(() => setOk(false), 1200);
-  };
+  const copiarPix = async () => { await navigator.clipboard.writeText("44988606483"); setOk(true); setTimeout(()=>setOk(false),1200); };
 
   return (
     <main className="min-h-screen">
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
         <div className="container h-14 flex items-center justify-between">
           <a href="/" className="font-semibold">Loja da Jane</a>
@@ -33,14 +26,12 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Banner (troque a imagem se quiser /images/banner.jpg) */}
       <section className="container mt-6">
         <div className="relative h-[180px] sm:h-[260px] md:h-[320px] overflow-hidden rounded-2xl">
           <Image src="/images/banner.jpg" alt="Promoções" fill priority className="object-cover" />
         </div>
       </section>
 
-      {/* Catálogo */}
       <section id="catalogo" className="container py-8">
         <h1 className="mb-4 text-3xl font-bold">Produtos</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -61,7 +52,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Contato / PIX */}
       <section id="contato" className="container pb-16">
         <h2 className="mb-4 text-2xl font-bold">Pagamento & Contato</h2>
         <div className="card">
@@ -72,18 +62,13 @@ export default function Home() {
 
           <div className="mt-4 flex flex-col sm:flex-row gap-3">
             <input readOnly value="44988606483" className="w-full sm:w-64 bg-zinc-900 rounded-xl px-4 py-2 border border-zinc-800" />
-            <button onClick={copiarPix} className="btn-primary">
-              {ok ? "Copiada!" : "Copiar chave"}
-            </button>
+            <button onClick={copiarPix} className="btn-primary">{ok ? "Copiada!" : "Copiar chave"}</button>
           </div>
 
-          <p className="mt-4 text-sm text-zinc-400">
-            Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
-          </p>
+          <p className="mt-4 text-sm text-zinc-400">Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.</p>
         </div>
       </section>
 
-      {/* Footer (único) */}
       <footer className="border-t border-zinc-800">
         <div className="container px-4 py-6 text-center text-zinc-400">
           © 2025 Loja da Jane — feito com amor 💚
