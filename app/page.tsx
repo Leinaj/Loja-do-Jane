@@ -2,66 +2,97 @@ import Image from "next/image";
 import PixCopy from "@/components/PixCopy";
 
 const produtos = [
-  { id: "moletom", nome: "Moletom", preco: "R$ 159,90", img: "/images/moletom.jpg" },
-  { id: "bone",    nome: "Boné",     preco: "R$ 59,90",  img: "/images/bone.jpg" },
-  { id: "cam-pre", nome: "Camiseta Preta",  preco: "R$ 49,90", img: "/images/camiseta-preta.jpg" },
-  { id: "cam-bra", nome: "Camiseta Branca", preco: "R$ 49,90", img: "/images/camiseta-branca.jpg" },
+  { id: "moletom", nome: "Moletom", preco: "R$ 159,90", img: "/moletom.jpg" },
+  { id: "bone", nome: "Boné", preco: "R$ 59,90", img: "/bone.jpg" },
+  { id: "camiseta", nome: "Camiseta", preco: "R$ 49,90", img: "/camiseta.jpg" },
 ];
 
-export default function Page() {
-  return (
-    <main className="container mx-auto px-4 py-8 space-y-8">
-      {/* HERO - agora com altura fixa responsiva */}
-      <section className="relative h-40 sm:h-56 md:h-72 rounded-2xl overflow-hidden">
-        <Image
-          src="/images/banner.jpg"
-          alt="Promoções"
-          fill
-          className="object-cover"
-          priority
-        />
-      </section>
+const PIX = "44988606483";
+const WHATS = "+55 (44) 98860-6483";
 
-      {/* Grid de produtos */}
-      <section>
-        <h1 className="text-3xl font-bold mb-4">Produtos</h1>
+export default function Home() {
+  return (
+    <main className="container mx-auto px-4 py-8 space-y-10">
+      {/* HERO / BANNER */}
+      <div className="hero-wrap">
+        <Image
+          src="/banner.jpg"
+          alt="Promoções"
+          width={1600}
+          height={500}
+          priority
+          className="hero-img rounded-2xl"
+        />
+      </div>
+
+      {/* PRODUTOS */}
+      <section className="space-y-4">
+        <h1>Produtos</h1>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {produtos.map((p) => (
-            <div key={p.id} className="card">
-              <div className="relative h-56 rounded-xl overflow-hidden">
-                <Image src={p.img} alt={p.nome} fill className="object-cover" />
+            <article key={p.id} className="card p-4">
+              <div className="overflow-hidden rounded-2xl">
+                <Image
+                  src={p.img}
+                  alt={p.nome}
+                  width={800}
+                  height={800}
+                  className="product-img"
+                />
               </div>
-              <div className="p-4">
+
+              <div className="mt-4 flex items-baseline justify-between">
                 <h2 className="text-xl font-semibold">{p.nome}</h2>
-                <p className="text-emerald-400 mt-1">{p.preco}</p>
-                <button className="btn-ghost mt-3">Ver</button>
+                <span className="text-emerald-500 font-medium">{p.preco}</span>
               </div>
-            </div>
+
+              <div className="mt-4">
+                <a
+                  href={`https://wa.me/5544988606483?text=Tenho%20interesse%20no%20produto:%20${encodeURIComponent(
+                    p.nome
+                  )}`}
+                  className="btn btn-ghost"
+                >
+                  Ver
+                </a>
+              </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* Pagamento & Contato */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Pagamento & Contato</h2>
-        <div className="card p-5 flex flex-col gap-4">
+      {/* CONTATO / PIX */}
+      <section className="card p-6">
+        <h2 className="text-2xl font-bold mb-4">Pagamento & Contato</h2>
+
+        <div className="space-y-3">
           <div>
-            <div className="text-zinc-400 text-sm">WhatsApp</div>
-            <a href="https://wa.me/5544988606483" className="btn-ghost mt-2 inline-block">
-              +55 (44) 98860-6483
+            <p className="text-sm text-zinc-400">WhatsApp</p>
+            <a
+              className="text-lg underline"
+              href="https://wa.me/5544988606483"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {WHATS}
             </a>
           </div>
-          <div>
-            <div className="text-zinc-400 text-sm">Chave PIX</div>
-            <PixCopy value="44988606483" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="text-sm text-zinc-400">Chave PIX</div>
+            <code className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800">
+              {PIX}
+            </code>
+            <PixCopy keyPix={PIX} />
           </div>
-          <p className="text-zinc-400">
+
+          <p className="text-zinc-400 text-sm">
             Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
           </p>
         </div>
       </section>
 
-      <footer className="text-center text-zinc-400 pt-6">
+      <footer className="text-center text-zinc-400 py-8">
         © 2025 Loja da Jane — feito com amor 💚
       </footer>
     </main>
