@@ -2,42 +2,21 @@
 export type Product = {
   slug: string;
   title: string;
-  price: number;
-  image: string;      // caminho relativo a /public
-  description?: string;
+  price: number; // centavos
+  image: string;
 };
 
-export const products: Record<string, Product> = {
-  moletom: {
-    slug: "moletom",
-    title: "Moletom",
-    price: 159.9,
-    image: "/images/moletom.jpg",
-    description: "Moletom confortável, tecido premium.",
-  },
-  bone: {
-    slug: "bone",
-    title: "Boné",
-    price: 59.9,
-    image: "/images/bone.jpg",
-    description: "Boné estiloso com ajuste traseiro.",
-  },
-  "camiseta-preta": {
-    slug: "camiseta-preta",
-    title: "Camiseta Preta",
-    price: 49.9,
-    image: "/images/camiseta-preta.jpg",
-    description: "Malha 100% algodão, corte clássico.",
-  },
-  "camiseta-branca": {
-    slug: "camiseta-branca",
-    title: "Camiseta Branca",
-    price: 49.9,
-    image: "/images/camiseta-branca.jpg",
-    description: "Leve, respirável e versátil.",
-  },
-};
+export const products: Product[] = [
+  { slug: "moletom", title: "Moletom", price: 15990, image: "/images/moletom.jpg" },
+  { slug: "bone", title: "Boné", price: 5990, image: "/images/bone.jpg" },
+  { slug: "camiseta-branca", title: "Camiseta Branca", price: 6990, image: "/images/camiseta-branca.jpg" },
+  { slug: "camiseta-preta", title: "Camiseta Preta", price: 6990, image: "/images/camiseta-preta.jpg" },
+];
 
-export function formatBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export function brl(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
 }
