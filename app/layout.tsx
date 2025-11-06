@@ -1,10 +1,39 @@
+// app/layout.tsx
+import type { Metadata } from "next";
+import "./globals.css";
+import Header from "@/components/Header";
+import { site } from "@/lib/site";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
+  title: { default: site.name, template: `%s · ${site.name}` },
+  description: site.description,
+  openGraph: {
+    type: "website",
+    url: site.url,
+    siteName: site.name,
+    title: site.name,
+    description: site.description,
+    images: [{ url: "/images/moletom.jpg", width: 1200, height: 630, alt: site.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: site.name,
+    description: site.description,
+    images: ["/images/moletom.jpg"],
+  },
+  alternates: { canonical: site.url },
+  icons: { icon: "/favicon.ico" },
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-zinc-950 text-zinc-100">
-        {children}
-        <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-400">
-          © {new Date().getFullYear()} Loja da Jane — feito com amor 💚
+    <html lang="pt-BR" className="bg-zinc-950 text-zinc-100">
+      <body>
+        <Header />
+        <main className="pt-16">{children}</main>
+        <footer className="mt-10 px-4 py-8 text-center text-sm text-zinc-500">
+          © 2025 Loja do Jane — feito com carinho
         </footer>
       </body>
     </html>
