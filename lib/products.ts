@@ -3,7 +3,7 @@ export type Product = {
   slug: string;
   title: string;
   price: number;
-  image: string;       // caminho a partir de /public
+  image: string;        // caminho relativo a /public
   description?: string;
 };
 
@@ -12,14 +12,14 @@ export const products: Record<string, Product> = {
     slug: "moletom",
     title: "Moletom",
     price: 159.9,
-    image: "/images/moletom.jpg",          // << daqui
+    image: "/images/moletom.jpg",
     description: "Moletom confortável, tecido premium.",
   },
   bone: {
     slug: "bone",
     title: "Boné",
     price: 59.9,
-    image: "/images/bone.jpg",             // << e daqui
+    image: "/images/bone.jpg",
     description: "Boné estiloso com ajuste traseiro.",
   },
   "camiseta-preta": {
