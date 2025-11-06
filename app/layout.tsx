@@ -1,32 +1,22 @@
-// app/layout.tsx
-import type { Metadata } from "next";
-import "./globals.css";
-import Header from "@/components/Header";
-import { site } from "@/lib/site";
-
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: { default: site.name, template: `%s · ${site.name}` },
-  description: site.description,
-  openGraph: {
-    type: "website",
-    url: site.url,
-    siteName: site.name,
-    title: site.name,
-    description: site.description,
-    images: [{ url: "/images/moletom.jpg", width: 1200, height: 630, alt: site.name }],
-  },
-  twitter: { card: "summary_large_image", title: site.name, description: site.description, images: ["/images/moletom.jpg"] },
-};
+export const metadata = { title: "Loja da Jane" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="bg-zinc-950 text-zinc-100">
-      <body>
-        <Header />
-        {children}
-        <footer className="mt-10 border-t border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-          © 2025 Loja do Jane
+    <html lang="pt-BR">
+      <body className="bg-black text-zinc-100 antialiased">
+        <header className="sticky top-0 z-40 backdrop-blur border-b border-zinc-900 bg-black/70">
+          <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
+            <div className="font-extrabold">Loja da Jane</div>
+            <nav className="flex gap-3 text-sm">
+              <a className="hover:underline" href="#catalogo">Catálogo</a>
+              <a className="hover:underline" href="#contato">Contato</a>
+              <a className="btn btn-primary" href="https://wa.me/5544988606483" target="_blank">WhatsApp</a>
+            </nav>
+          </div>
+        </header>
+        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+        <footer className="mx-auto max-w-5xl px-4 py-10">
+          <p>© 2025 Loja da Jane — feito com amor 💚</p>
         </footer>
       </body>
     </html>
