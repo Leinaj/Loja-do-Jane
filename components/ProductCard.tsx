@@ -1,24 +1,38 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
+import { brl } from "@/lib/products";
 
-const toBRL = (n: number) => n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+type Props = { title: string; price: number; image: string; href?: string };
 
-export default function ProductCard({ id, title, price, image, onAdd }:{
-  id:string; title:string; price:number; image:string; onAdd?:()=>void;
-}) {
+export default function ProductCard({ title, price, image, href }: Props) {
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4">
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
-        <Image src={image} alt={title} fill className="object-cover" />
+    <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
+      <div className="overflow-hidden rounded-xl">
+        <Image
+          src={image}
+          alt={title}
+          width={800}
+          height={600}
+          sizes="(max-width: 640px) 100vw, 600px"
+          className="aspect-[4/3] h-auto w-full object-cover"
+          priority
+        />
       </div>
-      <h3 className="mt-3 text-lg font-semibold text-white line-clamp-1">{title}</h3>
-      <p className="text-emerald-400">{toBRL(price)}</p>
-      <div className="mt-3 flex gap-3">
-        <button onClick={onAdd} className="flex-1 rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-500">Adicionar</button>
-        <Link href={`/p/${id}`} className="rounded-xl border border-zinc-700 px-4 py-2 text-zinc-100 hover:bg-zinc-800">Ver</Link>
+      <div className="mt-3">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="mt-1 text-emerald-400">{brl(price)}</p>
+        <div className="mt-3 flex gap-3">
+          <button className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-500">
+            Adicionar
+          </button>
+          <Link
+            href={href ?? "#"}
+            className="rounded-xl border border-zinc-700 px-4 py-2 font-medium hover:bg-zinc-800"
+          >
+            Ver
+          </Link>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
