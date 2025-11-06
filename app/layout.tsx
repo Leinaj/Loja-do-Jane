@@ -16,14 +16,7 @@ export const metadata: Metadata = {
     description: site.description,
     images: [{ url: "/images/moletom.jpg", width: 1200, height: 630, alt: site.name }],
   },
-  twitter: {
-    card: "summary_large_image",
-    title: site.name,
-    description: site.description,
-    images: ["/images/moletom.jpg"],
-  },
-  alternates: { canonical: site.url },
-  icons: { icon: "/favicon.ico" },
+  twitter: { card: "summary_large_image", title: site.name, description: site.description, images: ["/images/moletom.jpg"] },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,9 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className="bg-zinc-950 text-zinc-100">
       <body>
         <Header />
-        <main className="pt-16">{children}</main>
-        <footer className="mt-10 px-4 py-8 text-center text-sm text-zinc-500">
-          © 2025 Loja do Jane — feito com carinho
+        {children}
+        <footer className="mt-10 border-t border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+          © 2025 Loja do Jane
         </footer>
       </body>
     </html>
