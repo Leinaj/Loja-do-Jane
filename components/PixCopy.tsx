@@ -1,16 +1,17 @@
+// components/PixCopy.tsx
 "use client";
 
 type Props = { pix: string };
 
 export default function PixCopy({ pix }: Props) {
-  async function copy() {
+  const copy = async () => {
     try {
       await navigator.clipboard.writeText(pix);
       alert("Chave PIX copiada!");
     } catch {
       alert("Não foi possível copiar agora.");
     }
-  }
+  };
 
   return (
     <div className="inline-flex items-center gap-3">
