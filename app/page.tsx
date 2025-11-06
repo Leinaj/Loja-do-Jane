@@ -13,7 +13,7 @@ export default function HomePage() {
       <section className="mb-8">
         <div className="overflow-hidden rounded-2xl border border-zinc-800">
           <Image
-            src="/banner.jpg" // seu banner atual na raiz de /public
+            src="/banner.jpg" // coloque em /public/banner.jpg; se usar /images/banner.jpg, troque aqui
             alt="Promoções"
             width={1200}
             height={480}
@@ -28,7 +28,10 @@ export default function HomePage() {
 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {items.map((p) => (
-          <article key={p.slug} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
+          <article
+            key={p.slug}
+            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 transition-shadow hover:shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+          >
             <div className="overflow-hidden rounded-xl">
               <Image
                 src={p.image}
@@ -39,6 +42,7 @@ export default function HomePage() {
                 className="aspect-[4/3] h-auto w-full object-cover"
               />
             </div>
+
             <div className="mt-3">
               <h2 className="text-xl font-semibold">{p.title}</h2>
               <p className="mt-1 text-emerald-400">{formatBRL(p.price)}</p>
@@ -55,9 +59,16 @@ export default function HomePage() {
         ))}
       </section>
 
-      {/* Contato / PIX */}
+      {/* Confiança + Contato */}
       <section className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
         <h2 className="mb-4 text-2xl font-bold">Pagamento &amp; Contato</h2>
+
+        <ul className="mb-6 grid list-disc grid-cols-1 gap-2 pl-5 text-sm text-zinc-400 sm:grid-cols-2">
+          <li>Envio rápido e atendimento no Whats.</li>
+          <li>Fotos reais do produto.</li>
+          <li>Troca garantida em até 7 dias.</li>
+          <li>Preço justo, sem pegadinha.</li>
+        </ul>
 
         <div className="mb-5">
           <p className="mb-1 text-sm text-zinc-400">WhatsApp</p>
