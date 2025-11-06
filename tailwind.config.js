@@ -3,12 +3,8 @@ module.exports = {
   content: [
     "./app/**/*.{ts,tsx,js,jsx}",
     "./components/**/*.{ts,tsx,js,jsx}",
-    "./pages/**/*.{ts,tsx,js,jsx}",
-    "./src/**/*.{ts,tsx,js,jsx}"
+    "./src/**/*.{ts,tsx,js,jsx}",
   ],
-  theme: {
-    container: { center: true, padding: "1rem" },
-    extend: {}
-  },
-  plugins: []
+  theme: { extend: { container: { center: true, padding: "1rem" } } },
+  plugins: [],
 };
