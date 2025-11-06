@@ -23,12 +23,10 @@ export default function ProdutoPage({ params }: Props) {
   const p = products[params.slug];
   if (!p) notFound();
 
-  const msg =
-    `Olá! Quero finalizar a compra:%0A` +
-    `- Produto: ${p.title}%0A` +
-    `- Preço: ${formatBRL(p.price)}%0A` +
-    `- Link: ${typeof window !== "undefined" ? window.location.href : ""}`;
-  const wa = `https://wa.me/5544988606483?text=${msg}`;
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
+  const productUrl = `${base}/produto/${p.slug}`;
+  const waMsg = `Olá! Quero finalizar a compra:%0A- Produto: ${p.title}%0A- Preço: ${formatBRL(p.price)}%0A- Link: ${productUrl}`;
+  const waHref = `https://wa.me/5544988606483?text=${waMsg}`;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -50,13 +48,11 @@ export default function ProdutoPage({ params }: Props) {
           <p className="mt-2 text-emerald-400 text-2xl font-semibold">
             {formatBRL(p.price)}
           </p>
-          {p.description ? (
-            <p className="mt-4 text-zinc-300">{p.description}</p>
-          ) : null}
+          {p.description ? <p className="mt-4 text-zinc-300">{p.description}</p> : null}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <a
-              href={wa}
+              href={waHref}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-xl border border-emerald-600 bg-emerald-700/20 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-700/30"
