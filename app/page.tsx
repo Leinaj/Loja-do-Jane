@@ -6,12 +6,15 @@ const produtos = [
   { id: "moletom", nome: "Moletom", preco: 159.9, img: "/images/moletom.jpg" },
   { id: "bone", nome: "Boné", preco: 59.9, img: "/images/bone.jpg" },
   { id: "camiseta-preta", nome: "Camiseta Preta", preco: 49.9, img: "/images/camiseta-preta.jpg" },
-  { id: "camiseta-branca", nome: "Camiseta Branca", preco: 49.9, img: "/images/camiseta-branca.jpg" },
+  { id: "camiseta-branca", nome: "Camiseta Branca", preco: 49.9, img: "/images/camiseta-branca.jpg" }
 ];
 
 export default function Home() {
   const [ok, setOk] = useState(false);
-  const copiarPix = async () => { await navigator.clipboard.writeText("44988606483"); setOk(true); setTimeout(()=>setOk(false),1200); };
+  const copiarPix = async () => {
+    await navigator.clipboard.writeText("44988606483");
+    setOk(true); setTimeout(() => setOk(false), 1200);
+  };
 
   return (
     <main className="min-h-screen">
