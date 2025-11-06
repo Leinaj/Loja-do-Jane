@@ -1,38 +1,39 @@
+"use client";
 import Image from "next/image";
-import Link from "next/link";
-import { brl } from "@/lib/products";
+import { Product } from "@/lib/products";
 
-type Props = { title: string; price: number; image: string; href?: string };
-
-export default function ProductCard({ title, price, image, href }: Props) {
+export default function ProductCard({
+  p,
+  onAdd
+}: { p: Product; onAdd: (p: Product) => void }) {
   return (
-    <article className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
-      <div className="overflow-hidden rounded-xl">
+    <div className="card">
+      <div className="rounded-xl overflow-hidden bg-zinc-900">
         <Image
-          src={image}
-          alt={title}
+          src={p.image}
+          alt={p.name}
           width={800}
           height={600}
-          sizes="(max-width: 640px) 100vw, 600px"
-          className="aspect-[4/3] h-auto w-full object-cover"
-          priority
+          className="w-full h-64 object-cover"
+          priority={false}
         />
       </div>
       <div className="mt-3">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="mt-1 text-emerald-400">{brl(price)}</p>
-        <div className="mt-3 flex gap-3">
-          <button className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-500">
-            Adicionar
-          </button>
-          <Link
-            href={href ?? "#"}
-            className="rounded-xl border border-zinc-700 px-4 py-2 font-medium hover:bg-zinc-800"
-          >
-            Ver
-          </Link>
-        </div>
+        <div className="text-lg font-semibold">{p.name}</div>
+        <div className="text-emerald-400 font-bold">R$ {(p.price/100).toFixed(2)}</div>
       </div>
-    </article>
+      <div className="mt-3 flex gap-3">
+        <button className="btn btn-primary" onClick={() => onAdd(p)}>Adicionar</button>
+        <a
+          className="btn btn-ghost"
+          href={`https://wa.me/5544988606483?text=${encodeURIComponent(
+            `Olá, tenho interesse no produto: ${p.name} (R$ ${(p.price/100).toFixed(2)})`
+          )}`}
+          target="_blank"
+        >
+          Ver
+        </a>
+      </div>
+    </div>
   );
 }
