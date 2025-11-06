@@ -2,17 +2,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { products, formatBRL } from "@/lib/products";
+import PixCopy from "@/components/PixCopy";
 
 export default function HomePage() {
   const items = Object.values(products);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      {/* Banner (limitado) */}
+      {/* Banner limitado */}
       <section className="mb-8">
         <div className="overflow-hidden rounded-2xl border border-zinc-800">
           <Image
-            src="/banner.jpg"
+            src="/banner.jpg" // seu banner atual na raiz de /public
             alt="Promoções"
             width={1200}
             height={480}
@@ -27,10 +28,7 @@ export default function HomePage() {
 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {items.map((p) => (
-          <article
-            key={p.slug}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3"
-          >
+          <article key={p.slug} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
             <div className="overflow-hidden rounded-xl">
               <Image
                 src={p.image}
@@ -41,12 +39,10 @@ export default function HomePage() {
                 className="aspect-[4/3] h-auto w-full object-cover"
               />
             </div>
-
             <div className="mt-3">
               <h2 className="text-xl font-semibold">{p.title}</h2>
               <p className="mt-1 text-emerald-400">{formatBRL(p.price)}</p>
               <div className="mt-3">
-                {/* conserto: link certo para /produto/slug */}
                 <Link
                   href={`/produto/${p.slug}`}
                   className="rounded-xl border border-zinc-700 px-4 py-2 font-medium hover:bg-zinc-800"
@@ -76,13 +72,9 @@ export default function HomePage() {
 
         <div>
           <p className="mb-2 text-sm text-zinc-400">Chave PIX</p>
-          {/* usa componente PixCopy (sem crase aparecendo) */}
           <PixCopy pix="44988606483" />
         </div>
       </section>
     </main>
   );
 }
-
-// se ainda não tiver esse import no topo do arquivo:
-import PixCopy from "@/components/PixCopy";
