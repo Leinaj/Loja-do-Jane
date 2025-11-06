@@ -9,11 +9,7 @@ export const metadata: Metadata = {
   description: "Catálogo simples e direto",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-br">
       <body className={`${inter.className} bg-zinc-950 text-zinc-100 antialiased`}>
