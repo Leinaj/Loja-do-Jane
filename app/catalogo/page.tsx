@@ -26,10 +26,7 @@ export default function CatalogoPage() {
               <h2 className="text-xl font-semibold">{p.title}</h2>
               <p className="mt-1 text-emerald-400">{formatBRL(p.price)}</p>
               <div className="mt-3">
-                <Link
-                  href={`/produto/${p.slug}`}
-                  className="rounded-xl border border-zinc-700 px-4 py-2 font-medium hover:bg-zinc-800"
-                >
+                <Link href={`/produto/${p.slug}`} className="rounded border border-zinc-700 px-4 py-2 hover:bg-zinc-800">
                   Ver
                 </Link>
               </div>
