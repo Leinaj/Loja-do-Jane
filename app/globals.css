@@ -2,7 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* utilitários prontos */
-.card { @apply bg-[#121212] rounded-2xl border border-zinc-800 overflow-hidden; }
-.btn-primary { @apply bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-500; }
-.btn-ghost { @apply bg-zinc-900 text-white rounded-xl px-4 py-2 font-medium border border-zinc-800; }
+/* ===== Base ===== */
+@layer base {
+  html { scroll-behavior: smooth; }
+}
+
+/* ===== Componentes reutilizáveis ===== */
+@layer components {
+  /* Cartão padrão */
+  .card { @apply bg-[#121212] rounded-2xl border border-zinc-800 shadow-lg; }
+
+  /* Botões */
+  .btn { @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition active:scale-95; }
+  .btn-primary { @apply bg-emerald-600 text-white hover:bg-emerald-500; }
+  .btn-ghost { @apply bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800; }
+
+  /* Tipografia */
+  h1 { @apply text-4xl font-extrabold; }
+  h2 { @apply text-2xl font-bold; }
+}
+
+/* ===== Banner (hero) responsivo ===== */
+.hero-wrap { @apply w-full rounded-2xl overflow-hidden; }
+.hero-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+@media (min-width: 640px){ .hero-img{ height: 260px; } }
+@media (min-width: 768px){ .hero-img{ height: 320px; } }
+
+/* ===== Imagens de produto ===== */
+.product-img { width: 100%; height: 220px; object-fit: cover; display: block; }
+@media (min-width: 640px){ .product-img{ height: 260px; } }
+@media (min-width: 768px){ .product-img{ height: 300px; } }
+
+/* ===== Rodapé ===== */
+footer { @apply text-zinc-400; }
