@@ -15,22 +15,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = products[params.slug];
   if (!p) return {};
-
   const base = site.url;
   const og = p.image.startsWith("http") ? p.image : `${base}${p.image}`;
-
   return {
     title: p.title,
     description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-    alternates: { canonical: `${base}/produto/${p.slug}` },
-    openGraph: {
-      type: "product",
-      url: `${base}/produto/${p.slug}`,
-      title: p.title,
-      description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-      images: [{ url: og, width: 1200, height: 900, alt: p.title }],
-    },
-    twitter: { card: "summary_large_image", title: p.title, description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`, images: [og] },
+    openGraph: { images: [{ url: og, width: 1200, height: 900, alt: p.title }] },
   };
 }
 
@@ -38,8 +28,7 @@ export default function ProdutoPage({ params }: Props) {
   const p = products[params.slug];
   if (!p) notFound();
 
-  const base = site.url;
-  const productUrl = `${base}/produto/${p.slug}`;
+  const productUrl = `${site.url}/produto/${p.slug}`;
   const waMsg = `Olá! Quero finalizar a compra:%0A- Produto: ${p.title}%0A- Preço: ${formatBRL(p.price)}%0A- Link: ${productUrl}`;
   const waHref = `https://wa.me/${site.whatsapp}?text=${waMsg}`;
 
@@ -68,24 +57,14 @@ export default function ProdutoPage({ params }: Props) {
               href={waHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-700/20 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-700/30"
-              aria-label="Finalizar no WhatsApp"
+              className="rounded border border-emerald-600 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-900/20"
             >
               Finalizar no WhatsApp
             </a>
-            <Link
-              href="/catalogo"
-              className="rounded-xl border border-zinc-700 px-5 py-3 font-medium hover:bg-zinc-900"
-            >
+            <Link href="/catalogo" className="rounded border border-zinc-700 px-5 py-3 hover:bg-zinc-900">
               Voltar ao Catálogo
             </Link>
           </div>
-
-          <ul className="mt-6 space-y-1 text-sm text-zinc-400">
-            <li>• Suporte rápido pelo Whats.</li>
-            <li>• Fotos reais do produto.</li>
-            <li>• Preço justo, sem pegadinha.</li>
-          </ul>
         </section>
       </div>
     </main>
