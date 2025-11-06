@@ -1,6 +1,6 @@
+// app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
-import PixCopy from "@/components/PixCopy";
 import { products, formatBRL } from "@/lib/products";
 
 export default function HomePage() {
@@ -8,17 +8,17 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      {/* Banner (opcional, remova se não usar) */}
+      {/* Banner (limitado) */}
       <section className="mb-8">
         <div className="overflow-hidden rounded-2xl border border-zinc-800">
           <Image
-            src="/banner.jpg" // troque se quiser, ou remova a seção
+            src="/banner.jpg"
             alt="Promoções"
             width={1200}
             height={480}
-            sizes="(max-width: 640px) 100vw, 1200px"
-            className="h-auto w-full"
             priority
+            sizes="(max-width: 640px) 100vw, 1200px"
+            className="w-full h-auto max-h-[360px] object-cover sm:max-h-[420px]"
           />
         </div>
       </section>
@@ -39,15 +39,14 @@ export default function HomePage() {
                 height={600}
                 sizes="(max-width: 640px) 100vw, 600px"
                 className="aspect-[4/3] h-auto w-full object-cover"
-                priority={p.slug === "moletom" || p.slug === "bone"}
               />
             </div>
 
             <div className="mt-3">
               <h2 className="text-xl font-semibold">{p.title}</h2>
               <p className="mt-1 text-emerald-400">{formatBRL(p.price)}</p>
-
-              <div className="mt-3 flex gap-3">
+              <div className="mt-3">
+                {/* conserto: link certo para /produto/slug */}
                 <Link
                   href={`/produto/${p.slug}`}
                   className="rounded-xl border border-zinc-700 px-4 py-2 font-medium hover:bg-zinc-800"
@@ -60,9 +59,9 @@ export default function HomePage() {
         ))}
       </section>
 
-      {/* Pagamento & Contato */}
+      {/* Contato / PIX */}
       <section className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="mb-4 text-2xl font-semibold">Pagamento & Contato</h2>
+        <h2 className="mb-4 text-2xl font-bold">Pagamento &amp; Contato</h2>
 
         <div className="mb-5">
           <p className="mb-1 text-sm text-zinc-400">WhatsApp</p>
@@ -75,15 +74,15 @@ export default function HomePage() {
           </a>
         </div>
 
-        <div className="mb-2">
+        <div>
           <p className="mb-2 text-sm text-zinc-400">Chave PIX</p>
+          {/* usa componente PixCopy (sem crase aparecendo) */}
           <PixCopy pix="44988606483" />
         </div>
       </section>
-
-      <footer className="mx-auto mt-8 max-w-5xl px-2 py-8 text-center text-zinc-400">
-        © 2025 Loja da Jane — feito com amor 💚
-      </footer>
     </main>
   );
 }
+
+// se ainda não tiver esse import no topo do arquivo:
+import PixCopy from "@/components/PixCopy";
