@@ -4,13 +4,10 @@ module.exports = {
     "./app/**/*.{ts,tsx,js,jsx}",
     "./components/**/*.{ts,tsx,js,jsx}",
     "./pages/**/*.{ts,tsx,js,jsx}",
+    "./src/**/*.{ts,tsx,js,jsx}",
   ],
   theme: {
-    container: {
-      center: true,
-      padding: "1rem",
-      screens: { lg: "1024px", xl: "1120px", "2xl": "1120px" },
-    },
+    container: { center: true, padding: "1rem" },
     extend: {},
   },
   plugins: [],
