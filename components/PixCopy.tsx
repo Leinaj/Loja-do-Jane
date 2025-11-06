@@ -3,14 +3,14 @@
 type Props = { pix: string };
 
 export default function PixCopy({ pix }: Props) {
-  const copy = async () => {
+  async function copy() {
     try {
       await navigator.clipboard.writeText(pix);
       alert("Chave PIX copiada!");
     } catch {
       alert("Não foi possível copiar agora.");
     }
-  };
+  }
 
   return (
     <div className="inline-flex items-center gap-3">
