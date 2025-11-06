@@ -13,24 +13,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = products[params.slug];
   if (!p) return {};
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
-
   return {
     title: p.title,
     description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-    openGraph: {
-      type: "product",
-      url: `${base}/produto/${p.slug}`,
-      title: p.title,
-      description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-      images: [{ url: p.image.startsWith("http") ? p.image : `${base}${p.image}`, width: 1200, height: 900, alt: p.title }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: p.title,
-      description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-      images: [p.image.startsWith("http") ? p.image : `${base}${p.image}`],
-    },
   };
 }
 
@@ -38,10 +23,12 @@ export default function ProdutoPage({ params }: Props) {
   const p = products[params.slug];
   if (!p) notFound();
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loja-do-jane.vercel.app";
-  const productUrl = `${base}/produto/${p.slug}`;
-  const waMsg = `Olá! Quero finalizar a compra:%0A- Produto: ${p.title}%0A- Preço: ${formatBRL(p.price)}%0A- Link: ${productUrl}`;
-  const waHref = `https://wa.me/5544988606483?text=${waMsg}`;
+  const msg =
+    `Olá! Quero finalizar a compra:%0A` +
+    `- Produto: ${p.title}%0A` +
+    `- Preço: ${formatBRL(p.price)}%0A` +
+    `- Link: ${typeof window !== "undefined" ? window.location.href : ""}`;
+  const wa = `https://wa.me/5544988606483?text=${msg}`;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -60,21 +47,22 @@ export default function ProdutoPage({ params }: Props) {
 
         <section>
           <h1 className="text-3xl font-bold">{p.title}</h1>
-          <p className="mt-2 text-emerald-400 text-2xl font-semibold">{formatBRL(p.price)}</p>
-
-          {p.description ? <p className="mt-4 text-zinc-300">{p.description}</p> : null}
+          <p className="mt-2 text-emerald-400 text-2xl font-semibold">
+            {formatBRL(p.price)}
+          </p>
+          {p.description ? (
+            <p className="mt-4 text-zinc-300">{p.description}</p>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <a
-              href={waHref}
+              href={wa}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-700/20 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-700/30"
-              aria-label="Finalizar no WhatsApp"
+              className="rounded-xl border border-emerald-600 bg-emerald-700/20 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-700/30"
             >
               Finalizar no WhatsApp
             </a>
-
             <Link
               href="/catalogo"
               className="rounded-xl border border-zinc-700 px-5 py-3 font-medium hover:bg-zinc-900"
