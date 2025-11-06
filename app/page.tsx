@@ -1,165 +1,104 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { PRODUCTS, Product } from "@/lib/products";
-import ProductCard from "@/components/ProductCard";
-import PixCopy from "@/components/PixCopy";
+import { useState } from "react";
 
-type Address = {
-  cep?: string; rua?: string; numero?: string; complemento?: string;
-  bairro?: string; cidade?: string; uf?: string;
-};
+const produtos = [
+  { id: "moletom", nome: "Moletom", preco: 159.9, img: "/images/moletom.jpg" },
+  { id: "bone", nome: "Boné", preco: 59.9, img: "/images/bone.jpg" },
+];
 
-export default function Page() {
-  const [cart, setCart] = useState<Record<string, number>>({});
-  const [addr, setAddr] = useState<Address>({});
-  const pixKey = "44988606483"; // sua chave PIX
+export default function Home() {
+  const [ok, setOk] = useState(false);
 
-  const add = (p: Product) =>
-    setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
-  const inc = (id: string) =>
-    setCart((c) => ({ ...c, [id]: (c[id] ?? 1) + 1 }));
-  const dec = (id: string) =>
-    setCart((c) => {
-      const n = Math.max((c[id] ?? 1) - 1, 0);
-      const { [id]: _, ...rest } = n === 0 ? c : { ...c, [id]: n };
-      return n === 0 ? rest : { ...c, [id]: n };
-    });
-
-  const items = useMemo(
-    () => PRODUCTS.filter(p => cart[p.id]).map(p => ({ p, q: cart[p.id] })),
-    [cart]
-  );
-
-  const total = items.reduce((sum, it) => sum + it.p.price * it.q, 0);
-
-  const msg = useMemo(() => {
-    const linhas = [
-      "🛒 *Pedido Loja da Jane*",
-      ...items.map(it => `• ${it.p.name} x${it.q} — R$ ${((it.p.price*it.q)/100).toFixed(2)}`),
-      `*Total:* R$ ${(total/100).toFixed(2)}`,
-      "",
-      "📦 *Endereço de Entrega*",
-      `CEP: ${addr.cep ?? ""}`,
-      `Rua: ${addr.rua ?? ""}, Nº ${addr.numero ?? ""}`,
-      `Compl.: ${addr.complemento ?? ""}`,
-      `Bairro: ${addr.bairro ?? ""}`,
-      `Cidade/UF: ${addr.cidade ?? ""}/${addr.uf ?? ""}`
-    ];
-    return linhas.join("\n").trim();
-  }, [items, total, addr]);
+  const copiarPix = async () => {
+    await navigator.clipboard.writeText("44988606483");
+    setOk(true);
+    setTimeout(() => setOk(false), 1200);
+  };
 
   return (
-    <div className="space-y-10">
-      {/* HERO */}
-      <section className="hero-wrap">
-        <div className="hero-img">
-          <Image
-            src="/banner.jpg" /* troque por sua imagem */
-            alt="Promoções"
-            width={1600}
-            height={600}
-            priority
-          />
+    <main className="min-h-screen">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+        <div className="container mx-auto max-w-5xl h-14 px-4 flex items-center justify-between">
+          <a href="/" className="font-semibold">Loja da Jane</a>
+          <nav className="hidden sm:flex gap-6 text-sm text-zinc-300">
+            <a href="#catalogo" className="hover:text-white">Catálogo</a>
+            <a href="#contato" className="hover:text-white">Contato</a>
+          </nav>
+          <a href="https://wa.me/5544988606483" className="btn-primary rounded-xl px-4 py-2">
+            WhatsApp
+          </a>
         </div>
-        <div className="mt-4">
-          <h1>iPhone 6 <span className="text-emerald-500">Plus</span></h1>
-          <p className="text-zinc-400">
-            Exemplo de banner. Para trocar, substitua o arquivo <code>/public/banner.jpg</code>.
-          </p>
-          <div className="mt-4 flex gap-3">
-            <a href="#catalogo" className="btn btn-primary">Ver produtos</a>
-            <a href={`https://wa.me/5544988606483?text=${encodeURIComponent("Quero comprar!")}`} target="_blank" className="btn btn-ghost">Finalizar no WhatsApp</a>
-          </div>
+      </header>
+
+      {/* Banner */}
+      <section className="container mx-auto max-w-5xl px-4 mt-6">
+        <div className="relative h-[180px] sm:h-[260px] md:h-[320px] overflow-hidden rounded-2xl">
+          {/* troque o caminho abaixo para o seu banner, ex: /images/banner.jpg */}
+          <Image src="/images/moletom.jpg" alt="Promoções" fill priority className="object-cover" />
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section className="grid sm:grid-cols-3 gap-4">
-        <div className="card"><div className="text-xl">30 dias para troca</div><div className="text-zinc-400">Sem estresse</div></div>
-        <div className="card"><div className="text-xl">Frete grátis*</div><div className="text-zinc-400">Consulte condições</div></div>
-        <div className="card"><div className="text-xl">Pagamentos seguros</div><div className="text-zinc-400">Pix, Cartão</div></div>
-      </section>
-
-      {/* CATÁLOGO */}
-      <section id="catalogo" className="space-y-4">
-        <h2>Produtos</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {PRODUCTS.map(p => (
-            <ProductCard key={p.id} p={p} onAdd={add} />
+      {/* Catálogo */}
+      <section id="catalogo" className="container mx-auto max-w-5xl px-4 py-8">
+        <h1 className="mb-4 text-3xl font-bold">Produtos</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {produtos.map((p) => (
+            <article key={p.id} className="bg-[#121212] rounded-2xl p-4 border border-zinc-800">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl">
+                <Image src={p.img} alt={p.nome} fill className="object-cover" />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">{p.nome}</h2>
+                  <p className="text-emerald-400">R$ {p.preco.toFixed(2)}</p>
+                </div>
+                <a href="#contato" className="rounded-xl px-4 py-2 bg-zinc-900 border border-zinc-800">
+                  Ver
+                </a>
+              </div>
+            </article>
           ))}
         </div>
       </section>
 
-      {/* CARRINHO */}
-      <section className="space-y-3">
-        <h2>Carrinho</h2>
-        {items.length === 0 ? (
-          <div className="card text-zinc-400">Seu carrinho está vazio.</div>
-        ) : (
-          <div className="card space-y-3">
-            {items.map(({ p, q }) => (
-              <div key={p.id} className="flex items-center justify-between">
-                <div>{p.name} <span className="text-zinc-400">— R$ {(p.price/100).toFixed(2)}</span></div>
-                <div className="flex items-center gap-2">
-                  <button className="btn btn-ghost" onClick={() => dec(p.id)}>-</button>
-                  <div className="w-8 text-center">{q}</div>
-                  <button className="btn btn-ghost" onClick={() => inc(p.id)}>+</button>
-                </div>
-              </div>
-            ))}
-            <div className="pt-2 flex justify-between border-t border-zinc-800">
-              <div className="font-semibold">Total:</div>
-              <div className="font-bold text-emerald-400">R$ {(total/100).toFixed(2)}</div>
-            </div>
-          </div>
-        )}
-      </section>
+      {/* Contato / PIX */}
+      <section id="contato" className="container mx-auto max-w-5xl px-4 pb-16">
+        <h2 className="mb-4 text-2xl font-bold">Pagamento & Contato</h2>
+        <div className="bg-[#121212] rounded-2xl p-5 border border-zinc-800">
+          <p className="text-sm text-zinc-400">WhatsApp</p>
+          <a
+            className="inline-block underline underline-offset-4 text-emerald-400"
+            href="https://wa.me/5544988606483"
+          >
+            +55 (44) 98860-6483
+          </a>
 
-      {/* ENDEREÇO */}
-      <section className="space-y-3">
-        <h2>Endereço de Entrega</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <input placeholder="CEP" className="card" onChange={e=>setAddr(a=>({...a,cep:e.target.value}))} />
-          <input placeholder="Rua" className="card" onChange={e=>setAddr(a=>({...a,rua:e.target.value}))} />
-          <input placeholder="Número" className="card" onChange={e=>setAddr(a=>({...a,numero:e.target.value}))} />
-          <input placeholder="Complemento" className="card" onChange={e=>setAddr(a=>({...a,complemento:e.target.value}))} />
-          <input placeholder="Bairro" className="card" onChange={e=>setAddr(a=>({...a,bairro:e.target.value}))} />
-          <input placeholder="Cidade" className="card" onChange={e=>setAddr(a=>({...a,cidade:e.target.value}))} />
-          <input placeholder="UF" className="card" onChange={e=>setAddr(a=>({...a,uf:e.target.value}))} />
-        </div>
-      </section>
-
-      {/* CONTATO & PIX */}
-      <section id="contato" className="space-y-4">
-        <h2>Pagamento & Contato</h2>
-        <div className="card space-y-4">
-          <div>
-            <div className="text-zinc-400">WhatsApp</div>
-            <a className="text-emerald-400 underline" target="_blank" href="https://wa.me/5544988606483">
-              +55 (44) 98860-6483
-            </a>
+          <div className="mt-4 flex flex-col sm:flex-row gap-3">
+            <input
+              readOnly
+              value="44988606483"
+              className="w-full sm:w-64 bg-zinc-900 rounded-xl px-4 py-2 border border-zinc-800"
+            />
+            <button onClick={copiarPix} className="rounded-xl px-4 py-2 bg-emerald-600 hover:bg-emerald-500">
+              {ok ? "Copiada!" : "Copiar chave"}
+            </button>
           </div>
 
-          <div>
-            <div className="text-zinc-400 mb-2">Chave PIX</div>
-            <PixCopy pix={pixKey} />
-          </div>
-
-          <p className="text-zinc-400">
+          <p className="mt-4 text-sm text-zinc-400">
             Aceitamos PIX e Cartão. Entregas/retirada combinadas no WhatsApp.
           </p>
-
-          <a
-            className="btn btn-primary w-full sm:w-auto"
-            target="_blank"
-            href={`https://wa.me/5544988606483?text=${encodeURIComponent(msg)}`}
-          >
-            Finalizar no WhatsApp
-          </a>
         </div>
       </section>
-    </div>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-800">
+        <div className="container mx-auto max-w-5xl px-4 py-6 text-center text-zinc-400">
+          © 2025 Loja da Jane — feito com amor 💚
+        </div>
+      </footer>
+    </main>
   );
 }
