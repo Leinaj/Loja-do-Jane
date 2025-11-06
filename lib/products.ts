@@ -3,7 +3,7 @@ export type Product = {
   slug: string;
   title: string;
   price: number;
-  image: string;        // caminho relativo a /public
+  image: string;      // caminho relativo a /public
   description?: string;
 };
 
