@@ -30,26 +30,19 @@ export default function CheckoutPage() {
     state: "",
   });
 
-  // Auto-preenche endereço quando CEP tem 8 dígitos
+  // Auto-preencher via CEP (ViaCEP)
   useEffect(() => {
-    const digits = (address.cep || "").replace(/\D/g, "");
+    const digits = address.cep.replace(/\D/g, "");
     if (digits.length !== 8) return;
 
     const controller = new AbortController();
-
     (async () => {
       try {
-        const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`, {
+        const r = await fetch(`https://viacep.com.br/ws/${digits}/json/`, {
           signal: controller.signal,
         });
-        const data = (await resp.json()) as {
-          logradouro?: string;
-          localidade?: string;
-          uf?: string;
-          erro?: boolean;
-        };
-
-        if (!data.erro) {
+        const data = await r.json();
+        if (!data?.erro) {
           setAddress((prev) => ({
             ...prev,
             street: data.logradouro ?? prev.street,
@@ -58,32 +51,29 @@ export default function CheckoutPage() {
           }));
         }
       } catch {
-        // ignore (usuário pode digitar outro CEP)
+        /* ignore */
       }
     })();
 
     return () => controller.abort();
   }, [address.cep]);
 
-  const handleChange =
-    (field: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setAddress((prev) => ({ ...prev, [field]: e.target.value }));
-    };
+  const onChange =
+    (field: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setAddress((p) => ({ ...p, [field]: e.target.value }));
 
-  const handleFinish = (e: React.FormEvent) => {
+  const onFinish = (e: React.FormEvent) => {
     e.preventDefault();
-    // Aqui só mostramos os dados. Depois você integra pagamento/WhatsApp/PIX.
     alert(
       [
         "Pedido enviado! ✅",
-        "",
         `Nome: ${address.name}`,
         `Telefone: ${address.phone}`,
         `CEP: ${address.cep}`,
         `Endereço: ${address.street}, ${address.number} (${address.complement})`,
         `Cidade/UF: ${address.city}/${address.state}`,
         "",
-        `Itens:`,
+        "Itens:",
         ...items.map(
           (it) =>
             `- ${it.product.title} x${it.quantity} = ${priceBRL(
@@ -114,12 +104,12 @@ export default function CheckoutPage() {
       <section className="bg-zinc-900/60 rounded-2xl p-6 shadow">
         <h2 className="text-2xl font-semibold mb-4">Dados para entrega</h2>
 
-        <form onSubmit={handleFinish} className="space-y-4">
+        <form onSubmit={onFinish} className="space-y-4">
           <input
             className="w-full rounded-xl bg-zinc-800 px-4 py-3 outline-none"
             placeholder="Nome completo"
             value={address.name}
-            onChange={handleChange("name")}
+            onChange={onChange("name")}
             required
           />
 
@@ -128,14 +118,14 @@ export default function CheckoutPage() {
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="Telefone (WhatsApp)"
               value={address.phone}
-              onChange={handleChange("phone")}
+              onChange={onChange("phone")}
               required
             />
             <input
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="CEP"
               value={address.cep}
-              onChange={handleChange("cep")}
+              onChange={onChange("cep")}
               inputMode="numeric"
               pattern="\d{5}-?\d{3}"
               required
@@ -146,7 +136,7 @@ export default function CheckoutPage() {
             className="w-full rounded-xl bg-zinc-800 px-4 py-3 outline-none"
             placeholder="Endereço"
             value={address.street}
-            onChange={handleChange("street")}
+            onChange={onChange("street")}
             required
           />
 
@@ -155,14 +145,14 @@ export default function CheckoutPage() {
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="Número"
               value={address.number}
-              onChange={handleChange("number")}
+              onChange={onChange("number")}
               required
             />
             <input
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="Complemento"
               value={address.complement}
-              onChange={handleChange("complement")}
+              onChange={onChange("complement")}
             />
           </div>
 
@@ -171,14 +161,14 @@ export default function CheckoutPage() {
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="Cidade"
               value={address.city}
-              onChange={handleChange("city")}
+              onChange={onChange("city")}
               required
             />
             <input
               className="rounded-xl bg-zinc-800 px-4 py-3 outline-none"
               placeholder="Estado"
               value={address.state}
-              onChange={handleChange("state")}
+              onChange={onChange("state")}
               required
             />
           </div>
@@ -207,4 +197,30 @@ export default function CheckoutPage() {
             {items.map((it) => (
               <div
                 key={it.product.slug}
-                className="flex items-center justify-between bg
+                className="flex items-center justify-between bg-zinc-800 rounded-xl p-4"
+              >
+                <div>
+                  <p className="font-medium">{it.product.title}</p>
+                  <p className="text-zinc-400 text-sm">
+                    {it.quantity} × {priceBRL(it.product.price)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => remove(it.product.slug)}
+                  className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm"
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+
+            <div className="text-right mt-2">
+              <div className="text-sm text-zinc-400">Total do carrinho:</div>
+              <div className="text-2xl font-semibold">{priceBRL(total())}</div>
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
