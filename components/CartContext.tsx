@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Product } from "@/lib/products";
 
 type CartItem = { product: Product; qty: number };
@@ -18,6 +18,21 @@ const CartContext = createContext<CartContextType | null>(null);
 
 export default function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Carrega do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("cart:v1");
+      if (raw) setItems(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // Salva no localStorage a cada mudança
+  useEffect(() => {
+    try {
+      localStorage.setItem("cart:v1", JSON.stringify(items));
+    } catch {}
+  }, [items]);
 
   const add: CartContextType["add"] = (product, qty = 1) => {
     setItems((prev) => {
