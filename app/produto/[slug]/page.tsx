@@ -1,69 +1,63 @@
+// app/produto/[slug]/page.tsx
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { products } from "@/lib/products";
+import { products, getProductBySlug, priceBRL } from "@/lib/products";
 import AddToCart from "./parts/AddToCart";
 
-type PageProps = {
-  params: { slug: string };
-};
+type PageProps = { params: { slug: string } };
 
-// Normaliza qualquer formato vindo do products para o formato esperado pelo app
-function normalizeProduct(p: any) {
+export async function generateStaticParams() {
+  // Diz ao Next quais páginas de produto devem ser geradas na build
+  return products.map(p => ({ slug: p.slug }));
+}
+
+// (Opcional) Metadata básica por página
+export async function generateMetadata({ params }: PageProps) {
+  const product = getProductBySlug(params.slug);
+  if (!product) return { title: "Produto não encontrado" };
   return {
-    id: String(p.id ?? p.slug ?? p.sku ?? "0"),
-    name: String(p.name ?? p.title ?? "Produto"),
-    price: Number(p.price ?? 0),
-    slug: String(p.slug ?? p.id ?? "produto"),
-    image: String(p.image ?? p.img ?? p.photo ?? "/placeholder.png"),
-    description: String(p.description ?? p.desc ?? ""),
+    title: `${product.name} | Loja da Jane`,
+    description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: [{ url: product.image }]
+    }
   };
 }
 
 export default function ProductPage({ params }: PageProps) {
-  const raw = products.find((p: any) => String(p.slug) === String(params.slug));
-  if (!raw) return notFound();
-
-  // Agora usamos sempre o mesmo formato tipado
-  const prod = normalizeProduct(raw);
+  const product = getProductBySlug(params.slug);
+  if (!product) return notFound();
 
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row gap-6">
-        <div className="w-full sm:w-1/2">
+    <main className="max-w-4xl mx-auto px-4 py-8">
+      <header className="flex items-center justify-between mb-6">
+        <Link href="/" className="btn btn-ghost">Loja da Jane</Link>
+        <Link href="/checkout" className="btn">Checkout</Link>
+      </header>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
           <Image
-            src={prod.image}
-            alt={prod.name}
-            width={600}
-            height={600}
-            className="rounded-lg object-cover"
+            src={product.image}
+            alt={product.name}
+            width={800}
+            height={800}
+            className="rounded-xl w-full h-auto object-cover"
+            priority
           />
         </div>
 
-        <div className="flex-1 space-y-4">
-          <h1 className="text-2xl font-bold">{prod.name}</h1>
+        <div>
+          <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
+          <p className="text-lg text-muted-foreground">{priceBRL(product.price)}</p>
+          <p className="mt-4 text-sm leading-relaxed">{product.description}</p>
 
-          {prod.description && (
-            <p className="text-lg opacity-80">{prod.description}</p>
-          )}
-
-          <p className="text-xl font-semibold text-green-500">
-            {(prod.price / 100).toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-          </p>
-
-          <div className="pt-4">
-            {/* Passamos exatamente o que o AddToCart espera */}
-            <AddToCart
-              product={{
-                id: prod.id,
-                name: prod.name,
-                price: prod.price,
-                slug: prod.slug,
-                image: prod.image,
-              }}
-            />
+          <div className="mt-6 flex gap-3">
+            <AddToCart product={product} />
+            <Link href="/" className="btn btn-outline">Voltar</Link>
           </div>
         </div>
       </div>
