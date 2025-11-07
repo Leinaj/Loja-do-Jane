@@ -2,22 +2,23 @@
 
 import { useCart } from "@/components/CartContext";
 
-// Tipagem direta e tolerante, pra evitar erro de compilação
-type Product = {
-  id?: string | number;
-  slug: string;
-  name: string;
-  price: number;
-  image?: string;
+type AddToCartProps = {
+  product: {
+    id?: string | number;
+    slug: string;
+    name: string;
+    price: number;
+    image?: string;
+  };
 };
 
-export default function AddToCart({ product }: { product: Product }) {
+export default function AddToCart({ product }: AddToCartProps) {
   const { add } = useCart();
 
   const handleAdd = () => {
-    // Garante que sempre haverá um id (mesmo se faltar no objeto original)
+    // força o id a ser string (usa o slug como fallback)
     const safeProduct = {
-      id: product.id ?? product.slug,
+      id: String(product.id ?? product.slug),
       name: product.name,
       price: product.price,
       slug: product.slug,
