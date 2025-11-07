@@ -1,45 +1,54 @@
-// app/produto/[slug]/page.tsx
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { products } from "@/lib/products";
 import AddToCart from "./parts/AddToCart";
-import { getProductBySlug, priceBRL, type Product } from "@/lib/products";
 
-type PageProps = {
-  params: { slug: string };
+type Props = {
+  params: {
+    slug: string;
+  };
 };
 
-export default function ProductPage({ params }: PageProps) {
-  const product = getProductBySlug(params.slug);
+export default function ProductPage({ params }: Props) {
+  const product = products.find((p) => p.slug === params.slug);
 
   if (!product) return notFound();
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8">
-      <header className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">{product.title}</h1>
-        <a href="/" className="text-sm underline opacity-80 hover:opacity-100">
-          Loja da Jane
-        </a>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="rounded-2xl overflow-hidden bg-neutral-900">
+    <main className="max-w-3xl mx-auto p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row gap-6">
+        <div className="w-full sm:w-1/2">
           <Image
-            src={product.image}
-            alt={product.title}
-            width={900}
-            height={700}
-            className="w-full h-auto object-cover"
-            priority
+            src={product.image || "/placeholder.png"}
+            alt={product.name}
+            width={600}
+            height={600}
+            className="rounded-lg object-cover"
           />
         </div>
 
-        <div className="space-y-4">
-          <p className="text-3xl font-bold">{priceBRL(product.price)}</p>
-          <p className="opacity-80">{product.description}</p>
+        <div className="flex-1 space-y-4">
+          <h1 className="text-2xl font-bold">{product.name}</h1>
+          <p className="text-lg opacity-80">{product.description}</p>
+
+          <p className="text-xl font-semibold text-green-500">
+            {(product.price / 100).toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}
+          </p>
 
           <div className="pt-4">
-            <AddToCart product={product as Product} />
+            {/* Aqui o segredo: passamos explicitamente apenas o que o AddToCart precisa */}
+            <AddToCart
+              product={{
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                slug: product.slug,
+                image: product.image,
+              }}
+            />
           </div>
         </div>
       </div>
