@@ -1,21 +1,25 @@
+// components/CartContext.tsx
 "use client";
 
 import React, { createContext, useContext, useMemo, useState } from "react";
-import type { Product } from "@/lib/products";
 
-// Cada item do carrinho
-export type CartItem = {
-  product: Product;
-  quantity: number;
+export type Product = {
+  id: string;
+  slug: string;
+  name: string;
+  price: number; // em centavos
+  image: string;
 };
+
+export type CartItem = Product & { qty: number };
 
 type CartContextType = {
   items: CartItem[];
-  add: (product: Product, quantity?: number) => void;
-  remove: (slug: string) => void;
+  add: (p: Product, qty?: number) => void;
+  remove: (id: string) => void;
   clear: () => void;
-  count: () => number;
-  total: () => number;
+  getCartCount: () => number;
+  getCartTotal: () => number; // em centavos
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -23,35 +27,32 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const add = (product: Product, quantity = 1) => {
+  const add: CartContextType["add"] = (p, qty = 1) => {
     setItems((prev) => {
-      // >>> usamos o slug como identificador único
-      const i = prev.findIndex((it) => it.product.slug === product.slug);
+      const i = prev.findIndex((it) => it.id === p.id);
       if (i >= 0) {
         const clone = [...prev];
-        clone[i] = {
-          ...clone[i],
-          quantity: clone[i].quantity + quantity,
-        };
+        clone[i] = { ...clone[i], qty: clone[i].qty + qty };
         return clone;
       }
-      return [...prev, { product, quantity }];
+      return [...prev, { ...p, qty }];
     });
   };
 
-  const remove = (slug: string) => {
-    setItems((prev) => prev.filter((it) => it.product.slug !== slug));
+  const remove: CartContextType["remove"] = (id) => {
+    setItems((prev) => prev.filter((it) => it.id !== id));
   };
 
   const clear = () => setItems([]);
 
-  const count = () => items.reduce((acc, it) => acc + it.quantity, 0);
+  const getCartCount = () =>
+    items.reduce((sum, it) => sum + it.qty, 0);
 
-  const total = () =>
-    items.reduce((acc, it) => acc + it.product.price * it.quantity, 0);
+  const getCartTotal = () =>
+    items.reduce((sum, it) => sum + it.price * it.qty, 0);
 
   const value = useMemo(
-    () => ({ items, add, remove, clear, count, total }),
+    () => ({ items, add, remove, clear, getCartCount, getCartTotal }),
     [items]
   );
 
@@ -60,8 +61,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error("useCart deve ser usado dentro de <CartProvider>");
-  }
+  if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
