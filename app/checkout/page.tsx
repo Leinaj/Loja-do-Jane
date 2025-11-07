@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/components/CartContext";
 import { priceBRL } from "@/lib/products";
 
@@ -15,6 +15,8 @@ type Address = {
   city: string;
   state: string;
 };
+
+const REQUIRED: (keyof Address)[] = ["name", "phone", "cep", "street", "number", "city", "state"];
 
 export default function CheckoutPage() {
   const { items, remove, clear, getCartTotal } = useCart();
@@ -33,12 +35,12 @@ export default function CheckoutPage() {
 
   // Autopreencher via CEP (8 dígitos)
   useEffect(() => {
-    const cep = address.cep.replace(/\D/g, "");
-    if (cep.length !== 8) return;
+    const digits = address.cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
 
     (async () => {
       try {
-        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
         const data = await res.json();
         if (!data.erro) {
           setAddress((prev) => ({
@@ -48,21 +50,63 @@ export default function CheckoutPage() {
             state: data.uf || prev.state
           }));
         }
-      } catch {
-        // Silencia; usuário pode digitar manual
-      }
+      } catch {}
     })();
   }, [address.cep]);
 
-  const onChange = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setAddress((prev) => ({ ...prev, [k]: e.target.value }));
+  const onChange =
+    (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setAddress((prev) => ({ ...prev, [k]: e.target.value }));
+
+  const cartLines = useMemo(
+    () =>
+      items
+        .map(({ product, qty }) => `• ${product.name} — ${qty} × ${priceBRL(product.price)}`)
+        .join("\n"),
+    [items]
+  );
+
+  const validar = () => {
+    if (!items.length) {
+      alert("Seu carrinho está vazio.");
+      return false;
+    }
+    const faltando = REQUIRED.filter((k) => !String(address[k]).trim());
+    if (faltando.length) {
+      alert("Preencha os campos obrigatórios: " + faltando.join(", "));
+      return false;
+    }
+    return true;
+  };
 
   const finish = () => {
-    if (!items.length) return alert("Seu carrinho está vazio.");
-    alert(
-      `Pedido recebido!\nCliente: ${address.name}\nTotal: ${priceBRL(total)}\nEntrega: ${address.street}, ${address.number} - ${address.city}/${address.state}`
-    );
-    clear();
+    if (!validar()) return;
+
+    const msg =
+      `*Novo Pedido*\n` +
+      `Cliente: ${address.name}\n` +
+      `Telefone: ${address.phone}\n` +
+      `CEP: ${address.cep}\n` +
+      `Endereço: ${address.street}, ${address.number} ${address.comp ? "- " + address.comp : ""}\n` +
+      `Cidade/UF: ${address.city}/${address.state}\n\n` +
+      `*Itens:*\n${cartLines}\n\n` +
+      `*Total:* ${priceBRL(total)}\n` +
+      `———\nEnviado pela Loja da Jane`;
+
+    const url = `https://wa.me/5544988606483?text=${encodeURIComponent(msg)}`;
+
+    const abrir = confirm("Abrir o WhatsApp para enviar o pedido?");
+    if (!abrir) return;
+
+    // Abre o WhatsApp em uma nova aba
+    window.open(url, "_blank");
+
+    // Só limpa o carrinho quando o usuário confirmar que enviou
+    const enviado = confirm("Depois de enviar no WhatsApp, clique em OK para limpar o carrinho.");
+    if (enviado) {
+      clear();
+      alert("Pedido finalizado! Obrigado ❤️");
+    }
   };
 
   return (
@@ -71,21 +115,21 @@ export default function CheckoutPage() {
         <h2 className="h2">Dados para entrega</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          <input className="input sm:col-span-2" placeholder="Nome completo" value={address.name} onChange={onChange("name")} />
-          <input className="input" placeholder="Telefone (WhatsApp)" value={address.phone} onChange={onChange("phone")} />
-          <input className="input" placeholder="CEP" value={address.cep} onChange={onChange("cep")} />
-          <input className="input sm:col-span-2" placeholder="Endereço" value={address.street} onChange={onChange("street")} />
-          <input className="input" placeholder="Número" value={address.number} onChange={onChange("number")} />
+          <input className="input sm:col-span-2" placeholder="Nome completo *" value={address.name} onChange={onChange("name")} />
+          <input className="input" placeholder="Telefone (WhatsApp) *" value={address.phone} onChange={onChange("phone")} />
+          <input className="input" placeholder="CEP *" value={address.cep} onChange={onChange("cep")} />
+          <input className="input sm:col-span-2" placeholder="Endereço *" value={address.street} onChange={onChange("street")} />
+          <input className="input" placeholder="Número *" value={address.number} onChange={onChange("number")} />
           <input className="input" placeholder="Complemento" value={address.comp} onChange={onChange("comp")} />
-          <input className="input" placeholder="Cidade" value={address.city} onChange={onChange("city")} />
-          <input className="input" placeholder="Estado" value={address.state} onChange={onChange("state")} />
+          <input className="input" placeholder="Cidade *" value={address.city} onChange={onChange("city")} />
+          <input className="input" placeholder="Estado *" value={address.state} onChange={onChange("state")} />
         </div>
 
         <p className="text-sm text-zinc-400 mt-4">
-          Ao finalizar, os dados são mostrados e o carrinho é limpo. Depois integramos pagamento/PIX/WhatsApp.
+          Os campos com * são obrigatórios. O CEP preenche automaticamente rua/cidade/UF.
         </p>
 
-        <button className="btn w-full mt-4" onClick={finish}>Finalizar pedido</button>
+        <button className="btn w-full mt-4" onClick={finish}>Enviar pedido pelo WhatsApp</button>
       </section>
 
       <section className="rounded-2xl border border-zinc-800 p-4">
