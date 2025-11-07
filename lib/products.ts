@@ -1,48 +1,50 @@
 // lib/products.ts
-
 export type Product = {
   slug: string;
-  title: string;
-  price: number; // em centavos? -> aqui é em reais (número normal)
-  image: string; // caminho dentro de /public
+  name: string;
+  price: number; // em centavos
+  image: string; // caminho em /public
   description: string;
 };
 
 export const products: Product[] = [
   {
-    slug: "moletom-cinza",
-    title: "Moletom Cinza",
-    price: 159.9,
+    slug: "moletom",
+    name: "Moletom Cinza",
+    price: 15990,
     image: "/moletom.jpg",
-    description: "Moletom confortável para o dia a dia.",
+    description: "Moletom felpado cinza, confortável para o dia a dia."
   },
   {
-    slug: "bone-street",
-    title: "Boné Street",
-    price: 59.9,
+    slug: "bone",
+    name: "Boné Street",
+    price: 7990,
     image: "/bone.jpg",
-    description: "Boné casual com ajuste traseiro.",
+    description: "Boné estilo street, aba curva e regulador traseiro."
   },
   {
     slug: "camiseta-preta",
-    title: "Camiseta Preta",
-    price: 49.9,
+    name: "Camiseta Preta",
+    price: 4990,
     image: "/camiseta-preta.jpg",
-    description: "Camiseta 100% algodão, corte clássico.",
+    description: "Camiseta 100% algodão, malha penteada."
   },
   {
     slug: "camiseta-branca",
-    title: "Camiseta Branca",
-    price: 49.9,
+    name: "Camiseta Branca",
+    price: 4990,
     image: "/camiseta-branca.jpg",
-    description: "Camiseta 100% algodão, super macia.",
-  },
+    description: "Clássica e versátil, 100% algodão."
+  }
 ];
 
-// Formata número em BRL (R$ 0,00)
-export const priceBRL = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export function getProductBySlug(slug: string): Product | undefined {
+  return products.find(p => p.slug === slug);
+}
 
-// Busca de produto por slug
-export const getProductBySlug = (slug: string) =>
-  products.find((p) => p.slug === slug);
+export function priceBRL(valueInCents: number): string {
+  return (valueInCents / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
