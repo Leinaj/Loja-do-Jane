@@ -1,58 +1,71 @@
-// components/CartContext.tsx
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-export type Product = {
+type CartItem = {
   id: string;
-  slug: string;
   name: string;
-  price: number; // em centavos
-  image: string;
+  price: number;
+  slug: string;
+  image?: string;
+  qty: number;
 };
 
-export type CartItem = Product & { qty: number };
-
-type CartContextType = {
+type CartContextValue = {
   items: CartItem[];
-  add: (p: Product, qty?: number) => void;
+  add: (product: Omit<CartItem, "qty">, qty?: number) => void;
   remove: (id: string) => void;
   clear: () => void;
   getCartCount: () => number;
-  getCartTotal: () => number; // em centavos
+  total: () => number;
 };
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const add: CartContextType["add"] = (p, qty = 1) => {
+  // carrega do localStorage no cliente
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("cart");
+      if (saved) setItems(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // persiste alterações
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("cart", JSON.stringify(items));
+    } catch {}
+  }, [items]);
+
+  const add: CartContextValue["add"] = (product, qty = 1) => {
     setItems((prev) => {
-      const i = prev.findIndex((it) => it.id === p.id);
+      const i = prev.findIndex((p) => p.id === product.id);
       if (i >= 0) {
         const clone = [...prev];
         clone[i] = { ...clone[i], qty: clone[i].qty + qty };
         return clone;
-      }
-      return [...prev, { ...p, qty }];
+        }
+      return [...prev, { ...product, qty }];
     });
   };
 
-  const remove: CartContextType["remove"] = (id) => {
-    setItems((prev) => prev.filter((it) => it.id !== id));
+  const remove = (id: string) => {
+    setItems((prev) => prev.filter((p) => p.id !== id));
   };
 
   const clear = () => setItems([]);
 
-  const getCartCount = () =>
-    items.reduce((sum, it) => sum + it.qty, 0);
+  const getCartCount = () => items.reduce((sum, i) => sum + i.qty, 0);
 
-  const getCartTotal = () =>
-    items.reduce((sum, it) => sum + it.price * it.qty, 0);
+  const total = () => items.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   const value = useMemo(
-    () => ({ items, add, remove, clear, getCartCount, getCartTotal }),
+    () => ({ items, add, remove, clear, getCartCount, total }),
     [items]
   );
 
@@ -61,6 +74,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used within CartProvider");
+  if (!ctx) throw new Error("useCart deve ser usado dentro do CartProvider");
   return ctx;
 }
