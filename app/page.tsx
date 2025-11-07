@@ -12,7 +12,7 @@ export default function HomePage() {
         <nav className="flex items-center gap-3">
           <Link
             href="/checkout"
-            className="bg-emerald-500 hover:bg-emerald-600 transition rounded-xl px-4 py-2 font-semibold"
+            className="bg-emerald-500 hover:bg-emerald-600 transition rounded-xl px-4 py-2 font-semibold text-black"
           >
             Checkout
           </Link>
@@ -31,13 +31,12 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((p) => (
-            // >>> IMPORTANTE: usar p.slug, não p.id
+            // use a chave existente: slug
             <ProductCard key={p.slug} product={p} />
           ))}
         </div>
       </section>
 
-      {/* Rodapé simples */}
       <footer className="text-center opacity-70 mt-10">
         © {new Date().getFullYear()} Loja da Jane — feito com amor 💚
       </footer>
