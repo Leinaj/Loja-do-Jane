@@ -23,7 +23,7 @@ export default function Header() {
         </Link>
 
         <Link className="btn" href="/carrinho">
-          Carrinho ({getCartCount()})
+          Carrinho • {getCartCount()}
         </Link>
       </nav>
     </header>
