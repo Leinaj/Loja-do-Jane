@@ -1,72 +1,79 @@
-// app/produto/[slug]/page.tsx
-import Image from "next/image";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import { products, formatBRL } from "@/lib/products";
-import { site } from "@/lib/site";
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
+import { products } from '@/lib/products';
 
-type Props = { params: { slug: string } };
-
-export async function generateStaticParams() {
-  return Object.values(products).map((p) => ({ slug: p.slug }));
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = products[params.slug];
-  if (!p) return {};
-  const base = site.url;
-  const og = p.image.startsWith("http") ? p.image : `${base}${p.image}`;
-  return {
-    title: p.title,
-    description: p.description ?? `Compre ${p.title} por ${formatBRL(p.price)}.`,
-    openGraph: { images: [{ url: og, width: 1200, height: 900, alt: p.title }] },
+export function generateStaticParams() {
+  return (products ?? []).map((p: any) => ({ slug: p.slug ?? slugify(p.name) }));
+}
+
+function AddToCartButton({ item }: { item: any }) {
+  'use client';
+  const onClick = () => {
+    try {
+      const cartRaw = window.localStorage.getItem('cart');
+      const cart = cartRaw ? JSON.parse(cartRaw) : [];
+      cart.push({ ...item, qty: 1, slug: item.slug ?? slugify(item.name) });
+      window.localStorage.setItem('cart', JSON.stringify(cart));
+      alert('Adicionado ao carrinho ✅');
+    } catch {}
   };
+  return (
+    <button onClick={onClick} className="btn btn-primary">
+      Adicionar ao carrinho
+    </button>
+  );
 }
 
-export default function ProdutoPage({ params }: Props) {
-  const p = products[params.slug];
-  if (!p) notFound();
-
-  const productUrl = `${site.url}/produto/${p.slug}`;
-  const waMsg = `Olá! Quero finalizar a compra:%0A- Produto: ${p.title}%0A- Preço: ${formatBRL(p.price)}%0A- Link: ${productUrl}`;
-  const waHref = `https://wa.me/${site.whatsapp}?text=${waMsg}`;
+export default function ProductPage({ params }: { params: { slug: string } }) {
+  const list = (products ?? []).map((p: any) => ({
+    ...p,
+    slug: p.slug ?? slugify(p.name),
+  }));
+  const item = list.find((p: any) => p.slug === params.slug);
+  if (!item) return notFound();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-zinc-800">
-          <Image
-            src={p.image}
-            alt={p.title}
-            width={1200}
-            height={900}
-            sizes="(max-width: 640px) 100vw, 600px"
-            className="aspect-[4/3] h-auto w-full object-cover"
-            priority
-          />
-        </div>
-
-        <section>
-          <h1 className="text-3xl font-bold">{p.title}</h1>
-          <p className="mt-2 text-emerald-400 text-2xl font-semibold">{formatBRL(p.price)}</p>
-          {p.description ? <p className="mt-4 text-zinc-300">{p.description}</p> : null}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded border border-emerald-600 px-5 py-3 font-semibold text-emerald-400 hover:bg-emerald-900/20"
-            >
-              Finalizar no WhatsApp
-            </a>
-            <Link href="/catalogo" className="rounded border border-zinc-700 px-5 py-3 hover:bg-zinc-900">
-              Voltar ao Catálogo
-            </Link>
-          </div>
-        </section>
+    <div className="container mx-auto max-w-4xl p-4">
+      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl bg-zinc-900">
+        <Image
+          src={item.image}
+          alt={item.name}
+          fill
+          className="object-cover"
+          sizes="100vw"
+        />
       </div>
-    </main>
+
+      <h1 className="mt-6 text-3xl font-extrabold">{item.name}</h1>
+      <p className="mt-1 text-zinc-400">R$ {item.price.toFixed(2)}</p>
+      {item.description ? (
+        <p className="mt-2 text-zinc-300">{item.description}</p>
+      ) : null}
+
+      <div className="mt-4 flex gap-2">
+        <AddToCartButton item={item} />
+        <a href="/#produtos" className="btn btn-ghost">Voltar</a>
+      </div>
+
+      <hr className="my-6 border-zinc-800" />
+      <section>
+        <h2 className="text-2xl font-bold">Pagamento & Contato</h2>
+        <p className="mt-2 text-zinc-300">
+          WhatsApp:&nbsp;
+          <a className="underline" href="https://wa.me/5544988606483">
+            +55 (44) 98860-6483
+          </a>
+        </p>
+        <p className="mt-1 text-zinc-300">PIX: 44988606483</p>
+      </section>
+    </div>
   );
 }
