@@ -1,40 +1,34 @@
-"use client";
-
+// components/ProductCard.tsx
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/lib/products";
+import { priceBRL } from "@/lib/products";
 
-type Props = {
-  product: Product;
-};
-
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product }: { product: Product }) {
   return (
-    <article className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden hover:border-emerald-500/60 transition">
-      <div className="relative aspect-[16/10]">
-        {/* Usamos next/image com as imagens do /public */}
+    <article className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+      <div className="aspect-[16/10] w-full bg-neutral-900">
         <Image
-          src={`/${product.image}`}
-          alt={product.name}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority={false}
+          src={product.image}
+          alt={product.title}
+          width={1200}
+          height={750}
+          className="w-full h-full object-cover"
         />
       </div>
 
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-        <p className="text-zinc-400 mt-1">R$ {product.price.toFixed(2)}</p>
-
-        <div className="mt-4">
-          <Link
-            href={`/produto/${product.slug}`}
-            className="inline-flex items-center justify-center rounded-xl px-4 py-2 bg-emerald-500 hover:bg-emerald-600 font-medium text-black"
-          >
-            Ver produto
-          </Link>
+      <div className="p-4 flex items-center justify-between gap-4">
+        <div>
+          <h3 className="font-semibold">{product.title}</h3>
+          <p className="opacity-80">{priceBRL(product.price)}</p>
         </div>
+
+        <Link
+          href={`/produto/${product.slug}`}
+          className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-medium hover:brightness-110"
+        >
+          Ver produto
+        </Link>
       </div>
     </article>
   );
