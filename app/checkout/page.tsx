@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { priceBRL } from "@/lib/products";
 import { useCart } from "@/components/CartContext";
+import { priceBRL } from "@/lib/products";
 
 type Address = {
   name: string;
@@ -11,13 +11,14 @@ type Address = {
   cep: string;
   street: string;
   number: string;
-  complement: string;
+  comp: string;
   city: string;
   state: string;
 };
 
 export default function CheckoutPage() {
-  const { items, remove, clear, total } = useCart();
+  const { items, remove, clear, getCartTotal } = useCart();
+  const total = getCartTotal();
 
   const [address, setAddress] = useState<Address>({
     name: "",
@@ -25,189 +26,96 @@ export default function CheckoutPage() {
     cep: "",
     street: "",
     number: "",
-    complement: "",
+    comp: "",
     city: "",
-    state: "",
+    state: ""
   });
 
-  // auto-preenche endereço pelo CEP (ViaCEP)
+  // Autopreencher via CEP (8 dígitos)
   useEffect(() => {
-    const onlyDigits = address.cep.replace(/\D/g, "");
-    if (onlyDigits.length !== 8) return;
+    const cep = address.cep.replace(/\D/g, "");
+    if (cep.length !== 8) return;
 
-    const fetchCep = async () => {
+    (async () => {
       try {
-        const res = await fetch(`https://viacep.com.br/ws/${onlyDigits}/json/`);
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await res.json();
-
         if (!data.erro) {
           setAddress((prev) => ({
             ...prev,
             street: data.logradouro || prev.street,
             city: data.localidade || prev.city,
-            state: data.uf || prev.state,
+            state: data.uf || prev.state
           }));
         }
       } catch {
-        // silencioso – se der erro, o usuário pode digitar manualmente
+        // Silencia; usuário pode digitar manual
       }
-    };
-
-    fetchCep();
+    })();
   }, [address.cep]);
 
-  const onChange =
-    (key: keyof Address) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setAddress((prev) => ({ ...prev, [key]: e.target.value }));
-    };
+  const onChange = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setAddress((prev) => ({ ...prev, [k]: e.target.value }));
 
-  const hasItems = items.length > 0;
+  const finish = () => {
+    if (!items.length) return alert("Seu carrinho está vazio.");
+    alert(
+      `Pedido recebido!\nCliente: ${address.name}\nTotal: ${priceBRL(total)}\nEntrega: ${address.street}, ${address.number} - ${address.city}/${address.state}`
+    );
+    clear();
+  };
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-6">
-      <header className="flex items-center justify-between mb-6">
-        <Link href="/" className="btn-outline">
-          Loja da Jane
-        </Link>
-        <Link href="/" className="btn">
-          Voltar para loja
-        </Link>
-      </header>
+    <div className="grid lg:grid-cols-2 gap-8">
+      <section className="rounded-2xl border border-zinc-800 p-4">
+        <h2 className="h2">Dados para entrega</h2>
 
-      <h1 className="text-2xl font-semibold mb-4">Dados para entrega</h1>
-
-      <section className="rounded-xl border border-zinc-800 p-4 mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            className="input"
-            placeholder="Nome completo"
-            value={address.name}
-            onChange={onChange("name")}
-          />
-          <input
-            className="input"
-            placeholder="Telefone (WhatsApp)"
-            value={address.phone}
-            onChange={onChange("phone")}
-          />
-          <input
-            className="input"
-            placeholder="CEP"
-            value={address.cep}
-            onChange={onChange("cep")}
-            inputMode="numeric"
-            maxLength={9}
-          />
-          <input
-            className="input"
-            placeholder="Endereço"
-            value={address.street}
-            onChange={onChange("street")}
-          />
-          <input
-            className="input"
-            placeholder="Número"
-            value={address.number}
-            onChange={onChange("number")}
-          />
-          <input
-            className="input"
-            placeholder="Complemento"
-            value={address.complement}
-            onChange={onChange("complement")}
-          />
-          <input
-            className="input"
-            placeholder="Cidade"
-            value={address.city}
-            onChange={onChange("city")}
-          />
-          <input
-            className="input"
-            placeholder="Estado"
-            value={address.state}
-            onChange={onChange("state")}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+          <input className="input sm:col-span-2" placeholder="Nome completo" value={address.name} onChange={onChange("name")} />
+          <input className="input" placeholder="Telefone (WhatsApp)" value={address.phone} onChange={onChange("phone")} />
+          <input className="input" placeholder="CEP" value={address.cep} onChange={onChange("cep")} />
+          <input className="input sm:col-span-2" placeholder="Endereço" value={address.street} onChange={onChange("street")} />
+          <input className="input" placeholder="Número" value={address.number} onChange={onChange("number")} />
+          <input className="input" placeholder="Complemento" value={address.comp} onChange={onChange("comp")} />
+          <input className="input" placeholder="Cidade" value={address.city} onChange={onChange("city")} />
+          <input className="input" placeholder="Estado" value={address.state} onChange={onChange("state")} />
         </div>
 
         <p className="text-sm text-zinc-400 mt-4">
-          Ao finalizar, os dados são mostrados e o carrinho limpa. Depois
-          integramos pagamento/PIX/WhatsApp.
+          Ao finalizar, os dados são mostrados e o carrinho é limpo. Depois integramos pagamento/PIX/WhatsApp.
         </p>
+
+        <button className="btn w-full mt-4" onClick={finish}>Finalizar pedido</button>
       </section>
 
-      <h2 className="text-xl font-semibold mb-3">Seu carrinho</h2>
+      <section className="rounded-2xl border border-zinc-800 p-4">
+        <h2 className="h2">Seu carrinho</h2>
 
-      <section className="rounded-xl border border-zinc-800">
-        {!hasItems ? (
-          <div className="p-6 text-zinc-400">
-            Carrinho vazio.{" "}
-            <Link className="link" href="/">
-              Voltar para a loja
-            </Link>
-          </div>
-        ) : (
-          <div className="p-4 space-y-3">
-            {items.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between gap-3 border-b border-zinc-800 pb-3 last:border-b-0"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{product.name}</p>
-                  <p className="text-sm text-zinc-400">
-                    {priceBRL(product.price)}
-                  </p>
-                </div>
-
-                <button
-                  className="btn-outline"
-                  onClick={() => remove(product.id)}
-                  aria-label={`Remover ${product.name}`}
-                >
-                  Remover
-                </button>
-              </div>
-            ))}
-
-            <div className="flex items-center justify-between pt-3">
-              <span className="text-sm text-zinc-400">Total do carrinho:</span>
-              <strong className="text-lg">{priceBRL(total())}</strong>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button className="btn-outline" onClick={clear}>
-                Limpar carrinho
-              </button>
-              <button
-                className="btn flex-1"
-                onClick={() => {
-                  alert(
-                    `Pedido de ${address.name || "Cliente"} — Total: ${priceBRL(
-                      total()
-                    )}`
-                  );
-                  clear();
-                }}
-                disabled={!hasItems}
-              >
-                Finalizar pedido
-              </button>
-            </div>
-          </div>
+        {!items.length && (
+          <p className="text-zinc-400 mt-3">
+            Carrinho vazio. <Link className="underline" href="/">Continuar comprando</Link>
+          </p>
         )}
-      </section>
-    </main>
-  );
-}
 
-/* utilidades de estilo tailwind em forma de classes utilitárias
-   (caso você já tenha algo assim, pode remover) */
-declare global {
-  namespace JSX {
-    interface IntrinsicAttributes {
-      className?: string;
-    }
-  }
+        <div className="mt-3 space-y-3">
+          {items.map(({ product, qty }) => (
+            <div key={product.id} className="flex items-center justify-between gap-3 border border-zinc-800 rounded-xl p-3">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{product.name}</p>
+                <p className="text-sm text-zinc-400">
+                  {qty} × {priceBRL(product.price)}
+                </p>
+              </div>
+              <button onClick={() => remove(product.id)} className="btn-ghost">Remover</button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mt-4 border-t border-zinc-800 pt-4">
+          <span className="text-zinc-400">Total</span>
+          <strong className="text-lg">{priceBRL(total)}</strong>
+        </div>
+      </section>
+    </div>
+  );
 }
