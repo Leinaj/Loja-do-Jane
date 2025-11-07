@@ -1,32 +1,32 @@
-// components/ProductCard.tsx
 import Link from "next/link";
 import Image from "next/image";
-import type { Product } from "@/lib/products";
-import { priceBRL } from "@/lib/products";
+import { type Product, priceBRL } from "@/lib/products";
 
-export default function ProductCard({ product }: { product: Product }) {
+type Props = {
+  product: Product;
+};
+
+export default function ProductCard({ product }: Props) {
   return (
-    <article className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-      <div className="aspect-[16/10] w-full bg-neutral-900">
+    <article className="rounded-2xl border border-zinc-800 overflow-hidden bg-zinc-900/40">
+      <div className="relative aspect-[16/10]">
         <Image
           src={product.image}
-          alt={product.title}
-          width={1200}
-          height={750}
-          className="w-full h-full object-cover"
+          alt={product.name}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover"
+          priority={false}
         />
       </div>
 
-      <div className="p-4 flex items-center justify-between gap-4">
-        <div>
-          <h3 className="font-semibold">{product.title}</h3>
-          <p className="opacity-80">{priceBRL(product.price)}</p>
+      <div className="p-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-medium truncate">{product.name}</h3>
+          <p className="text-sm text-zinc-400">{priceBRL(product.price)}</p>
         </div>
 
-        <Link
-          href={`/produto/${product.slug}`}
-          className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-medium hover:brightness-110"
-        >
+        <Link href={`/produto/${product.slug}`} className="btn">
           Ver produto
         </Link>
       </div>
