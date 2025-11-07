@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/components/CartContext";
 import { useEffect, useState } from "react";
+import { priceBRL } from "@/lib/products";
+import { useCart } from "@/components/CartContext";
 
 type Address = {
   name: string;
@@ -15,12 +16,8 @@ type Address = {
   state: string;
 };
 
-const formatBRL = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 export default function CheckoutPage() {
-  // >>> use o getCartTotal() em vez de 'total'
-  const { items, remove, clear, getCartTotal } = useCart();
+  const { items, remove, clear, total } = useCart();
 
   const [address, setAddress] = useState<Address>({
     name: "",
@@ -33,151 +30,184 @@ export default function CheckoutPage() {
     state: "",
   });
 
-  // Autofill de endereço ao digitar CEP
+  // auto-preenche endereço pelo CEP (ViaCEP)
   useEffect(() => {
-    const cep = (address.cep || "").replace(/\D/g, "");
-    if (cep.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (!d.erro) {
-            setAddress((prev) => ({
-              ...prev,
-              street: d.logradouro || "",
-              city: d.localidade || "",
-              state: d.uf || "",
-            }));
-          }
-        })
-        .catch(() => {});
-    }
+    const onlyDigits = address.cep.replace(/\D/g, "");
+    if (onlyDigits.length !== 8) return;
+
+    const fetchCep = async () => {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${onlyDigits}/json/`);
+        const data = await res.json();
+
+        if (!data.erro) {
+          setAddress((prev) => ({
+            ...prev,
+            street: data.logradouro || prev.street,
+            city: data.localidade || prev.city,
+            state: data.uf || prev.state,
+          }));
+        }
+      } catch {
+        // silencioso – se der erro, o usuário pode digitar manualmente
+      }
+    };
+
+    fetchCep();
   }, [address.cep]);
 
-  const total = getCartTotal();
+  const onChange =
+    (key: keyof Address) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setAddress((prev) => ({ ...prev, [key]: e.target.value }));
+    };
+
+  const hasItems = items.length > 0;
 
   return (
-    <main className="max-w-4xl mx-auto p-4 space-y-6">
-      <header className="flex items-center justify-between">
-        <Link href="/" className="btn">
+    <main className="max-w-4xl mx-auto px-4 py-6">
+      <header className="flex items-center justify-between mb-6">
+        <Link href="/" className="btn-outline">
           Loja da Jane
         </Link>
-        <Link href="/checkout" className="btn">
-          Checkout
+        <Link href="/" className="btn">
+          Voltar para loja
         </Link>
       </header>
 
-      <section className="card p-4 space-y-4">
-        <h2 className="h2">Dados para entrega</h2>
+      <h1 className="text-2xl font-semibold mb-4">Dados para entrega</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <section className="rounded-xl border border-zinc-800 p-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input
             className="input"
             placeholder="Nome completo"
             value={address.name}
-            onChange={(e) => setAddress({ ...address, name: e.target.value })}
+            onChange={onChange("name")}
           />
           <input
             className="input"
             placeholder="Telefone (WhatsApp)"
             value={address.phone}
-            onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+            onChange={onChange("phone")}
           />
           <input
             className="input"
             placeholder="CEP"
             value={address.cep}
-            onChange={(e) => setAddress({ ...address, cep: e.target.value })}
+            onChange={onChange("cep")}
+            inputMode="numeric"
+            maxLength={9}
           />
           <input
             className="input"
             placeholder="Endereço"
             value={address.street}
-            onChange={(e) => setAddress({ ...address, street: e.target.value })}
+            onChange={onChange("street")}
           />
           <input
             className="input"
             placeholder="Número"
             value={address.number}
-            onChange={(e) => setAddress({ ...address, number: e.target.value })}
+            onChange={onChange("number")}
           />
           <input
             className="input"
             placeholder="Complemento"
             value={address.complement}
-            onChange={(e) =>
-              setAddress({ ...address, complement: e.target.value })
-            }
+            onChange={onChange("complement")}
           />
           <input
             className="input"
             placeholder="Cidade"
             value={address.city}
-            onChange={(e) => setAddress({ ...address, city: e.target.value })}
+            onChange={onChange("city")}
           />
           <input
             className="input"
             placeholder="Estado"
             value={address.state}
-            onChange={(e) => setAddress({ ...address, state: e.target.value })}
+            onChange={onChange("state")}
           />
         </div>
 
-        <p className="text-sm opacity-70">
+        <p className="text-sm text-zinc-400 mt-4">
           Ao finalizar, os dados são mostrados e o carrinho limpa. Depois
           integramos pagamento/PIX/WhatsApp.
         </p>
       </section>
 
-      <section className="card p-4 space-y-4">
-        <h3 className="h3">Seu carrinho</h3>
+      <h2 className="text-xl font-semibold mb-3">Seu carrinho</h2>
 
-        <div className="space-y-3">
-          {items.length === 0 && <p>Seu carrinho está vazio.</p>}
+      <section className="rounded-xl border border-zinc-800">
+        {!hasItems ? (
+          <div className="p-6 text-zinc-400">
+            Carrinho vazio.{" "}
+            <Link className="link" href="/">
+              Voltar para a loja
+            </Link>
+          </div>
+        ) : (
+          <div className="p-4 space-y-3">
+            {items.map((product) => (
+              <div
+                key={product.id}
+                className="flex items-center justify-between gap-3 border-b border-zinc-800 pb-3 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{product.name}</p>
+                  <p className="text-sm text-zinc-400">
+                    {priceBRL(product.price)}
+                  </p>
+                </div>
 
-          {items.map((it) => (
-            <div
-              key={it.id}
-              className="flex items-center justify-between bg-white/5 p-3 rounded-lg"
-            >
-              <div>
-                <p className="font-medium">{it.name}</p>
-                <p className="text-sm opacity-70">
-                  Qtd: {it.qty} • {formatBRL(it.price)}
-                </p>
+                <button
+                  className="btn-outline"
+                  onClick={() => remove(product.id)}
+                  aria-label={`Remover ${product.name}`}
+                >
+                  Remover
+                </button>
               </div>
+            ))}
 
-              <button className="btn danger" onClick={() => remove(it.id)}>
-                Remover
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-sm text-zinc-400">Total do carrinho:</span>
+              <strong className="text-lg">{priceBRL(total())}</strong>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button className="btn-outline" onClick={clear}>
+                Limpar carrinho
+              </button>
+              <button
+                className="btn flex-1"
+                onClick={() => {
+                  alert(
+                    `Pedido de ${address.name || "Cliente"} — Total: ${priceBRL(
+                      total()
+                    )}`
+                  );
+                  clear();
+                }}
+                disabled={!hasItems}
+              >
+                Finalizar pedido
               </button>
             </div>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-          <span className="font-semibold">Total:</span>
-          <span className="font-semibold">{formatBRL(total)}</span>
-        </div>
-
-        <div className="flex gap-3">
-          <button className="btn" onClick={clear}>
-            Limpar carrinho
-          </button>
-          <button
-            className="btn primary"
-            onClick={() =>
-              alert(
-                JSON.stringify(
-                  { address, items, total: formatBRL(total) },
-                  null,
-                  2
-                )
-              )
-            }
-          >
-            Finalizar pedido
-          </button>
-        </div>
+          </div>
+        )}
       </section>
     </main>
   );
+}
+
+/* utilidades de estilo tailwind em forma de classes utilitárias
+   (caso você já tenha algo assim, pode remover) */
+declare global {
+  namespace JSX {
+    interface IntrinsicAttributes {
+      className?: string;
+    }
+  }
 }
