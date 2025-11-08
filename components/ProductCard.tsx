@@ -1,62 +1,39 @@
 "use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import type { Product } from "@/lib/products";
 
-type Product = {
-  id?: string;
-  slug: string;
-  name: string;
-  image: string;
-  price: number;
-  oldPrice?: number;
-  badge?: string;
-  [key: string]: any; // evita erro TS se vierem campos extras
-};
+type Props = { product: Product };
 
-function money(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product }: Props) {
   return (
-    <div className="card group overflow-hidden">
+    <div className="bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800">
       <Link href={`/produto/${product.slug}`} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.05]"
-            sizes="(max-width:768px) 100vw, (max-width:1200px) 50vw, 25vw"
-            priority={false}
-          />
-          {product.badge && (
-            <span className="absolute left-3 top-3 rounded-lg bg-brand-500 px-2 py-1 text-xs font-semibold shadow-soft">
-              {product.badge}
-            </span>
-          )}
-        </div>
+        <Image
+          src={product.image}
+          alt={product.title}
+          width={1200}
+          height={750}
+          className="w-full h-auto object-cover"
+          priority
+        />
       </Link>
 
-      <div className="space-y-3 p-4">
-        <h3 className="line-clamp-1 text-base font-semibold">{product.name}</h3>
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold text-white">{money(product.price)}</span>
-          {product.oldPrice && (
-            <span className="text-sm text-neutral-400 line-through">
-              {money(product.oldPrice)}
-            </span>
-          )}
+      <div className="p-4 flex items-center justify-between gap-4">
+        <div>
+          <Link href={`/produto/${product.slug}`} className="text-white font-medium hover:underline">
+            {product.title}
+          </Link>
+          <p className="text-neutral-400">R$ {product.price.toFixed(2).replace(".", ",")}</p>
         </div>
 
-        <div className="flex gap-2">
-          <Link href={`/produto/${product.slug}`} className="btn flex-1">
-            Ver produto
-          </Link>
-          <Link href={`/checkout?add=${product.slug}`} className="btn-outline">
-            Comprar
-          </Link>
-        </div>
+        <Link
+          href={`/produto/${product.slug}`}
+          className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-md"
+        >
+          Ver produto
+        </Link>
       </div>
     </div>
   );
