@@ -1,26 +1,21 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import CartProvider from "@/components/CartContext";
-import Header from "@/components/Header";
+import './globals.css';
+import type { Metadata } from 'next';
+import Header from '@/components/Header';
+import { CartProvider } from '@/lib/cart';
 
 export const metadata: Metadata = {
-  title: "Loja da Jane",
-  description: "Sua loja online — simples e rápida",
+  title: 'Loja da Jane',
+  description: 'Loja simples em Next.js',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-zinc-950 text-zinc-100">
+      <body>
+        {/* O provider precisa envolver TUDO que usa useCart, inclusive o Header */}
         <CartProvider>
           <Header />
-          <main className="max-w-4xl mx-auto px-4 py-6">{children}</main>
-          <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-400">
-            © {new Date().getFullYear()} Loja da Jane — feito com amor 💚
-            <div className="mt-2">
-              WhatsApp: <a className="underline" href="https://wa.me/5544988606483">+55 (44) 98860-6483</a>
-            </div>
-          </footer>
+          {children}
         </CartProvider>
       </body>
     </html>
