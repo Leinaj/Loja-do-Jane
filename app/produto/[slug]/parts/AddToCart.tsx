@@ -1,71 +1,65 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useCart } from "@/lib/cart";
-import { toast } from "@/components/ui/toast";
+import { useState } from 'react';
+import { useCart } from '@/lib/cart';
+import { toast } from '@/components/ui/toast';
 
 type ProductLite = {
   id: string | number;
   name: string;
   price: number;
-  image: string;
+  image?: string;
 };
 
-export default function AddToCart({ product }: { product: ProductLite }) {
+type Props = {
+  product: ProductLite;
+  defaultQty?: number;
+};
+
+export default function AddToCart({ product, defaultQty = 1 }: Props) {
+  const [qty, setQty] = useState<number>(defaultQty);
   const { add } = useCart();
-  const [qty, setQty] = useState(1);
 
-  function inc() {
-    setQty((n) => Math.min(99, n + 1));
-  }
-  function dec() {
-    setQty((n) => Math.max(1, n - 1));
-  }
-
-  function handleAdd() {
-    const item = {
+  const addItem = () => {
+    add({
       id: String(product.id),
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: product.image ?? '',
       quantity: qty,
-    };
-    add(item);
+    });
 
-    // Toast bonito
     toast({
-      title: "Produto adicionado!",
+      title: 'Produto adicionado!',
       description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
-      variant: "success",
-      actionLabel: "Ver carrinho",
-      actionHref: "/checkout",
+      variant: 'success',
+      actionLabel: 'Ver carrinho',
+      actionHref: '/checkout',
       durationMs: 2800,
     });
-  }
+  };
 
   return (
-    <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={dec}
-          className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-lg hover:bg-white/10"
-        >
-          –
-        </button>
-        <div className="min-w-[72px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center">
-          {qty}
-        </div>
-        <button
-          onClick={inc}
-          className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-lg hover:bg-white/10"
-        >
-          +
-        </button>
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => setQty(q => Math.max(1, q - 1))}
+        className="h-10 w-10 rounded-lg bg-zinc-800 text-zinc-200 ring-1 ring-white/10"
+      >
+        –
+      </button>
+      <div className="h-10 min-w-[2.5rem] px-3 flex items-center justify-center rounded-lg bg-zinc-900 text-white ring-1 ring-white/10">
+        {qty}
       </div>
+      <button
+        onClick={() => setQty(q => Math.min(99, q + 1))}
+        className="h-10 w-10 rounded-lg bg-zinc-800 text-zinc-200 ring-1 ring-white/10"
+      >
+        +
+      </button>
 
       <button
-        onClick={handleAdd}
-        className="flex-1 rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-emerald-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
+        onClick={addItem}
+        className="ml-2 inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 text-white font-medium hover:bg-emerald-500"
       >
         Adicionar ao carrinho
       </button>
