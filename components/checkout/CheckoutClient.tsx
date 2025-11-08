@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "@/components/ui/toast";
 
 export default function CheckoutClient() {
   const { items, remove, clear, total } = useCart();
 
-  // formulário (mínimo funcional; seu auto-CEP continua funcionando se já estava no projeto)
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -19,19 +19,56 @@ export default function CheckoutClient() {
     state: "",
   });
 
+  // formatação do CEP e busca ViaCEP
+  const cepDigits = useMemo(() => form.cep.replace(/\D/g, "").slice(0, 8), [form.cep]);
+  const cepMasked = useMemo(
+    () => (cepDigits.length > 5 ? `${cepDigits.slice(0, 5)}-${cepDigits.slice(5)}` : cepDigits),
+    [cepDigits]
+  );
+
+  useEffect(() => {
+    if (cepDigits.length === 8) {
+      (async () => {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
+          const data = (await res.json()) as any;
+          if (!data.erro) {
+            setForm((f) => ({
+              ...f,
+              street: data.logradouro ?? f.street,
+              city: data.localidade ?? f.city,
+              state: data.uf ?? f.state,
+            }));
+            toast({
+              title: "Endereço preenchido!",
+              description: "Encontramos seu endereço pelo CEP.",
+              variant: "success",
+              durationMs: 2200,
+            });
+          }
+        } catch {
+          // falhou silenciosamente
+        }
+      })();
+    }
+  }, [cepDigits]);
+
   return (
     <div className="py-8">
       <h1 className="mb-6 text-3xl font-extrabold tracking-tight">Checkout</h1>
 
       <div className="grid gap-6 md:grid-cols-[1.2fr_.8fr]">
-        {/* Coluna do carrinho */}
+        {/* Carrinho */}
         <section className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-6">
           <h2 className="mb-4 text-xl font-semibold">Carrinho</h2>
 
           <div className="space-y-3">
             {items.length === 0 ? (
               <div className="rounded-xl border border-white/10 p-6 text-center text-zinc-400">
-                Seu carrinho está vazio. <Link href="/" className="text-emerald-300 underline">Continuar comprando</Link>
+                Seu carrinho está vazio.{" "}
+                <Link href="/" className="text-emerald-300 underline">
+                  Continuar comprando
+                </Link>
               </div>
             ) : (
               items.map((it) => (
@@ -69,7 +106,7 @@ export default function CheckoutClient() {
           </div>
         </section>
 
-        {/* Coluna do endereço/pagamento */}
+        {/* Endereço */}
         <section className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-6">
           <h2 className="mb-4 text-xl font-semibold">Endereço</h2>
 
@@ -82,7 +119,14 @@ export default function CheckoutClient() {
           >
             <Input label="Nome *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
             <Input label="Telefone *" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-            <Input label="CEP *" value={form.cep} onChange={(v) => setForm({ ...form, cep: v })} />
+
+            <Input
+              label="CEP *"
+              value={cepMasked}
+              onChange={(v) => setForm({ ...form, cep: v })}
+              helper={cepDigits.length === 8 ? "Buscando endereço..." : "Somente números"}
+            />
+
             <Input label="Rua *" value={form.street} onChange={(v) => setForm({ ...form, street: v })} />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Número *" value={form.number} onChange={(v) => setForm({ ...form, number: v })} />
@@ -115,10 +159,12 @@ function Input({
   label,
   value,
   onChange,
+  helper,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  helper?: string;
 }) {
   return (
     <label className="block">
@@ -129,6 +175,7 @@ function Input({
         className="w-full rounded-xl border border-white/10 bg-[#0b1512] px-3 py-3 text-sm outline-none ring-emerald-400/30 placeholder:text-zinc-500 focus:ring-2"
         placeholder=""
       />
+      {helper && <span className="mt-1 block text-xs text-zinc-500">{helper}</span>}
     </label>
   );
 }
