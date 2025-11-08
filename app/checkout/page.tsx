@@ -1,58 +1,67 @@
 // app/checkout/page.tsx
 'use client';
 
+import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Address = {
-  name: string;
-  phone: string;
+type Endereco = {
+  nome: string;
+  telefone: string;
   cep: string;
-  street: string;
-  number: string;
-  city: string;
-  state: string;
+  rua: string;
+  numero: string;
+  cidade: string;
+  estado: string;
 };
 
 export default function CheckoutPage() {
   const { items, remove, clear, total } = useCart();
   const router = useRouter();
 
-  const [address, setAddress] = useState<Address>({
-    name: '',
-    phone: '',
+  const [endereco, setEndereco] = useState<Endereco>({
+    nome: '',
+    telefone: '',
     cep: '',
-    street: '',
-    number: '',
-    city: '',
-    state: '',
+    rua: '',
+    numero: '',
+    cidade: '',
+    estado: '',
   });
 
   const cartTotal = useMemo(() => total, [total]);
 
-  const handleFinish = () => {
+  const finalizar = () => {
     if (
-      !address.name ||
-      !address.phone ||
-      !address.cep ||
-      !address.street ||
-      !address.number ||
-      !address.city ||
-      !address.state
+      !endereco.nome ||
+      !endereco.telefone ||
+      !endereco.cep ||
+      !endereco.rua ||
+      !endereco.numero ||
+      !endereco.cidade ||
+      !endereco.estado
     ) {
       alert('Preencha todos os campos do endereço.');
       return;
     }
 
-    const order = {
+    const pedido = {
       items,
-      address,
+      address: {
+        name: endereco.nome,
+        phone: endereco.telefone,
+        cep: endereco.cep,
+        street: endereco.rua,
+        number: endereco.numero,
+        city: endereco.cidade,
+        state: endereco.estado,
+      },
       total: cartTotal,
       createdAt: new Date().toISOString(),
     };
 
-    localStorage.setItem('last_order_v1', JSON.stringify(order));
+    localStorage.setItem('last_order_v1', JSON.stringify(pedido));
     router.push('/pagamento');
   };
 
@@ -70,14 +79,27 @@ export default function CheckoutPage() {
             {items.map((it) => (
               <div
                 key={it.id}
-                className="flex items-center justify-between rounded-xl bg-neutral-900 p-3 border border-white/10"
+                className="flex items-center justify-between gap-3 rounded-xl bg-neutral-900 p-3 border border-white/10"
               >
-                <div>
-                  <div className="font-medium">{it.name}</div>
-                  <div className="text-sm text-white/60">
-                    {it.quantity} × R$ {it.price.toFixed(2).replace('.', ',')}
+                <div className="flex items-center gap-3">
+                  {/* MINIATURA */}
+                  <div className="relative h-12 w-12 rounded-md overflow-hidden">
+                    <Image
+                      src={it.image || '/placeholder.png'}
+                      alt={it.name}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-medium">{it.name}</div>
+                    <div className="text-sm text-white/60">
+                      {it.quantity} × R$ {it.price.toFixed(2).replace('.', ',')}
+                    </div>
                   </div>
                 </div>
+
                 <button
                   onClick={() => remove(it.id)}
                   className="px-3 py-2 rounded-md bg-rose-600 hover:bg-rose-500 transition"
@@ -112,21 +134,21 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {(
             [
-              ['name', 'Name *'],
-              ['phone', 'Phone *'],
-              ['cep', 'Cep *'],
-              ['street', 'Street *'],
-              ['number', 'Number *'],
-              ['city', 'City *'],
-              ['state', 'State *'],
+              ['nome', 'Nome *'],
+              ['telefone', 'Telefone *'],
+              ['cep', 'CEP *'],
+              ['rua', 'Rua *'],
+              ['numero', 'Número *'],
+              ['cidade', 'Cidade *'],
+              ['estado', 'Estado *'],
             ] as const
           ).map(([key, label]) => (
             <input
               key={key}
               placeholder={label}
-              value={address[key]}
+              value={endereco[key]}
               onChange={(e) =>
-                setAddress((a) => ({ ...a, [key]: e.target.value }))
+                setEndereco((a) => ({ ...a, [key]: e.target.value }))
               }
               className="w-full rounded-lg bg-neutral-800 border border-white/10 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
@@ -136,7 +158,7 @@ export default function CheckoutPage() {
 
       <div className="flex justify-end">
         <button
-          onClick={handleFinish}
+          onClick={finalizar}
           className="px-5 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition font-medium"
           disabled={items.length === 0}
         >
