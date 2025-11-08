@@ -3,52 +3,33 @@ export type Product = {
   id: string;
   slug: string;
   name: string;
-  price: number; // em centavos? -> aqui em reais (número normal)
-  image: string; // caminho dentro de /public
-  description: string;
+  description?: string;
+  price: number;
+  oldPrice?: number;
+  image: string;      // URL da imagem
+  badge?: string;     // texto do selo (ex.: "Promoção ⚡")
 };
-
-export const priceBRL = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export const products: Product[] = [
   {
-    id: "1",
-    slug: "moletom-cinza",
-    name: "Moletom Cinza",
+    id: 'hoodie-gray',
+    slug: 'moletom-cinza',
+    name: 'Moletom Cinza',
+    description: 'Moletom confortável, interior flanelado.',
     price: 159.9,
-    image: "/moletom.jpg",
-    description:
-      "Moletom confortável e quentinho para os dias frios. Tecido premium."
+    oldPrice: 189.9,
+    image:
+      'https://images.unsplash.com/photo-1542060749-10c28b62716f?q=80&w=1200&auto=format&fit=crop',
+    badge: 'Promoção ⚡',
   },
   {
-    id: "2",
-    slug: "bone-street",
-    name: "Boné Street",
+    id: 'cap-street',
+    slug: 'bone-street',
+    name: 'Boné Street',
+    description: 'Boné aba curva, ajuste traseiro.',
     price: 79.9,
-    image: "/bone.jpg",
-    description:
-      "Boné estilo streetwear com ajuste traseiro. Leve e durável."
+    image:
+      'https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop',
+    badge: 'Oferta 🔥',
   },
-  {
-    id: "3",
-    slug: "camiseta-preta",
-    name: "Camiseta Preta",
-    price: 49.9,
-    image: "/camiseta-preta.jpg",
-    description:
-      "Camiseta 100% algodão, corte clássico e super confortável."
-  },
-  {
-    id: "4",
-    slug: "camiseta-branca",
-    name: "Camiseta Branca",
-    price: 49.9,
-    image: "/camiseta-branca.jpg",
-    description:
-      "Camiseta branca essencial, perfeita para o dia a dia."
-  }
 ];
-
-export const getProductBySlug = (slug: string) =>
-  products.find((p) => p.slug === slug);
