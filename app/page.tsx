@@ -2,17 +2,22 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { money } from '../lib/format';
 
+// função auxiliar pra formatar dinheiro (BRL)
+const money = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// tipo do produto corrigido
 type Product = {
   id: string;
   name: string;
   image: string;
   price: number;
-  oldPrice?: number; // opcional
-  badge?: string; // opcional
+  oldPrice?: number;
+  badge?: string;
 };
 
+// lista de produtos
 const products: Product[] = [
   {
     id: '1',
@@ -20,7 +25,7 @@ const products: Product[] = [
     image: '/products/moletom-cinza.jpg',
     price: 159.9,
     oldPrice: 189.9,
-    badge: 'Promoção',
+    badge: 'Promoção ⚡',
   },
   {
     id: '2',
@@ -47,7 +52,7 @@ export default function Page() {
         <p className="text-lg">Até 50% OFF em itens selecionados.</p>
       </div>
 
-      {/* Produtos */}
+      {/* Lista de produtos */}
       <section>
         <h2 className="text-2xl font-semibold mb-6">Produtos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -64,7 +69,7 @@ export default function Page() {
                   className="object-cover"
                 />
                 {p.badge && (
-                  <span className="absolute top-2 left-2 bg-emerald-500 text-white text-xs font-medium px-2 py-1 rounded-md shadow-md">
+                  <span className="absolute top-2 left-2 bg-emerald-500 text-white text-xs font-medium px-2 py-1 rounded-md shadow-md animate-pulse">
                     {p.badge}
                   </span>
                 )}
@@ -72,7 +77,6 @@ export default function Page() {
 
               <div className="p-4 space-y-2">
                 <h3 className="text-lg font-medium">{p.name}</h3>
-
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-semibold text-lg">
                     {money(p.price)}
