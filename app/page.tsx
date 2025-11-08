@@ -1,22 +1,40 @@
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/lib/products";
+import { products } from "@/lib/products"; // use sua fonte
 
 export default function HomePage() {
   return (
     <>
-      <section className="rounded-2xl p-6 bg-gradient-to-r from-emerald-600 to-emerald-500 text-zinc-50">
-        <h1 className="text-3xl font-bold">Promo relâmpago ⚡</h1>
-        <p className="text-emerald-50/90">Até 50% OFF em itens selecionados.</p>
-      </section>
+      <Header />
+      <main className="container">
+        <section className="mb-10 mt-8">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-6">
+            <h1 className="text-2xl font-bold">Novidades da Jane</h1>
+            <p className="mt-1 text-neutral-300">
+              Peças selecionadas com preço amigo. Entrega rápida e segura.
+            </p>
+          </div>
+        </section>
 
-      <section className="mt-8">
-        <h2 className="h2">Produtos</h2>
-        <div className="grid sm:grid-cols-2 gap-6 mt-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+        <section className="grid-products">
+          {products.map((p: any) => (
+            <ProductCard
+              key={p.id ?? p.slug}
+              product={{
+                id: p.id,
+                slug: p.slug,
+                name: p.name ?? p.title, // aceita os dois
+                image: p.image,
+                price: p.price ?? p.value ?? 0,
+                oldPrice: p.oldPrice,
+                badge: p.badge,
+              }}
+            />
           ))}
-        </div>
-      </section>
+        </section>
+      </main>
+      <Footer />
     </>
   );
 }
