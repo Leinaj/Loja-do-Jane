@@ -1,73 +1,111 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import CartDrawer from './cart/CartDrawer';
+import { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
 
-const navLink =
-  'px-3 py-2 rounded-md text-sm font-medium hover:bg-white/10 transition-colors';
+// Tipagem para o evento customizado "open-cart"
+declare global {
+  interface WindowEventMap {
+    'open-cart': CustomEvent<void>;
+  }
+}
 
 export default function Header() {
-  const pathname = usePathname();
-  const { items } = useCart();
+  const { itemsCount } = useCart();
   const [open, setOpen] = useState(false);
 
-  const cartCount = useMemo(
-    () =>
-      Array.isArray(items)
-        ? items.reduce((acc: number, it: any) => acc + (Number(it?.quantity) || 0), 0)
-        : 0,
-    [items]
-  );
-
-  // 👉 escuta por "open-cart" (disparado quando adiciona um item)
   useEffect(() => {
     const onOpen = () => setOpen(true);
-    // @ts-expect-error evento customizado
-    window.addEventListener('open-cart', onOpen as EventListener);
+    window.addEventListener('open-cart', onOpen);
     return () => {
-      // @ts-expect-error evento customizado
-      window.removeEventListener('open-cart', onOpen as EventListener);
+      window.removeEventListener('open-cart', onOpen);
     };
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-neutral-900/70 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="text-white font-semibold tracking-wide">
+    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/60 backdrop-blur supports-[backdrop-filter]:bg-black/40">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        {/* Logo / Nome da loja */}
+        <Link href="/" className="font-semibold tracking-tight text-white">
           Loja da Jane
         </Link>
 
-        <nav className="hidden sm:flex items-center gap-1 text-neutral-200">
+        {/* Navegação */}
+        <nav className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/"
-            className={`${navLink} ${pathname === '/' ? 'bg-white/10' : ''}`}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
           >
             Home
           </Link>
+
           <Link
             href="/checkout"
-            className={`${navLink} ${pathname.startsWith('/checkout') ? 'bg-white/10' : ''}`}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
           >
             Checkout
           </Link>
-        </nav>
 
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Abrir carrinho"
-          className="relative rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400"
-        >
-          <span className="pointer-events-none select-none">🛒 Carrinho</span>
-          <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-white/20 px-2 text-xs">
-            {cartCount}
-          </span>
-        </button>
+          {/* Carrinho */}
+          <Link
+            href="/checkout"
+            className="relative inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500"
+            aria-label={`Carrinho com ${itemsCount} item(s)`}
+          >
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="currentColor"
+            >
+              <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6.2 5 5.5 2.9A1 1 0 0 0 4.5 2H2a1 1 0 1 0 0 2h1.2l2.7 8.6A3 3 0 0 0 8.8 15H17a1 1 0 1 0 0-2H8.8a1 1 0 0 1-1-.7L7.6 11H18a3 3 0 0 0 2.9-2.2l.9-3.3A1 1 0 0 0 21 4H6.6a1 1 0 0 0-.4 0Z" />
+            </svg>
+            Carrinho
+            <span className="ml-1 inline-flex min-w-[1.5rem] items-center justify-center rounded-md bg-white/15 px-1 text-xs">
+              {itemsCount}
+            </span>
+          </Link>
+        </nav>
       </div>
 
-      <CartDrawer open={open} onClose={() => setOpen(false)} />
+      {/* Drawer simples (apenas controle visual; se não usar, pode remover `open`) */}
+      {open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 p-2 sm:p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="h-full w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Carrinho</h2>
+              <button
+                className="rounded-lg px-2 py-1 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+                onClick={() => setOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <p className="text-sm text-white/60">
+              Para finalizar, acesse o <strong>Checkout</strong>.
+            </p>
+            <div className="mt-4">
+              <Link
+                href="/checkout"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                onClick={() => setOpen(false)}
+              >
+                Ir para o Checkout
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
