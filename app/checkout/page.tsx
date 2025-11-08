@@ -1,12 +1,10 @@
-// app/checkout/page.tsx
 'use client';
 
 import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
-type Endereco = {
+type Address = {
   nome: string;
   telefone: string;
   cep: string;
@@ -14,13 +12,19 @@ type Endereco = {
   numero: string;
   cidade: string;
   estado: string;
+  complemento?: string;
+  bairro?: string;
 };
 
 export default function CheckoutPage() {
-  const { items, remove, clear, total } = useCart();
-  const router = useRouter();
+  const { items, remove, clear } = useCart();
 
-  const [endereco, setEndereco] = useState<Endereco>({
+  const total = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * (it.quantity ?? 1), 0),
+    [items]
+  );
+
+  const [address, setAddress] = useState<Address>({
     nome: '',
     telefone: '',
     cep: '',
@@ -28,143 +32,173 @@ export default function CheckoutPage() {
     numero: '',
     cidade: '',
     estado: '',
+    complemento: '',
+    bairro: '',
   });
 
-  const cartTotal = useMemo(() => total, [total]);
+  // Busca ViaCEP quando CEP tem 8 dígitos
+  const handleCepChange = async (value: string) => {
+    const onlyDigits = value.replace(/\D/g, '');
+    setAddress((a) => ({ ...a, cep: value }));
 
-  const finalizar = () => {
-    if (
-      !endereco.nome ||
-      !endereco.telefone ||
-      !endereco.cep ||
-      !endereco.rua ||
-      !endereco.numero ||
-      !endereco.cidade ||
-      !endereco.estado
-    ) {
-      alert('Preencha todos os campos do endereço.');
-      return;
+    if (onlyDigits.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${onlyDigits}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+          setAddress((a) => ({
+            ...a,
+            rua: data.logradouro ?? a.rua,
+            bairro: data.bairro ?? a.bairro,
+            cidade: data.localidade ?? a.cidade,
+            estado: data.uf ?? a.estado,
+          }));
+        }
+      } catch {
+        // silencioso
+      }
     }
-
-    const pedido = {
-      items,
-      address: {
-        name: endereco.nome,
-        phone: endereco.telefone,
-        cep: endereco.cep,
-        street: endereco.rua,
-        number: endereco.numero,
-        city: endereco.cidade,
-        state: endereco.estado,
-      },
-      total: cartTotal,
-      createdAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem('last_order_v1', JSON.stringify(pedido));
-    router.push('/pagamento');
   };
 
-  return (
-    <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <h1 className="text-4xl font-bold">Checkout</h1>
+  const onChange =
+    (key: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setAddress((a) => ({ ...a, [key]: e.target.value }));
 
-      <section className="rounded-2xl border border-white/10 bg-neutral-900/50 p-4">
-        <h2 className="text-xl font-semibold mb-3">Carrinho</h2>
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-6">
+      <h1 className="text-3xl font-semibold">Checkout</h1>
+
+      {/* Carrinho */}
+      <section className="mt-6 rounded-2xl border border-white/10 bg-neutral-900/50 p-4">
+        <h2 className="mb-3 text-lg font-medium">Carrinho</h2>
 
         {items.length === 0 ? (
           <p className="text-white/70">Carrinho vazio.</p>
         ) : (
-          <div className="space-y-3">
+          <ul className="space-y-3">
             {items.map((it) => (
-              <div
+              <li
                 key={it.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-neutral-900 p-3 border border-white/10"
+                className="flex items-center justify-between gap-3 rounded-xl bg-neutral-900/60 p-3"
               >
                 <div className="flex items-center gap-3">
-                  {/* MINIATURA */}
-                  <div className="relative h-12 w-12 rounded-md overflow-hidden">
-                    <Image
-                      src={it.image || '/placeholder.png'}
-                      alt={it.name}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  </div>
+                  {/* miniatura */}
+                  {it.image ? (
+                    <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-neutral-800">
+                      <Image
+                        src={it.image}
+                        alt={it.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-14 w-14 rounded-lg bg-neutral-800" />
+                  )}
+
                   <div>
-                    <div className="font-medium">{it.name}</div>
-                    <div className="text-sm text-white/60">
-                      {it.quantity} × R$ {it.price.toFixed(2).replace('.', ',')}
+                    <div className="text-sm font-medium">{it.name}</div>
+                    <div className="text-xs text-white/60">
+                      {it.quantity ?? 1} × R${' '}
+                      {it.price.toFixed(2).replace('.', ',')}
                     </div>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => remove(it.id)}
-                  className="px-3 py-2 rounded-md bg-rose-600 hover:bg-rose-500 transition"
+                  onClick={() => remove(String(it.id))}
+                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500"
                 >
                   Remover
                 </button>
-              </div>
+              </li>
             ))}
-
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
-              <span className="text-lg">Total</span>
-              <span className="text-xl font-bold">
-                R$ {cartTotal.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={clear}
-                className="px-4 py-2 rounded-md bg-neutral-700 hover:bg-neutral-600 transition"
-              >
-                Limpar carrinho
-              </button>
-            </div>
-          </div>
+          </ul>
         )}
-      </section>
 
-      <section className="rounded-2xl border border-white/10 bg-neutral-900/50 p-4 space-y-3">
-        <h2 className="text-xl font-semibold mb-1">Endereço</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {(
-            [
-              ['nome', 'Nome *'],
-              ['telefone', 'Telefone *'],
-              ['cep', 'CEP *'],
-              ['rua', 'Rua *'],
-              ['numero', 'Número *'],
-              ['cidade', 'Cidade *'],
-              ['estado', 'Estado *'],
-            ] as const
-          ).map(([key, label]) => (
-            <input
-              key={key}
-              placeholder={label}
-              value={endereco[key]}
-              onChange={(e) =>
-                setEndereco((a) => ({ ...a, [key]: e.target.value }))
-              }
-              className="w-full rounded-lg bg-neutral-800 border border-white/10 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          ))}
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            onClick={clear}
+            className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+          >
+            Limpar carrinho
+          </button>
+          <div className="text-right text-lg">
+            Total{' '}
+            <span className="font-semibold">
+              R$ {total.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
         </div>
       </section>
 
-      <div className="flex justify-end">
-        <button
-          onClick={finalizar}
-          className="px-5 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition font-medium"
-          disabled={items.length === 0}
-        >
-          Finalizar pedido
-        </button>
-      </div>
+      {/* Endereço */}
+      <section className="mt-6 rounded-2xl border border-white/10 bg-neutral-900/50 p-4">
+        <h2 className="mb-3 text-lg font-medium">Endereço</h2>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Nome *"
+            value={address.nome}
+            onChange={onChange('nome')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Telefone *"
+            value={address.telefone}
+            onChange={onChange('telefone')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="CEP *"
+            value={address.cep}
+            onChange={(e) => handleCepChange(e.target.value)}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Rua *"
+            value={address.rua}
+            onChange={onChange('rua')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Número *"
+            value={address.numero}
+            onChange={onChange('numero')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Bairro"
+            value={address.bairro ?? ''}
+            onChange={onChange('bairro')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Cidade *"
+            value={address.cidade}
+            onChange={onChange('cidade')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            placeholder="Estado *"
+            value={address.estado}
+            onChange={onChange('estado')}
+          />
+          <input
+            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40 md:col-span-2"
+            placeholder="Complemento"
+            value={address.complemento ?? ''}
+            onChange={onChange('complemento')}
+          />
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+            Finalizar pedido
+          </button>
+        </div>
+      </section>
     </main>
   );
 }
