@@ -1,97 +1,72 @@
-import Link from 'next/link';
-import AddToCartButton from './parts/AddToCart';
+// app/produto/[slug]/page.tsx
+'use client';
 
-type Product = {
-  slug: string;
-  name: string;
-  price: number;
-  oldPrice?: number;
-  image: string;
-  badge?: string;
-};
-
-const products: Product[] = [
-  {
-    slug: 'moletom-cinza',
-    name: 'Moletom Cinza',
-    price: 159.9,
-    oldPrice: 189.9,
-    image: '/images/moletom-cinza.jpg', // troque para o caminho que você usa
-    badge: 'Promoção ⚡',
-  },
-  {
-    slug: 'bone-street',
-    name: 'Boné Street',
-    price: 79.9,
-    image: '/images/bone-street.jpg',
-    badge: 'Oferta 🔥',
-  },
-];
-
-function getProduct(slug: string) {
-  return products.find((p) => p.slug === slug);
-}
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { products } from '@/lib/products';
+import { useCart } from '@/lib/cart';
 
 export default function ProductPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const product = getProduct(params.slug);
+  const product = products.find((p) => p.slug === params.slug);
+  const { add } = useCart();
+  const router = useRouter();
 
   if (!product) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Produto não encontrado</h1>
-        <Link className="text-emerald-500 underline" href="/">
-          Voltar para a loja
-        </Link>
-      </div>
+      <main className="max-w-4xl mx-auto px-4 py-10">
+        <p className="text-white/70">Produto não encontrado.</p>
+      </main>
     );
   }
 
+  const handleAdd = () => {
+    add({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+    });
+    router.push('/checkout');
+  };
+
   return (
-    <div className="grid gap-8 md:grid-cols-2">
-      {/* Imagem */}
-      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-        {/* se suas imagens são externas e o Next/Image reclama, use <img> simples */}
-        <img
+    <main className="max-w-4xl mx-auto px-4 py-8 grid gap-6 sm:grid-cols-2">
+      <div className="relative w-full aspect-square">
+        <Image
           src={product.image}
           alt={product.name}
-          className="h-auto w-full rounded-lg object-cover"
+          fill
+          className="object-cover rounded-xl"
+          sizes="(max-width:768px) 100vw, 50vw"
         />
       </div>
 
-      {/* Info */}
       <div className="space-y-4">
-        {product.badge ? (
-          <span className="inline-flex w-auto rounded-full bg-emerald-600/90 px-3 py-1 text-sm text-white">
-            {product.badge}
-          </span>
-        ) : null}
-        <h1 className="text-3xl font-semibold">{product.name}</h1>
-        <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-bold text-emerald-400">
-            R$ {product.price.toFixed(2)}
+        <h1 className="text-3xl font-bold">{product.name}</h1>
+        <p className="text-white/80">{product.description}</p>
+        <div className="flex items-center gap-3">
+          <span className="text-emerald-400 font-bold text-2xl">
+            R$ {product.price.toFixed(2).replace('.', ',')}
           </span>
           {product.oldPrice ? (
-            <span className="text-lg text-white/50 line-through">
-              R$ {product.oldPrice.toFixed(2)}
+            <span className="text-white/50 line-through">
+              R$ {product.oldPrice.toFixed(2).replace('.', ',')}
             </span>
           ) : null}
         </div>
 
-        <AddToCartButton
-          id={product.slug}
-          name={product.name}
-          price={product.price}
-          image={product.image}
-        />
-
-        <p className="text-white/70">
-          Frete rápido e devolução grátis em 7 dias. Qualquer dúvida, fale conosco no WhatsApp.
-        </p>
+        <button
+          onClick={handleAdd}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition px-5 py-3 font-medium"
+        >
+          Adicionar ao carrinho
+        </button>
       </div>
-    </div>
+    </main>
   );
 }
