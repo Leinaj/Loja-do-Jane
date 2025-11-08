@@ -1,11 +1,12 @@
+// lib/cart.tsx
 'use client';
 
 import React, {
   createContext,
   useContext,
-  useState,
   useEffect,
   useMemo,
+  useState,
 } from 'react';
 
 export type CartItem = {
@@ -40,8 +41,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const add = (item: CartItem) => {
     setItems((prev) => {
-      const existing = prev.find((p) => p.id === item.id);
-      if (existing) {
+      const found = prev.find((p) => p.id === item.id);
+      if (found) {
         return prev.map((p) =>
           p.id === item.id ? { ...p, quantity: p.quantity + item.quantity } : p
         );
@@ -50,11 +51,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const remove = (id: string) => setItems((prev) => prev.filter((p) => p.id !== id));
+  const remove = (id: string) =>
+    setItems((prev) => prev.filter((p) => p.id !== id));
+
   const clear = () => setItems([]);
 
   const total = useMemo(
-    () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    () => items.reduce((sum, it) => sum + it.price * it.quantity, 0),
     [items]
   );
 
@@ -63,11 +66,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items, total]
   );
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
