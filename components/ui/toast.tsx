@@ -1,7 +1,13 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 type Toast = {
   id: string;
@@ -24,11 +30,16 @@ export function useToast() {
   return ctx;
 }
 
+function genId() {
+  // evita depender de crypto.randomUUID
+  return `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function ToastItem({ t, onClose }: { t: Toast; onClose: (id: string) => void }) {
   useEffect(() => {
     const ms = t.duration ?? 3000;
-    const id = setTimeout(() => onClose(t.id), ms);
-    return () => clearTimeout(id);
+    const id = window.setTimeout(() => onClose(t.id), ms);
+    return () => window.clearTimeout(id);
   }, [t, onClose]);
 
   const color =
@@ -45,7 +56,6 @@ function ToastItem({ t, onClose }: { t: Toast; onClose: (id: string) => void }) 
         'backdrop-blur-md bg-neutral-900/90 text-white',
         'animate-[toast-in_180ms_ease-out]',
       ].join(' ')}
-      style={{}}
     >
       <div className="flex items-start gap-3">
         <div className={`mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${color}`} />
@@ -72,6 +82,7 @@ function ToastItem({ t, onClose }: { t: Toast; onClose: (id: string) => void }) 
           ✕
         </button>
       </div>
+
       <style>{`
         @keyframes toast-in {
           from { transform: translateY(8px) scale(.98); opacity: 0 }
@@ -94,9 +105,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const show = useCallback((t: Omit<Toast, 'id'>) => {
-    const id = crypto.randomUUID();
-    const toast: Toast = { id, ...t };
-    setToasts((cur) => [...cur, toast]);
+    const id = genId();
+    setToasts((cur) => [...cur, { id, ...t }]);
   }, []);
 
   const close = useCallback((id: string) => {
@@ -106,15 +116,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      {mounted.current &&
-        createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[999] flex flex-col items-center gap-3 px-4">
-            {toasts.map((t) => (
-              <ToastItem key={t.id} t={t} onClose={close} />
-            ))}
-          </div>,
-          document.body
-        )}
+
+      {/* Container fixo; dispensa portal e libs */}
+      {mounted.current && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[999] flex flex-col items-center gap-3 px-4">
+          {toasts.map((t) => (
+            <ToastItem key={t.id} t={t} onClose={close} />
+          ))}
+        </div>
+      )}
     </ToastContext.Provider>
   );
 }
