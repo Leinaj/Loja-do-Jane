@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import RootProviders from "@/components/providers/RootProviders";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -21,13 +22,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${outfit.variable} font-sans min-h-screen bg-gradient-to-b from-[#0b1512] via-[#0c1714] to-[#0f1b18] text-zinc-100 antialiased`}
       >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 md:px-8">
-          {children}
-        </div>
+        <RootProviders>
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 md:px-8">{children}</div>
 
-        <footer className="mt-16 border-t border-white/10 py-8 text-center text-sm text-zinc-400">
-          © {new Date().getFullYear()} Loja da Jane — todos os direitos reservados
-        </footer>
+          <footer className="mt-16 border-t border-white/10 py-8 text-center text-sm text-zinc-400">
+            © {new Date().getFullYear()} Loja da Jane — todos os direitos reservados
+          </footer>
+        </RootProviders>
       </body>
     </html>
   );
