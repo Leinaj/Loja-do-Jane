@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useCart } from '@/lib/cart';
-// ✅ importa via caminho relativo para evitar problema com alias
-import { toast } from '../../../../components/ui/toast';
+import { toast } from '@/components/ui/toast'; // ✅ usa alias do tsconfig
 
 type ProductLite = {
   id: string | number;
