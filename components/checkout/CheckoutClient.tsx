@@ -82,4 +82,53 @@ export default function CheckoutClient() {
           >
             <Input label="Nome *" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
             <Input label="Telefone *" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-            <Input label="CEP *" value={form.cep} onChange={(v) => setForm({ ...
+            <Input label="CEP *" value={form.cep} onChange={(v) => setForm({ ...form, cep: v })} />
+            <Input label="Rua *" value={form.street} onChange={(v) => setForm({ ...form, street: v })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Número *" value={form.number} onChange={(v) => setForm({ ...form, number: v })} />
+              <Input label="Cidade *" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
+            </div>
+            <Input label="Estado *" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-emerald-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
+              >
+                Finalizar pedido
+              </button>
+              <Link
+                href="/"
+                className="mt-3 block w-full rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-emerald-300 hover:bg-white/5"
+              >
+                Voltar para a loja
+              </Link>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function Input({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm text-zinc-300">{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-white/10 bg-[#0b1512] px-3 py-3 text-sm outline-none ring-emerald-400/30 placeholder:text-zinc-500 focus:ring-2"
+        placeholder=""
+      />
+    </label>
+  );
+}
