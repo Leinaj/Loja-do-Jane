@@ -1,104 +1,85 @@
-'use client';
-
-import Image from 'next/image';
 import Link from 'next/link';
 
-// função auxiliar pra formatar dinheiro (BRL)
-const money = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-// tipo do produto corrigido
 type Product = {
-  id: string;
+  slug: string;
   name: string;
-  image: string;
   price: number;
   oldPrice?: number;
+  image: string;
   badge?: string;
 };
 
-// lista de produtos
 const products: Product[] = [
   {
-    id: '1',
+    slug: 'moletom-cinza',
     name: 'Moletom Cinza',
-    image: '/products/moletom-cinza.jpg',
     price: 159.9,
     oldPrice: 189.9,
+    image: '/images/moletom-cinza.jpg',
     badge: 'Promoção ⚡',
   },
   {
-    id: '2',
+    slug: 'bone-street',
     name: 'Boné Street',
-    image: '/products/bone-street.jpg',
     price: 79.9,
-    oldPrice: 99.9,
-    badge: '🔥 Oferta',
-  },
-  {
-    id: '3',
-    name: 'Camiseta Preta',
-    image: '/products/camiseta-preta.jpg',
-    price: 69.9,
+    image: '/images/bone-street.jpg',
+    badge: 'Oferta 🔥',
   },
 ];
 
-export default function Page() {
+export default function HomePage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+    <>
       {/* Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 p-6 text-white text-center shadow-md">
-        <h1 className="text-3xl font-semibold">Promo relâmpago ⚡</h1>
-        <p className="text-lg">Até 50% OFF em itens selecionados.</p>
+      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white shadow-lg">
+        <h2 className="mb-1 text-3xl font-bold">Promo relâmpago ⚡</h2>
+        <p className="text-white/90">Até 50% OFF em itens selecionados.</p>
       </div>
 
-      {/* Lista de produtos */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-6">Produtos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((p) => (
-            <div
-              key={p.id}
-              className="bg-neutral-900/60 border border-white/10 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform"
-            >
-              <div className="relative w-full h-64">
-                <Image
-                  src={p.image}
-                  alt={p.name}
-                  fill
-                  className="object-cover"
-                />
-                {p.badge && (
-                  <span className="absolute top-2 left-2 bg-emerald-500 text-white text-xs font-medium px-2 py-1 rounded-md shadow-md animate-pulse">
-                    {p.badge}
+      <h3 className="mb-4 text-2xl font-semibold">Produtos</h3>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {products.map((p) => (
+          <div
+            key={p.slug}
+            className="rounded-2xl border border-white/10 bg-black/30 p-4 shadow-md"
+          >
+            <Link href={`/produto/${p.slug}`} className="block">
+              <div className="overflow-hidden rounded-xl">
+                <img src={p.image} alt={p.name} className="w-full object-cover" />
+              </div>
+            </Link>
+
+            <div className="mt-4 space-y-2">
+              {p.badge ? (
+                <span className="inline-flex rounded-full bg-emerald-600/90 px-3 py-1 text-xs text-white">
+                  {p.badge}
+                </span>
+              ) : null}
+              <h4 className="text-lg font-medium">{p.name}</h4>
+              <div className="flex items-baseline gap-3">
+                <span className="text-xl font-semibold text-emerald-400">
+                  R$ {p.price.toFixed(2)}
+                </span>
+                {p.oldPrice ? (
+                  <span className="text-sm text-white/50 line-through">
+                    R$ {p.oldPrice.toFixed(2)}
                   </span>
-                )}
+                ) : null}
               </div>
 
-              <div className="p-4 space-y-2">
-                <h3 className="text-lg font-medium">{p.name}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-semibold text-lg">
-                    {money(p.price)}
-                  </span>
-                  {p.oldPrice && (
-                    <span className="text-white/60 line-through text-sm">
-                      {money(p.oldPrice)}
-                    </span>
-                  )}
-                </div>
-
+              <div className="pt-2">
                 <Link
-                  href={`/produto/${p.id}`}
-                  className="inline-block text-center w-full py-2 mt-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium transition"
+                  href={`/produto/${p.slug}`}
+                  className="inline-flex w-full justify-center rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white transition hover:bg-emerald-700"
                 >
                   Ver produto
                 </Link>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-    </main>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
