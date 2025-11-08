@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCart } from '@/lib/cart';
 
 // Tipagem para o evento customizado "open-cart"
@@ -12,7 +12,18 @@ declare global {
 }
 
 export default function Header() {
-  const { itemsCount } = useCart();
+  // Seu hook provavelmente retorna { items, add, remove, ... }
+  const { items = [] } = useCart() as { items: Array<{ quantity?: number }> };
+
+  // Conta itens: se tiver quantity soma, senão usa length
+  const itemsCount = useMemo(() => {
+    if (!Array.isArray(items)) return 0;
+    const hasQty = items.some((i) => typeof i?.quantity === 'number');
+    return hasQty
+      ? items.reduce((acc, i: any) => acc + (i.quantity ?? 0), 0)
+      : items.length;
+  }, [items]);
+
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -70,7 +81,7 @@ export default function Header() {
         </nav>
       </div>
 
-      {/* Drawer simples (apenas controle visual; se não usar, pode remover `open`) */}
+      {/* Drawer simples para abrir o carrinho via evento "open-cart" (opcional) */}
       {open && (
         <div
           role="dialog"
