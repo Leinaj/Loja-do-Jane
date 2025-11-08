@@ -1,13 +1,6 @@
-// lib/cart.tsx
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type CartItem = {
   id: string;
@@ -25,46 +18,49 @@ type CartContextValue = {
   total: number;
 };
 
-const CartContext = createContext<CartContextValue | undefined>(undefined);
+const CartContext = createContext<CartContextValue | null>(null);
+
+const STORAGE_KEY = 'loja-jane:cart';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // carrega do localStorage no cliente
   useEffect(() => {
-    const saved = localStorage.getItem('cart_v1');
-    if (saved) setItems(JSON.parse(saved));
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setItems(JSON.parse(raw));
+    } catch {}
   }, []);
 
+  // persiste no localStorage
   useEffect(() => {
-    localStorage.setItem('cart_v1', JSON.stringify(items));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {}
   }, [items]);
 
   const add = (item: CartItem) => {
-    setItems((prev) => {
-      const found = prev.find((p) => p.id === item.id);
-      if (found) {
-        return prev.map((p) =>
-          p.id === item.id ? { ...p, quantity: p.quantity + item.quantity } : p
-        );
+    setItems((curr) => {
+      const idx = curr.findIndex((i) => i.id === item.id);
+      if (idx >= 0) {
+        const copy = [...curr];
+        copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + (item.quantity || 1) };
+        return copy;
       }
-      return [...prev, item];
+      return [...curr, { ...item, quantity: item.quantity || 1 }];
     });
   };
 
-  const remove = (id: string) =>
-    setItems((prev) => prev.filter((p) => p.id !== id));
-
+  const remove = (id: string) => setItems((curr) => curr.filter((i) => i.id !== id));
   const clear = () => setItems([]);
 
   const total = useMemo(
-    () => items.reduce((sum, it) => sum + it.price * it.quantity, 0),
+    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
     [items]
   );
 
-  const value = useMemo(
-    () => ({ items, add, remove, clear, total }),
-    [items, total]
-  );
+  const value: CartContextValue = { items, add, remove, clear, total };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
