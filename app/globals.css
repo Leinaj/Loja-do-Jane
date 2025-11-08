@@ -2,14 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-.h2 { @apply text-xl font-semibold; }
+:root {
+  color-scheme: dark;
+}
 
+html, body {
+  @apply bg-neutral-950 text-neutral-100;
+  background-image:
+    radial-gradient(1200px 600px at 100% -10%, rgba(23,196,113,0.12), transparent),
+    radial-gradient(800px 400px at -10% 110%, rgba(23,196,113,0.07), transparent);
+}
+
+a { @apply text-brand-400 hover:text-brand-300 transition-colors; }
+
+/* botões padrão */
 .btn {
-  @apply inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition;
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
+         bg-brand-500 text-white hover:bg-brand-400 active:bg-brand-600
+         transition-shadow shadow-soft;
 }
-.btn-ghost {
-  @apply inline-flex items-center rounded-xl px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/60 transition;
+.btn-outline {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
+         border border-white/15 text-white hover:bg-white/10;
 }
-.input {
-  @apply w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-600;
+
+/* cartão base */
+.card {
+  @apply bg-white/5 backdrop-blur border border-white/10 rounded-2xl shadow-card;
+}
+
+/* grade responsiva de produtos */
+.grid-products {
+  @apply grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
 }
