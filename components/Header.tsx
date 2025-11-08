@@ -1,44 +1,29 @@
 "use client";
+
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCart } from "@/components/CartContext"; // mantém como está no seu projeto
+import { useCart } from "./CartContext";
 
 export default function Header() {
-  const pathname = usePathname();
-  const { getCartCount } = useCart();
-
-  const nav = [
-    { href: "/", label: "Home" },
-    { href: "/checkout", label: "Checkout" },
-  ];
+  const { items } = useCart();
+  const count = items.reduce((acc, it) => acc + it.q, 0);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/70 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          <span className="text-white">Loja da Jane</span>
+    <header className="p-4 bg-neutral-900 text-white sticky top-0 z-50">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <Link href="/" className="font-semibold text-lg">
+          Loja da Jane
         </Link>
 
-        <nav className="hidden gap-2 sm:flex">
-          {nav.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                  active ? "bg-white/10 text-white" : "text-neutral-300 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex items-center gap-6">
+          <Link href="/" className="hover:opacity-80">Home</Link>
+          <Link href="/checkout" className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 px-3 py-2 rounded-md">
+            <span role="img" aria-label="carrinho">🛒</span>
+            <span>Carrinho</span>
+            <span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white text-black text-sm font-medium">
+              {count}
+            </span>
+          </Link>
         </nav>
-
-        <Link href="/checkout" className="btn">
-          Carrinho · {getCartCount()}
-        </Link>
       </div>
     </header>
   );
