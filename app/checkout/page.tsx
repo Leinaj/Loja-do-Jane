@@ -3,163 +3,230 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/components/CartContext";
-import { priceBRL } from "@/lib/products";
 
 type Address = {
   name: string;
-  phone: string;
-  cep: string;
-  street: string;
-  number: string;
-  comp: string;
-  city: string;
-  state: string;
+  phone?: string;
+  zip?: string;
+  street?: string;
+  number?: string;
+  city?: string;
+  state?: string;
 };
 
-const REQUIRED: (keyof Address)[] = ["name", "phone", "cep", "street", "number", "city", "state"];
+const money = (n: number) =>
+  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function CheckoutPage() {
-  const { items, remove, clear, getCartTotal } = useCart();
-  const total = getCartTotal();
-
+  const { items, remove, clear } = useCart();
   const [address, setAddress] = useState<Address>({
     name: "",
     phone: "",
-    cep: "",
+    zip: "",
     street: "",
     number: "",
-    comp: "",
     city: "",
-    state: ""
+    state: "",
   });
 
-  // Autopreencher via CEP (8 dígitos)
-  useEffect(() => {
-    const digits = address.cep.replace(/\D/g, "");
-    if (digits.length !== 8) return;
+  // total calculado localmente (não depende de função externa)
+  const total = useMemo(() => {
+    return items.reduce((acc, it: any) => acc + (it?.price ?? 0) * (it?.quantity ?? 1), 0);
+  }, [items]);
 
-    (async () => {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-        const data = await res.json();
-        if (!data.erro) {
-          setAddress((prev) => ({
-            ...prev,
-            street: data.logradouro || prev.street,
-            city: data.localidade || prev.city,
-            state: data.uf || prev.state
-          }));
-        }
-      } catch {}
-    })();
-  }, [address.cep]);
+  const disabled = items.length === 0 || !address.name?.trim();
 
-  const onChange =
-    (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setAddress((prev) => ({ ...prev, [k]: e.target.value }));
-
-  const cartLines = useMemo(
-    () =>
-      items
-        .map(({ product, qty }) => `• ${product.name} — ${qty} × ${priceBRL(product.price)}`)
-        .join("\n"),
-    [items]
-  );
-
-  const validar = () => {
-    if (!items.length) {
-      alert("Seu carrinho está vazio.");
-      return false;
-    }
-    const faltando = REQUIRED.filter((k) => !String(address[k]).trim());
-    if (faltando.length) {
-      alert("Preencha os campos obrigatórios: " + faltando.join(", "));
-      return false;
-    }
-    return true;
-  };
-
-  const finish = () => {
-    if (!validar()) return;
+  const handlePlaceOrder = () => {
+    if (disabled) return;
 
     const msg =
-      `*Novo Pedido*\n` +
-      `Cliente: ${address.name}\n` +
-      `Telefone: ${address.phone}\n` +
-      `CEP: ${address.cep}\n` +
-      `Endereço: ${address.street}, ${address.number} ${address.comp ? "- " + address.comp : ""}\n` +
-      `Cidade/UF: ${address.city}/${address.state}\n\n` +
-      `*Itens:*\n${cartLines}\n\n` +
-      `*Total:* ${priceBRL(total)}\n` +
-      `———\nEnviado pela Loja da Jane`;
+      `🧾 *Pedido recebido!*\n` +
+      `*Cliente:* ${address.name}\n` +
+      (address.phone ? `*Tel:* ${address.phone}\n` : "") +
+      `*Total:* ${money(total)}\n` +
+      `*Entrega:* ${[
+        address.street,
+        address.number,
+        address.city,
+        address.state,
+        address.zip,
+      ]
+        .filter(Boolean)
+        .join(", ")}\n\n` +
+      `*Itens:*\n` +
+      items
+        .map(
+          (it: any) =>
+            `• ${it.name ?? it.title} — ${it.quantity} × ${money(it.price)}`
+        )
+        .join("\n");
 
-    const url = `https://wa.me/5544988606483?text=${encodeURIComponent(msg)}`;
-
-    const abrir = confirm("Abrir o WhatsApp para enviar o pedido?");
-    if (!abrir) return;
-
-    // Abre o WhatsApp em uma nova aba
+    // abre WhatsApp com mensagem pronta
+    const phone = "5544988606483"; // <<< ajuste se quiser outro número
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank");
 
-    // Só limpa o carrinho quando o usuário confirmar que enviou
-    const enviado = confirm("Depois de enviar no WhatsApp, clique em OK para limpar o carrinho.");
-    if (enviado) {
-      clear();
-      alert("Pedido finalizado! Obrigado ❤️");
-    }
+    // limpa carrinho depois de abrir o WhatsApp
+    clear();
   };
 
+  // preenche cidade/UF a partir do CEP? (opcional, só mantém campos)
+  useEffect(() => {
+    // espaço para futuras integrações
+  }, [address.zip]);
+
   return (
-    <div className="grid lg:grid-cols-2 gap-8">
-      <section className="rounded-2xl border border-zinc-800 p-4">
-        <h2 className="h2">Dados para entrega</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          <input className="input sm:col-span-2" placeholder="Nome completo *" value={address.name} onChange={onChange("name")} />
-          <input className="input" placeholder="Telefone (WhatsApp) *" value={address.phone} onChange={onChange("phone")} />
-          <input className="input" placeholder="CEP *" value={address.cep} onChange={onChange("cep")} />
-          <input className="input sm:col-span-2" placeholder="Endereço *" value={address.street} onChange={onChange("street")} />
-          <input className="input" placeholder="Número *" value={address.number} onChange={onChange("number")} />
-          <input className="input" placeholder="Complemento" value={address.comp} onChange={onChange("comp")} />
-          <input className="input" placeholder="Cidade *" value={address.city} onChange={onChange("city")} />
-          <input className="input" placeholder="Estado *" value={address.state} onChange={onChange("state")} />
+    <>
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/70 backdrop-blur">
+        <div className="container flex h-16 items-center justify-between">
+          <Link href="/" className="text-lg font-semibold tracking-tight">
+            Loja da Jane
+          </Link>
+          <span className="text-sm text-neutral-400">
+            {items.length} item(ns) — <strong className="text-white">{money(total)}</strong>
+          </span>
         </div>
+      </header>
 
-        <p className="text-sm text-zinc-400 mt-4">
-          Os campos com * são obrigatórios. O CEP preenche automaticamente rua/cidade/UF.
-        </p>
+      <main className="container grid gap-8 py-8 lg:grid-cols-3">
+        {/* formulário */}
+        <section className="card p-5 lg:col-span-2">
+          <h1 className="mb-4 text-xl font-bold">Dados para entrega</h1>
 
-        <button className="btn w-full mt-4" onClick={finish}>Enviar pedido pelo WhatsApp</button>
-      </section>
-
-      <section className="rounded-2xl border border-zinc-800 p-4">
-        <h2 className="h2">Seu carrinho</h2>
-
-        {!items.length && (
-          <p className="text-zinc-400 mt-3">
-            Carrinho vazio. <Link className="underline" href="/">Continuar comprando</Link>
-          </p>
-        )}
-
-        <div className="mt-3 space-y-3">
-          {items.map(({ product, qty }) => (
-            <div key={product.id} className="flex items-center justify-between gap-3 border border-zinc-800 rounded-xl p-3">
-              <div className="min-w-0">
-                <p className="font-medium truncate">{product.name}</p>
-                <p className="text-sm text-zinc-400">
-                  {qty} × {priceBRL(product.price)}
-                </p>
-              </div>
-              <button onClick={() => remove(product.id)} className="btn-ghost">Remover</button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm text-neutral-300">Nome completo*</label>
+              <input
+                value={address.name}
+                onChange={(e) => setAddress({ ...address, name: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="Digite seu nome"
+              />
             </div>
-          ))}
-        </div>
 
-        <div className="flex items-center justify-between mt-4 border-t border-zinc-800 pt-4">
-          <span className="text-zinc-400">Total</span>
-          <strong className="text-lg">{priceBRL(total)}</strong>
-        </div>
-      </section>
-    </div>
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">Telefone (WhatsApp)</label>
+              <input
+                value={address.phone}
+                onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="(44) 9 8888-8888"
+                inputMode="tel"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">CEP</label>
+              <input
+                value={address.zip}
+                onChange={(e) => setAddress({ ...address, zip: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="87000-000"
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm text-neutral-300">Endereço</label>
+              <input
+                value={address.street}
+                onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="Rua / Avenida"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">Número</label>
+              <input
+                value={address.number}
+                onChange={(e) => setAddress({ ...address, number: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="123"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">Cidade</label>
+              <input
+                value={address.city}
+                onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="Maringá"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">Estado (UF)</label>
+              <input
+                value={address.state}
+                onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none"
+                placeholder="PR"
+                maxLength={2}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* resumo */}
+        <aside className="card p-5">
+          <h2 className="mb-4 text-lg font-semibold">Resumo do pedido</h2>
+
+          <div className="mb-4 space-y-3">
+            {items.length === 0 && (
+              <p className="text-neutral-400">Seu carrinho está vazio.</p>
+            )}
+
+            {items.map((it: any) => (
+              <div
+                key={`${it.id ?? it.slug}-${it.size ?? ""}`}
+                className="flex items-start justify-between rounded-xl border border-white/10 p-3"
+              >
+                <div>
+                  <p className="font-medium">{it.name ?? it.title}</p>
+                  <p className="text-sm text-neutral-400">
+                    {it.quantity} × {money(it.price)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => remove(it)}
+                  className="text-sm text-red-400 hover:text-red-300"
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mb-4 border-t border-white/10 pt-3">
+            <div className="flex justify-between text-neutral-300">
+              <span>Subtotal</span>
+              <span>{money(total)}</span>
+            </div>
+            <div className="flex justify-between text-neutral-300">
+              <span>Entrega</span>
+              <span>Combinar pelo WhatsApp</span>
+            </div>
+            <div className="mt-2 flex justify-between text-lg font-bold">
+              <span>Total</span>
+              <span>{money(total)}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handlePlaceOrder}
+            disabled={disabled}
+            className={`btn w-full ${disabled ? "opacity-60" : ""}`}
+          >
+            Finalizar pedido no WhatsApp
+          </button>
+
+          <p className="mt-3 text-center text-xs text-neutral-400">
+            Ao clicar, abriremos o WhatsApp com o pedido preenchido.
+          </p>
+        </aside>
+      </main>
+    </>
   );
 }
