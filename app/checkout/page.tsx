@@ -1,202 +1,196 @@
 'use client';
 
 import Image from 'next/image';
-import { useCart } from '@/lib/cart';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useCart } from '../../lib/cart';
 
 type Address = {
-  nome: string;
-  telefone: string;
+  name: string;
+  phone: string;
   cep: string;
-  rua: string;
-  numero: string;
-  cidade: string;
-  estado: string;
-  complemento?: string;
-  bairro?: string;
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  complement?: string;
 };
 
 export default function CheckoutPage() {
-  const { items, remove, clear } = useCart();
-
-  const total = useMemo(
-    () => items.reduce((acc, it) => acc + it.price * (it.quantity ?? 1), 0),
-    [items]
-  );
+  const { items, remove, clear, total } = useCart();
 
   const [address, setAddress] = useState<Address>({
-    nome: '',
-    telefone: '',
+    name: '',
+    phone: '',
     cep: '',
-    rua: '',
-    numero: '',
-    cidade: '',
-    estado: '',
-    complemento: '',
-    bairro: '',
+    street: '',
+    number: '',
+    city: '',
+    state: '',
+    complement: '',
   });
 
-  // Busca ViaCEP quando CEP tem 8 dígitos
-  const handleCepChange = async (value: string) => {
-    const onlyDigits = value.replace(/\D/g, '');
-    setAddress((a) => ({ ...a, cep: value }));
+  // Busca endereço via ViaCEP ao digitar CEP (somente números)
+  useEffect(() => {
+    const cep = (address.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
 
-    if (onlyDigits.length === 8) {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${onlyDigits}/json/`);
-        const data = await res.json();
-        if (!data.erro) {
+    const ctrl = new AbortController();
+    fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data?.erro) {
           setAddress((a) => ({
             ...a,
-            rua: data.logradouro ?? a.rua,
-            bairro: data.bairro ?? a.bairro,
-            cidade: data.localidade ?? a.cidade,
-            estado: data.uf ?? a.estado,
+            street: data.logradouro || a.street,
+            city: data.localidade || a.city,
+            state: data.uf || a.state,
           }));
         }
-      } catch {
-        // silencioso
-      }
-    }
-  };
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [address.cep]);
 
-  const onChange =
-    (key: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setAddress((a) => ({ ...a, [key]: e.target.value }));
+  const canFinish = useMemo(() => {
+    if (!items.length) return false;
+    const { name, phone, cep, street, number, city, state } = address;
+    return [name, phone, cep, street, number, city, state].every(Boolean);
+  }, [items.length, address]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
-      <h1 className="text-3xl font-semibold">Checkout</h1>
+    <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+      <h1 className="text-3xl font-bold">Checkout</h1>
 
       {/* Carrinho */}
-      <section className="mt-6 rounded-2xl border border-white/10 bg-neutral-900/50 p-4">
-        <h2 className="mb-3 text-lg font-medium">Carrinho</h2>
+      <section className="rounded-xl border border-white/10 bg-black/20 p-4">
+        <h2 className="mb-4 text-xl font-semibold">Carrinho</h2>
 
-        {items.length === 0 ? (
-          <p className="text-white/70">Carrinho vazio.</p>
-        ) : (
-          <ul className="space-y-3">
-            {items.map((it) => (
-              <li
-                key={it.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-neutral-900/60 p-3"
-              >
-                <div className="flex items-center gap-3">
-                  {/* miniatura */}
-                  {it.image ? (
-                    <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-neutral-800">
-                      <Image
-                        src={it.image}
-                        alt={it.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-14 w-14 rounded-lg bg-neutral-800" />
-                  )}
+        {!items.length && <p className="text-white/70">Carrinho vazio.</p>}
 
-                  <div>
-                    <div className="text-sm font-medium">{it.name}</div>
-                    <div className="text-xs text-white/60">
-                      {it.quantity ?? 1} × R${' '}
-                      {it.price.toFixed(2).replace('.', ',')}
-                    </div>
+        <ul className="space-y-3">
+          {items.map((it) => (
+            <li
+              key={it.id}
+              className="flex items-center justify-between gap-4 rounded-lg bg-white/5 p-3"
+            >
+              <div className="flex items-center gap-3">
+                {it.image && (
+                  <Image
+                    src={it.image}
+                    alt={it.name}
+                    width={56}
+                    height={56}
+                    className="h-14 w-14 rounded object-cover"
+                  />
+                )}
+                <div>
+                  <div className="font-medium">{it.name}</div>
+                  <div className="text-sm text-white/70">
+                    {it.quantity} × R$ {it.price.toFixed(2).replace('.', ',')}
                   </div>
                 </div>
+              </div>
 
-                <button
-                  onClick={() => remove(String(it.id))}
-                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500"
-                >
-                  Remover
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              <button
+                onClick={() => remove(it.id)}
+                className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium hover:bg-rose-500"
+              >
+                Remover
+              </button>
+            </li>
+          ))}
+        </ul>
 
         <div className="mt-4 flex items-center justify-between">
+          <div className="text-lg">
+            <span className="text-white/70">Total</span>{' '}
+            <strong>R$ {total.toFixed(2).replace('.', ',')}</strong>
+          </div>
+
           <button
             onClick={clear}
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+            className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/5"
           >
             Limpar carrinho
           </button>
-          <div className="text-right text-lg">
-            Total{' '}
-            <span className="font-semibold">
-              R$ {total.toFixed(2).replace('.', ',')}
-            </span>
-          </div>
         </div>
       </section>
 
       {/* Endereço */}
-      <section className="mt-6 rounded-2xl border border-white/10 bg-neutral-900/50 p-4">
-        <h2 className="mb-3 text-lg font-medium">Endereço</h2>
+      <section className="rounded-xl border border-white/10 bg-black/20 p-4">
+        <h2 className="mb-4 text-xl font-semibold">Endereço</h2>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Nome *"
-            value={address.nome}
-            onChange={onChange('nome')}
+            value={address.name}
+            onChange={(e) => setAddress({ ...address, name: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Telefone *"
-            value={address.telefone}
-            onChange={onChange('telefone')}
+            value={address.phone}
+            onChange={(e) => setAddress({ ...address, phone: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="CEP *"
+            inputMode="numeric"
             value={address.cep}
-            onChange={(e) => handleCepChange(e.target.value)}
+            onChange={(e) =>
+              setAddress({ ...address, cep: e.target.value.replace(/\D/g, '') })
+            }
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Rua *"
-            value={address.rua}
-            onChange={onChange('rua')}
+            value={address.street}
+            onChange={(e) => setAddress({ ...address, street: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Número *"
-            value={address.numero}
-            onChange={onChange('numero')}
+            value={address.number}
+            onChange={(e) => setAddress({ ...address, number: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
-            placeholder="Bairro"
-            value={address.bairro ?? ''}
-            onChange={onChange('bairro')}
-          />
-          <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Cidade *"
-            value={address.cidade}
-            onChange={onChange('cidade')}
+            value={address.city}
+            onChange={(e) => setAddress({ ...address, city: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40"
+            className="rounded-lg bg-white/5 p-3 outline-none"
             placeholder="Estado *"
-            value={address.estado}
-            onChange={onChange('estado')}
+            value={address.state}
+            onChange={(e) => setAddress({ ...address, state: e.target.value })}
           />
           <input
-            className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 outline-none placeholder:text-white/40 md:col-span-2"
+            className="rounded-lg bg-white/5 p-3 outline-none md:col-span-2"
             placeholder="Complemento"
-            value={address.complemento ?? ''}
-            onChange={onChange('complemento')}
+            value={address.complement || ''}
+            onChange={(e) =>
+              setAddress({ ...address, complement: e.target.value })
+            }
           />
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <button className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+        <div className="mt-6 flex gap-3">
+          <button
+            disabled={!canFinish}
+            className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:bg-emerald-500"
+            onClick={() => alert('Pedido finalizado! (fluxo de pagamento em breve)')}
+          >
             Finalizar pedido
           </button>
+
+          <a
+            href="/"
+            className="rounded-lg border border-white/20 px-5 py-3 font-medium hover:bg-white/5"
+          >
+            Voltar para a loja
+          </a>
         </div>
       </section>
     </main>
