@@ -3,22 +3,37 @@
 import { useCart } from '@/lib/cart';
 
 export default function AddToCartButton({
-  id,
-  name,
-  price,
-  image,
+  product,
 }: {
-  id: string;
-  name: string;
-  price: number;
-  image?: string;
+  product: {
+    id: string | number;
+    slug: string;
+    name: string;
+    price: number;
+    image?: string;
+  };
 }) {
   const { add } = useCart();
 
+  const onAdd = () => {
+    add({
+      id: String(product.id),
+      name: product.name,
+      price: product.price,
+      quantity: 1,
+      image: product.image,
+    });
+
+    // Dispara evento global para mostrar aviso
+    window.dispatchEvent(
+      new CustomEvent('cart:item-added', { detail: { name: product.name } })
+    );
+  };
+
   return (
     <button
-      onClick={() => add({ id, name, price, image, quantity: 1 })}
-      className="w-full rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white transition hover:bg-emerald-700"
+      onClick={onAdd}
+      className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
     >
       Adicionar ao carrinho
     </button>
