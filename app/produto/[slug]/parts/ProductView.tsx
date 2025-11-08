@@ -30,7 +30,7 @@ export default function ProductView({ product }: { product: Product }) {
       name: product.name,
       price: product.price,
       image: product.image,
-      qty: quantity,
+      quantity, // ✅ chave correta
     });
 
     // toast elegante (compatível com o novo toast.tsx)
