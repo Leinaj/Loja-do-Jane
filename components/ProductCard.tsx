@@ -1,29 +1,63 @@
-import Link from "next/link";
+"use client";
 import Image from "next/image";
-import { type Product, priceBRL } from "@/lib/products";
+import Link from "next/link";
+
+type Product = {
+  id?: string;
+  slug: string;
+  name: string;
+  image: string;
+  price: number;
+  oldPrice?: number;
+  badge?: string;
+  [key: string]: any; // evita erro TS se vierem campos extras
+};
+
+function money(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
-    <article className="rounded-2xl border border-zinc-800 overflow-hidden bg-zinc-900/40">
-      <div className="relative aspect-[16/10]">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
-        />
-      </div>
-
-      <div className="p-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-medium truncate">{product.name}</h3>
-          <p className="text-sm text-zinc-400">{priceBRL(product.price)}</p>
+    <div className="card group overflow-hidden">
+      <Link href={`/produto/${product.slug}`} className="block">
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+            sizes="(max-width:768px) 100vw, (max-width:1200px) 50vw, 25vw"
+            priority={false}
+          />
+          {product.badge && (
+            <span className="absolute left-3 top-3 rounded-lg bg-brand-500 px-2 py-1 text-xs font-semibold shadow-soft">
+              {product.badge}
+            </span>
+          )}
         </div>
-        <Link href={`/produto/${product.slug}`} className="btn">
-          Ver produto
-        </Link>
+      </Link>
+
+      <div className="space-y-3 p-4">
+        <h3 className="line-clamp-1 text-base font-semibold">{product.name}</h3>
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-bold text-white">{money(product.price)}</span>
+          {product.oldPrice && (
+            <span className="text-sm text-neutral-400 line-through">
+              {money(product.oldPrice)}
+            </span>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Link href={`/produto/${product.slug}`} className="btn flex-1">
+            Ver produto
+          </Link>
+          <Link href={`/checkout?add=${product.slug}`} className="btn-outline">
+            Comprar
+          </Link>
+        </div>
       </div>
-    </article>
+    </div>
   );
 }
