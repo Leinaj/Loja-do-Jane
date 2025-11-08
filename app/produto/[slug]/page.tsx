@@ -2,9 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { useCart } from '../../../lib/cart';
-import { useToast } from '../../../components/ui/toast';
+import { useMemo, useState } from 'react';
+import { useCart } from '@/lib/cart';
+import { useToast } from '@/components/ui/toast';
+import Lightbox from '@/components/ui/lightbox';
 
 const products = [
   {
@@ -49,6 +50,8 @@ type PageProps = { params: { slug: string } };
 export default function ProductPage({ params }: PageProps) {
   const { add } = useCart();
   const { show } = useToast();
+  const [qty, setQty] = useState(1);
+  const [open, setOpen] = useState(false);
 
   const product = useMemo(
     () => products.find((p) => p.slug === params.slug),
@@ -75,17 +78,14 @@ export default function ProductPage({ params }: PageProps) {
       name: product.name,
       price: product.price,
       image: product.image,
-      quantity: 1,
+      quantity: qty,
     });
 
     show({
       title: 'Produto adicionado!',
-      description: `"${product.name}" foi adicionado ao carrinho.`,
+      description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
       variant: 'success',
-      action: {
-        label: 'Ver carrinho',
-        onClick: () => (window.location.href = '/checkout'),
-      },
+      action: { label: 'Ver carrinho', onClick: () => (window.location.href = '/checkout') },
       duration: 2800,
     });
   };
@@ -94,14 +94,20 @@ export default function ProductPage({ params }: PageProps) {
     <main className="mx-auto max-w-6xl px-4 py-10">
       <div className="grid gap-8 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={900}
-            height={900}
-            className="h-auto w-full rounded-xl object-cover"
-            priority
-          />
+          <button
+            onClick={() => setOpen(true)}
+            className="block w-full rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            aria-label="Ampliar imagem"
+          >
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={900}
+              height={900}
+              className="h-auto w-full rounded-xl object-cover"
+              priority
+            />
+          </button>
         </div>
 
         <div className="space-y-5">
@@ -124,6 +130,34 @@ export default function ProductPage({ params }: PageProps) {
             )}
           </div>
 
+          {/* Quantidade */}
+          <div className="flex items-center gap-2 pt-2">
+            <span className="text-sm text-white/70">Quantidade:</span>
+            <div className="inline-flex items-center rounded-xl border border-white/15">
+              <button
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="px-3 py-2 hover:bg-white/5"
+                aria-label="Diminuir quantidade"
+              >
+                −
+              </button>
+              <input
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                className="w-12 bg-transparent text-center outline-none"
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <button
+                onClick={() => setQty((q) => q + 1)}
+                className="px-3 py-2 hover:bg-white/5"
+                aria-label="Aumentar quantidade"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleAdd}
@@ -141,6 +175,10 @@ export default function ProductPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {open && (
+        <Lightbox src={product.image} alt={product.name} onClose={() => setOpen(false)} />
+      )}
     </main>
   );
 }
