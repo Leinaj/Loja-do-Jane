@@ -1,85 +1,23 @@
-import Link from 'next/link';
+// app/page.tsx
+import ProductCard from '@/components/ProductCard';
+import { products } from '@/lib/products';
 
-type Product = {
-  slug: string;
-  name: string;
-  price: number;
-  oldPrice?: number;
-  image: string;
-  badge?: string;
-};
-
-const products: Product[] = [
-  {
-    slug: 'moletom-cinza',
-    name: 'Moletom Cinza',
-    price: 159.9,
-    oldPrice: 189.9,
-    image: '/images/moletom-cinza.jpg',
-    badge: 'Promoção ⚡',
-  },
-  {
-    slug: 'bone-street',
-    name: 'Boné Street',
-    price: 79.9,
-    image: '/images/bone-street.jpg',
-    badge: 'Oferta 🔥',
-  },
-];
-
-export default function HomePage() {
+export default function Home() {
   return (
-    <>
-      {/* Banner */}
-      <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white shadow-lg">
-        <h2 className="mb-1 text-3xl font-bold">Promo relâmpago ⚡</h2>
-        <p className="text-white/90">Até 50% OFF em itens selecionados.</p>
-      </div>
+    <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+      <section className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6">
+        <h2 className="text-3xl font-bold">Promo relâmpago ⚡</h2>
+        <p className="opacity-90">Até 50% OFF em itens selecionados.</p>
+      </section>
 
-      <h3 className="mb-4 text-2xl font-semibold">Produtos</h3>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {products.map((p) => (
-          <div
-            key={p.slug}
-            className="rounded-2xl border border-white/10 bg-black/30 p-4 shadow-md"
-          >
-            <Link href={`/produto/${p.slug}`} className="block">
-              <div className="overflow-hidden rounded-xl">
-                <img src={p.image} alt={p.name} className="w-full object-cover" />
-              </div>
-            </Link>
-
-            <div className="mt-4 space-y-2">
-              {p.badge ? (
-                <span className="inline-flex rounded-full bg-emerald-600/90 px-3 py-1 text-xs text-white">
-                  {p.badge}
-                </span>
-              ) : null}
-              <h4 className="text-lg font-medium">{p.name}</h4>
-              <div className="flex items-baseline gap-3">
-                <span className="text-xl font-semibold text-emerald-400">
-                  R$ {p.price.toFixed(2)}
-                </span>
-                {p.oldPrice ? (
-                  <span className="text-sm text-white/50 line-through">
-                    R$ {p.oldPrice.toFixed(2)}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  href={`/produto/${p.slug}`}
-                  className="inline-flex w-full justify-center rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white transition hover:bg-emerald-700"
-                >
-                  Ver produto
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
+      <section>
+        <h3 className="text-2xl font-semibold mb-4">Produtos</h3>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((p) => (
+            <ProductCard key={p.id} p={p} />
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
