@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useCart } from "@/components/CartContext";
-import { money } from "@/lib/products";
+import { useMemo, useRef, useState } from "react";
+import { useCart } from "../../components/CartContext";
+import { money } from "../../lib/products";
 
 type Address = {
   name: string;
@@ -15,7 +15,7 @@ type Address = {
   state: string;
 };
 
-const INITIAL_ADDR: Address = {
+const EMPTY: Address = {
   name: "",
   phone: "",
   cep: "",
@@ -27,11 +27,11 @@ const INITIAL_ADDR: Address = {
 
 export default function CheckoutPage() {
   const { items, remove, clear } = useCart();
-  const [address, setAddress] = useState<Address>(INITIAL_ADDR);
-  const [error, setError] = useState<string>("");
-  const [okMsg, setOkMsg] = useState<string>("");
+  const [address, setAddress] = useState<Address>(EMPTY);
+  const [error, setError] = useState("");
+  const [okMsg, setOkMsg] = useState("");
 
-  // refs pra focar no primeiro campo vazio
+  // refs para focar no primeiro campo vazio
   const refs = {
     name: useRef<HTMLInputElement>(null),
     phone: useRef<HTMLInputElement>(null),
@@ -51,45 +51,53 @@ export default function CheckoutPage() {
     setAddress((a) => ({ ...a, [key]: v }));
   }
 
-  function validate(): keyof Address | null {
-    const required: (keyof Address)[] = ["name", "phone", "cep", "street", "number", "city", "state"];
-    for (const k of required) {
-      if (!address[k]?.trim()) return k;
-    }
+  function firstMissing(): keyof Address | null {
+    const req: (keyof Address)[] = [
+      "name",
+      "phone",
+      "cep",
+      "street",
+      "number",
+      "city",
+      "state",
+    ];
+    for (const k of req) if (!address[k].trim()) return k;
     return null;
   }
 
-  function submitOrder(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setOkMsg("");
 
-    const missing = validate();
-    if (missing) {
+    const miss = firstMissing();
+    if (miss) {
       setError("Por favor, preencha todos os campos obrigatórios.");
-      refs[missing].current?.focus();
+      refs[miss].current?.focus();
       return;
     }
 
-    // sucesso “fake” (ex.: envio pro WhatsApp/planilha se quiser depois)
+    // sucesso (simulado)
     setOkMsg(
       `Pedido recebido! Total: ${money(total)} — Entrega: ${address.street}, ${address.number} — ${address.city}/${address.state}`
     );
 
-    clear(); // esvazia o carrinho somente após sucesso
-    setAddress(INITIAL_ADDR);
+    clear();           // limpa o carrinho somente após sucesso
+    setAddress(EMPTY); // limpa o formulário
   }
 
   return (
     <main className="max-w-4xl mx-auto p-4 text-white">
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Checkout</h1>
-        <Link href="/" className="text-sm text-neutral-300 hover:underline">← Continuar comprando</Link>
+        <Link href="/" className="text-sm text-neutral-300 hover:underline">
+          ← Continuar comprando
+        </Link>
       </header>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Formulário */}
-        <form onSubmit={submitOrder} className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
+        <form onSubmit={submit} className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
           <div className="grid grid-cols-1 gap-3">
             <input ref={refs.name}   value={address.name}   onChange={(e)=>onChange("name", e.target.value)}   placeholder="Nome completo *" className="input" />
             <input ref={refs.phone}  value={address.phone}  onChange={(e)=>onChange("phone", e.target.value)}  placeholder="Telefone *" className="input" />
@@ -117,9 +125,14 @@ export default function CheckoutPage() {
               <div key={it.product.id} className="flex items-center justify-between bg-neutral-800 rounded-lg p-3">
                 <div>
                   <p className="font-medium">{it.product.title}</p>
-                  <p className="text-neutral-400 text-sm">{it.q} × {money(it.product.price)}</p>
+                  <p className="text-neutral-400 text-sm">
+                    {it.q} × {money(it.product.price)}
+                  </p>
                 </div>
-                <button onClick={() => remove(it.product.id)} className="text-sm text-red-300 hover:text-red-200">
+                <button
+                  onClick={() => remove(it.product.id)}
+                  className="text-sm text-red-300 hover:text-red-200"
+                >
                   Remover
                 </button>
               </div>
@@ -143,7 +156,7 @@ export default function CheckoutPage() {
         }
         .input:focus {
           border-color: #22c55e;
-          box-shadow: 0 0 0 3px rgba(34,197,94,.2);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
         }
       `}</style>
     </main>
