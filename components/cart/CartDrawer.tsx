@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useCart } from '@/lib/cart';
+import Image from "next/image";
+import Link from "next/link";
+import { useCart } from "@/lib/cart";
 
 type Props = {
   open: boolean;
@@ -11,128 +10,112 @@ type Props = {
 };
 
 export default function CartDrawer({ open, onClose }: Props) {
-  const { items, remove, clear } = useCart();
-
-  const subtotal = (items ?? []).reduce(
-    (acc: number, it: any) => acc + (Number(it?.price) || 0) * (Number(it?.quantity) || 0),
-    0
-  );
-
-  // fechar com ESC
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    if (open) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  const { items, remove, clear, total } = useCart();
 
   return (
-    <>
-      {/* overlay */}
+    <div
+      aria-hidden={!open}
+      className={`fixed inset-0 z-[60] ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+    >
+      {/* Backdrop */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 bg-black/50 transition-opacity ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        aria-hidden="true"
+        className={`absolute inset-0 bg-black/60 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
       />
 
-      {/* painél */}
+      {/* Painel */}
       <aside
-        className={`fixed right-0 top-0 z-50 h-full w-full max-w-md bg-neutral-900 text-neutral-100 shadow-2xl transition-transform duration-300 ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute right-0 top-0 h-full w-[92%] max-w-md transform bg-[#0e1916] shadow-2xl ring-1 ring-white/10 transition duration-300 ease-out ${
+          open ? "translate-x-0" : "translate-x-full"
         }`}
-        role="dialog"
-        aria-label="Carrinho"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
           <h2 className="text-lg font-semibold">Seu carrinho</h2>
           <button
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-neutral-300 hover:bg-white/10"
             aria-label="Fechar carrinho"
+            className="rounded-lg px-2 py-1 text-zinc-300 hover:bg-white/5"
           >
             ✕
           </button>
         </div>
 
-        <div className="h-[calc(100%-10rem)] overflow-y-auto px-4 py-3 space-y-3">
-          {(items ?? []).length === 0 && (
-            <p className="text-sm text-neutral-400">Seu carrinho está vazio.</p>
-          )}
-
-          {(items ?? []).map((it: any) => (
-            <div
-              key={`${it.id}`}
-              className="flex items-center gap-3 rounded-lg border border-white/10 bg-neutral-800/60 p-3"
-            >
-              <div className="relative h-16 w-16 overflow-hidden rounded-md bg-neutral-700">
-                {/* Se tiver configurado next/image pode usar <Image/>; caso não, <img/> */}
-                {it.image ? (
-                  <Image
-                    src={it.image}
-                    alt={it.name ?? 'Produto'}
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <img
-                    src="/placeholder.svg"
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                )}
+        <div className="flex h-[calc(100%-64px)] flex-col">
+          {/* Lista de itens */}
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            {items.length === 0 ? (
+              <div className="rounded-xl border border-white/10 p-6 text-center text-zinc-400">
+                Seu carrinho está vazio.
               </div>
+            ) : (
+              items.map((it) => (
+                <div
+                  key={`${it.id}`}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                >
+                  <div className="relative h-16 w-16 overflow-hidden rounded-lg ring-1 ring-white/10">
+                    <Image
+                      src={it.image}
+                      alt={it.name}
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                    />
+                  </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{it.name}</p>
-                <p className="text-xs text-neutral-400">
-                  {it.quantity} × R$ {Number(it.price).toFixed(2).replace('.', ',')}
-                </p>
-              </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{it.name}</div>
+                    <div className="mt-0.5 text-xs text-zinc-400">
+                      {it.quantity} × R$ {it.price.toFixed(2).replace(".", ",")}
+                    </div>
+                  </div>
 
-              <button
-                onClick={() => remove(String(it.id))}
-                className="rounded-md bg-rose-600 px-2 py-1 text-xs font-medium hover:bg-rose-500"
+                  <button
+                    onClick={() => remove(String(it.id))}
+                    className="rounded-lg bg-rose-500/15 px-3 py-2 text-sm font-medium text-rose-300 ring-1 ring-rose-400/20 hover:bg-rose-500/25"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Rodapé do drawer */}
+          <div className="space-y-3 border-t border-white/10 p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-300">Total</span>
+              <strong className="text-base text-emerald-400">
+                R$ {total.toFixed(2).replace(".", ",")}
+              </strong>
+            </div>
+
+            <div className="flex gap-3">
+              <Link
+                href="/checkout"
+                onClick={onClose}
+                className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-center font-semibold text-emerald-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
               >
-                Remover
+                Ir para o checkout
+              </Link>
+              <button
+                onClick={clear}
+                className="rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-300 hover:bg-white/5"
+              >
+                Limpar
               </button>
             </div>
-          ))}
-        </div>
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-neutral-900/80 p-4 backdrop-blur">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-neutral-300">Subtotal</span>
-            <strong className="text-base">
-              R$ {subtotal.toFixed(2).replace('.', ',')}
-            </strong>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={clear}
-              className="w-1/2 rounded-md bg-neutral-700 px-3 py-2 text-sm hover:bg-neutral-600"
-            >
-              Limpar
-            </button>
             <Link
-              href="/checkout"
+              href="/"
               onClick={onClose}
-              className="w-1/2 rounded-md bg-emerald-600 px-3 py-2 text-center text-sm font-medium hover:bg-emerald-500"
+              className="block rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-emerald-300 hover:bg-white/5"
             >
-              Ir ao checkout
+              Continuar comprando
             </Link>
           </div>
-
-          <Link
-            href="/"
-            onClick={onClose}
-            className="mt-3 block text-center text-xs text-neutral-400 hover:text-neutral-200"
-          >
-            Continuar comprando
-          </Link>
         </div>
       </aside>
-    </>
+    </div>
   );
 }
