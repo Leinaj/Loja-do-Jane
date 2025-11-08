@@ -3,40 +3,40 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type CartItem = {
-  id: string;
+  id: string | number;
   name: string;
   price: number;
   image?: string;
   quantity: number;
 };
 
-type CartContextValue = {
+type CartContextType = {
   items: CartItem[];
   add: (item: CartItem) => void;
-  remove: (id: string) => void;
+  remove: (id: string | number) => void;
   clear: () => void;
+  setQuantity: (id: string | number, quantity: number) => void;
   total: number;
+  itemsCount: number;
 };
 
-const CartContext = createContext<CartContextValue | null>(null);
-
-const STORAGE_KEY = 'loja-jane:cart';
+const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // carrega do localStorage no cliente
+  // carregar do localStorage
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem('cart:v1');
       if (raw) setItems(JSON.parse(raw));
     } catch {}
   }, []);
 
-  // persiste no localStorage
+  // salvar no localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem('cart:v1', JSON.stringify(items));
     } catch {}
   }, [items]);
 
@@ -45,22 +45,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const idx = curr.findIndex((i) => i.id === item.id);
       if (idx >= 0) {
         const copy = [...curr];
-        copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + (item.quantity || 1) };
+        copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + item.quantity };
         return copy;
       }
-      return [...curr, { ...item, quantity: item.quantity || 1 }];
+      return [...curr, item];
     });
   };
 
-  const remove = (id: string) => setItems((curr) => curr.filter((i) => i.id !== id));
+  const remove = (id: string | number) => {
+    setItems((curr) => curr.filter((i) => i.id !== id));
+  };
+
   const clear = () => setItems([]);
 
+  const setQuantity = (id: string | number, quantity: number) => {
+    setItems((curr) =>
+      curr.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i)),
+    );
+  };
+
   const total = useMemo(
-    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
-    [items]
+    () => items.reduce((acc, i) => acc + i.price * i.quantity, 0),
+    [items],
   );
 
-  const value: CartContextValue = { items, add, remove, clear, total };
+  const itemsCount = useMemo(
+    () => items.reduce((acc, i) => acc + i.quantity, 0),
+    [items],
+  );
+
+  const value: CartContextType = { items, add, remove, clear, setQuantity, total, itemsCount };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
