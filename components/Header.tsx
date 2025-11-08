@@ -1,23 +1,44 @@
 "use client";
-
 import Link from "next/link";
-import { useCart } from "./CartContext";
+import { usePathname } from "next/navigation";
+import { useCart } from "@/components/CartContext"; // mantém como está no seu projeto
 
 export default function Header() {
+  const pathname = usePathname();
   const { getCartCount } = useCart();
 
-  return (
-    <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
-      <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="font-semibold">Loja da Jane</Link>
+  const nav = [
+    { href: "/", label: "Home" },
+    { href: "/checkout", label: "Checkout" },
+  ];
 
-        <nav className="flex items-center gap-2">
-          <Link href="/" className="btn-ghost">Home</Link>
-          <Link href="/checkout" className="btn-ghost">Checkout</Link>
-          <Link href="/checkout" className="btn">
-            Carrinho • {getCartCount()}
-          </Link>
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/70 backdrop-blur">
+      <div className="container flex h-16 items-center justify-between">
+        <Link href="/" className="text-lg font-semibold tracking-tight">
+          <span className="text-white">Loja da Jane</span>
+        </Link>
+
+        <nav className="hidden gap-2 sm:flex">
+          {nav.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                  active ? "bg-white/10 text-white" : "text-neutral-300 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
+
+        <Link href="/checkout" className="btn">
+          Carrinho · {getCartCount()}
+        </Link>
       </div>
     </header>
   );
