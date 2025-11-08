@@ -7,7 +7,6 @@ export default function RootProviders({ children }: { children: React.ReactNode 
   return (
     <CartProvider>
       <ToastProvider>
-        {/* Faz o bridge do helper global toast() */}
         <ToastBridge />
         {children}
       </ToastProvider>
