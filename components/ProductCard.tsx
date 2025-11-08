@@ -14,14 +14,14 @@ export default function ProductCard({ p }: { p: Product }) {
         </span>
       ) : null}
 
-      {/* CLICOU NA FOTO -> vai para a página do produto */}
       <Link href={`/produto/${p.slug}`} className="block relative w-full h-56">
         <Image
-          src={p.image}
+          src={p.image}               // funciona com arquivos em /public
           alt={p.name}
           fill
           className="object-cover rounded-lg"
           sizes="(max-width:768px) 100vw, 33vw"
+          priority
         />
       </Link>
 
