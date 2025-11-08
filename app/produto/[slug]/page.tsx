@@ -1,24 +1,13 @@
+// app/produto/[slug]/page.tsx
 'use client';
 
-import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-// ajuste os caminhos de acordo com seu projeto
-import { useCart } from '@/lib/cart';
-import { money } from '@/lib/money';
-import { products } from '@/lib/products';
-
-// Tipagem simples do produto (compatível com o que já existe)
-type Product = {
-  id: string | number;
-  slug: string;
-  name: string;
-  price: number;
-  oldPrice?: number;
-  image: string;      // ex: "moletom.jpg"
-  badge?: string;
-  description?: string;
-};
+// 👇 Caminhos RELATIVOS (sobem 3 pastas até a raiz do projeto)
+import { useCart } from '../../../lib/cart';
+import { products } from '../../../lib/products';
 
 type PageProps = {
   params: { slug: string };
@@ -26,133 +15,81 @@ type PageProps = {
 
 export default function ProductPage({ params }: PageProps) {
   const { add } = useCart();
-  const [added, setAdded] = useState(false);
 
-  const product = useMemo<Product | undefined>(() => {
-    // tenta achar por slug; se no seu lib/products não tiver slug,
-    // adapte para buscar por id ou name.
-    const p = (products as Product[]).find((it) => it.slug === params.slug);
-    return p;
-  }, [params.slug]);
-
+  const product = products.find((p) => p.slug === params.slug);
   if (!product) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold text-white">Produto não encontrado</h1>
-        <p className="mt-2 text-neutral-300">
-          O item que você procura não está disponível.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-block rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-500 transition-colors"
-        >
-          Voltar para a loja
-        </Link>
-      </div>
-    );
+    return notFound();
   }
 
-  const handleAdd = () => {
-    // ✅ corrige o erro: força id do carrinho como string
+  function handleAdd() {
+    // garante ID como string e inclui imagem p/ miniatura no checkout
     add({
       id: String(product.id),
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: product.image, // ex.: "/moletom.jpg"
+      quantity: 1,
     });
-    setAdded(true);
 
-    // dispara um evento global (se você quiser ouvir em outro lugar)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('cart:item-added', { detail: { name: product.name } })
-      );
-    }
-  };
+    // apenas avisa, não navega para o checkout
+    alert('Produto adicionado ao carrinho!');
+  }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16">
-      {/* alerta de sucesso (não redireciona) */}
-      {added && (
-        <div className="mb-6 rounded-lg border border-emerald-500/40 bg-emerald-600/10 px-4 py-3 text-emerald-200">
-          <div className="flex items-center justify-between gap-4">
-            <span>✅ <strong>{product.name}</strong> foi adicionado ao carrinho.</span>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/"
-                className="rounded-md bg-transparent px-3 py-1.5 text-emerald-300 underline hover:text-emerald-200"
-              >
-                Voltar para a loja
-              </Link>
-              <Link
-                href="/checkout"
-                className="rounded-md bg-emerald-600 px-3 py-1.5 font-medium text-white hover:bg-emerald-500 transition-colors"
-              >
-                Ir para o checkout
-              </Link>
-            </div>
+    <main className="mx-auto max-w-5xl px-4 py-6">
+      <div className="grid gap-8 md:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+          {/* Ao clicar na imagem, abre ela em nova aba */}
+          <a href={product.image} target="_blank" rel="noreferrer">
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="h-auto w-full rounded-lg object-cover"
+              priority
+            />
+          </a>
+          <div className="mt-2 text-sm text-white/60">
+            Toque na imagem para ver em tela cheia
           </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        {/* Imagem do produto (usa /public) */}
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
-          {/* Se suas imagens estão em /public com nomes ex: moletom.jpg */}
-          <img
-            src={`/${product.image}`}
-            alt={product.name}
-            className="h-auto w-full object-cover"
-          />
-        </div>
+        <div className="space-y-4">
+          <h1 className="text-3xl font-semibold text-white">{product.name}</h1>
 
-        {/* Detalhes */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white">{product.name}</h1>
-            {product.badge && (
-              <span className="mt-2 inline-block rounded-full bg-emerald-600/20 px-3 py-1 text-sm text-emerald-300">
-                {product.badge}
-              </span>
-            )}
-          </div>
+          {product.description && (
+            <p className="text-white/80">{product.description}</p>
+          )}
 
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-semibold text-emerald-400">
-              {money(product.price)}
+            <span className="text-2xl font-bold text-emerald-400">
+              R$ {product.price.toFixed(2).replace('.', ',')}
             </span>
-            {typeof product.oldPrice === 'number' && (
-              <span className="text-lg text-neutral-400 line-through">
-                {money(product.oldPrice)}
+            {product.oldPrice && (
+              <span className="text-lg text-white/40 line-through">
+                R$ {product.oldPrice.toFixed(2).replace('.', ',')}
               </span>
             )}
           </div>
 
-          <p className="text-neutral-300">
-            {product.description ?? 'Produto de ótima qualidade, pronto para envio.'}
-          </p>
-
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={handleAdd}
-              className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-500 transition-colors"
+              className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-500"
             >
               Adicionar ao carrinho
             </button>
 
             <Link
               href="/"
-              className="rounded-lg border border-white/15 px-5 py-3 font-medium text-white/90 hover:bg-white/5 transition-colors"
+              className="rounded-lg border border-white/20 px-5 py-3 font-medium text-white hover:bg-white/5"
             >
-              Voltar
+              Voltar para a loja
             </Link>
-          </div>
-
-          <div className="pt-4 text-sm text-neutral-400">
-            Frete calculado no checkout. Entrega rápida para todo o Brasil.
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
