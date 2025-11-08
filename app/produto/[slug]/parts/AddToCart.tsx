@@ -1,102 +1,137 @@
 'use client';
 
-import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { useCart } from '@/lib/cart'; // mantém como já está no seu projeto
-import { toast } from '@/components/ui/toast'; // <- caminho corrigido (veja a observação abaixo)
+import { useState } from 'react';
+import { useCart } from '@/lib/cart';
+import { toast } from '@/components/ui/toast';
 
 type ProductLite = {
   id: string | number;
+  slug: string;
   name: string;
   price: number;
-  image?: string; // caminho de /public (ex.: "/moletom.jpg")
+  oldPrice?: number;
+  image?: string;        // ex.: "/moletom.jpg"
+  description?: string;
+  label?: string;        // "Oferta", "Promoção" etc.
 };
 
-export default function AddToCartButton({ product }: { product: ProductLite }) {
+export default function AddToCart({ product }: { product: ProductLite }) {
   const { add } = useCart();
-  const [qty, setQty] = useState(1);
+  const [quantity, setQuantity] = useState(1);
 
-  function increase() {
-    setQty((q) => Math.min(q + 1, 99));
-  }
-  function decrease() {
-    setQty((q) => Math.max(q - 1, 1));
-  }
-
-  function handleAdd() {
-    if (!product) return;
-
-    // garante ID como string para padronizar
-    const item = {
+  const handleAdd = () => {
+    // >>> AQUI usamos 'quantity' conforme o tipo do seu carrinho
+    add({
       id: String(product.id),
       name: product.name,
       price: product.price,
-      image: product.image, // exemplo: "/moletom.jpg"
-      qty,
-    };
-
-    add(item);
-
-    // Toast elegante (sem redirecionar)
-    toast({
-      title: 'Produto adicionado!',
-      description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
-      variant: 'success',
-      actionPrimary: {
-        label: 'Ver carrinho',
-        href: '/checkout',
-      },
-      actionSecondary: {
-        label: 'Continuar comprando',
-        href: '/',
-      },
+      image: product.image,
+      quantity, // ✅
     });
 
-    // opcional: voltar quantidade para 1
-    // setQty(1);
-  }
+    // Toast elegante (sem redirecionar imediato)
+    toast({
+      title: 'Produto adicionado!',
+      description: `${quantity} × ${product.name} foi adicionado ao carrinho.`,
+      variant: 'success',
+      actionPrimary: { label: 'Ver carrinho', href: '/checkout' },
+      actionSecondary: { label: 'Continuar comprando', href: '/' },
+      durationMs: 2800,
+    });
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Seletor de quantidade */}
-      <div className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-        <button
-          className="px-3 py-1 text-2xl leading-none opacity-80 hover:opacity-100"
-          onClick={decrease}
-          aria-label="Diminuir"
-          type="button"
-        >
-          −
-        </button>
-        <span className="mx-4 min-w-[2ch] text-center text-lg tabular-nums">
-          {qty}
-        </span>
-        <button
-          className="px-3 py-1 text-2xl leading-none opacity-80 hover:opacity-100"
-          onClick={increase}
-          aria-label="Aumentar"
-          type="button"
-        >
-          +
-        </button>
-      </div>
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+      <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 p-4 md:p-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Imagem */}
+          <div className="overflow-hidden rounded-2xl bg-black/20">
+            <Image
+              src={product.image || '/images/placeholder.png'}
+              alt={product.name}
+              width={900}
+              height={900}
+              className="h-auto w-full object-cover"
+              priority
+            />
+          </div>
 
-      {/* Ações */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="rounded-xl bg-emerald-600 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-        >
-          Adicionar ao carrinho
-        </button>
+          {/* Infos */}
+          <div className="space-y-5">
+            {product.label && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300 ring-1 ring-emerald-400/20">
+                {product.label} <span aria-hidden>🔥</span>
+              </span>
+            )}
 
-        <Link
-          href="/"
-          className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-center text-base font-medium text-emerald-300/90 transition hover:bg-white/10 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-        >
-          Voltar para a loja
-        </Link>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+              {product.name}
+            </h1>
+
+            {product.description && (
+              <p className="text-base text-white/70">{product.description}</p>
+            )}
+
+            <div className="flex items-baseline gap-4">
+              <span className="text-3xl font-bold text-emerald-400">
+                {product.price.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </span>
+              {!!product.oldPrice && (
+                <span className="text-lg text-white/40 line-through">
+                  {product.oldPrice.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </span>
+              )}
+            </div>
+
+            {/* Quantidade */}
+            <div className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-2 py-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="px-3 text-2xl leading-none"
+                aria-label="Diminuir"
+              >
+                −
+              </button>
+              <span className="mx-3 min-w-[2ch] text-center text-lg tabular-nums">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                className="px-3 text-2xl leading-none"
+                aria-label="Aumentar"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="rounded-xl bg-emerald-600 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+              >
+                Adicionar ao carrinho
+              </button>
+
+              <Link
+                href="/"
+                className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-center text-base font-medium text-emerald-300/90 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
+              >
+                Voltar para a loja
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
