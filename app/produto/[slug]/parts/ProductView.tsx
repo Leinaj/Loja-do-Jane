@@ -12,36 +12,32 @@ type Product = {
   name: string;
   price: number;
   oldPrice?: number;
-  image?: string;       // ex.: "/moletom.jpg"
+  image?: string;        // ex.: "/moletom.jpg"
   description?: string;
-  label?: string;       // "Oferta", "Promoção" etc.
+  label?: string;        // "Oferta", "Promoção", etc.
 };
 
 export default function ProductView({ product }: { product: Product }) {
   const { add } = useCart();
-  const [qty, setQty] = useState(1);
+  const [quantity, setQuantity] = useState(1); // ✅ use 'quantity'
 
   const handleAdd = () => {
+    // objeto esperado pelo seu carrinho
     add({
       id: String(product.id),
       name: product.name,
       price: product.price,
       image: product.image,
-      qty,
+      quantity, // ✅ aqui é 'quantity' (antes estava 'qty')
     });
 
+    // toast elegante sem redirecionar
     toast({
       title: 'Produto adicionado!',
-      description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
+      description: `${quantity} × ${product.name} foi adicionado ao carrinho.`,
       variant: 'success',
-      actionPrimary: {      // botão principal no toast
-        label: 'Ver carrinho',
-        href: '/checkout',
-      },
-      actionSecondary: {    // botão secundário opcional
-        label: 'Continuar comprando',
-        href: '/',
-      },
+      actionPrimary: { label: 'Ver carrinho', href: '/checkout' },
+      actionSecondary: { label: 'Continuar comprando', href: '/' },
       durationMs: 2800,
     });
   };
@@ -50,6 +46,7 @@ export default function ProductView({ product }: { product: Product }) {
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
       <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 p-4 md:p-6">
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Imagem do produto */}
           <div className="overflow-hidden rounded-2xl bg-black/20">
             <Image
               src={product.image || '/images/placeholder.png'}
@@ -61,6 +58,7 @@ export default function ProductView({ product }: { product: Product }) {
             />
           </div>
 
+          {/* Conteúdo */}
           <div className="space-y-5">
             {product.label && (
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300 ring-1 ring-emerald-400/20">
@@ -78,29 +76,37 @@ export default function ProductView({ product }: { product: Product }) {
 
             <div className="flex items-baseline gap-4">
               <span className="text-3xl font-bold text-emerald-400">
-                {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {product.price.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
               </span>
-              {product.oldPrice && (
+              {!!product.oldPrice && (
                 <span className="text-lg text-white/40 line-through">
-                  {product.oldPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {product.oldPrice.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
                 </span>
               )}
             </div>
 
-            {/* Quantidade */}
+            {/* Controle de quantidade */}
             <div className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-2 py-2">
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 className="px-3 text-2xl leading-none"
                 aria-label="Diminuir"
               >
                 −
               </button>
-              <span className="mx-3 min-w-[2ch] text-center text-lg tabular-nums">{qty}</span>
+              <span className="mx-3 min-w-[2ch] text-center text-lg tabular-nums">
+                {quantity}
+              </span>
               <button
                 type="button"
-                onClick={() => setQty((q) => Math.min(99, q + 1))}
+                onClick={() => setQuantity((q) => Math.min(99, q + 1))}
                 className="px-3 text-2xl leading-none"
                 aria-label="Aumentar"
               >
