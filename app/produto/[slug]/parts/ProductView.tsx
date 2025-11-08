@@ -1,29 +1,33 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
-import { useCart } from "@/lib/cart";
-import { toast } from "@/components/ui/toast";
+import { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useCart } from '@/lib/cart';
+import { toast } from '@/components/ui/toast';
 
 type Product = {
   id: string | number;
   name: string;
   price: number;
-  image: string; // ex.: "/moletom.jpg"
+  image: string;
   description?: string;
   badge?: string;
 };
 
-export default function ProductView({ product }: { product: Product }) {
-  const { add } = useCart();
-  const [quantity, setQuantity] = useState<number>(1);
+type Props = {
+  product: Product;
+};
 
-  const dec = () => setQuantity((q) => Math.max(1, q - 1));
-  const inc = () => setQuantity((q) => Math.min(99, q + 1));
+export default function ProductView({ product }: Props) {
+  const [quantity, setQuantity] = useState<number>(1);
+  const { add } = useCart();
+
+  const dec = () => setQuantity(q => Math.max(1, q - 1));
+  const inc = () => setQuantity(q => Math.min(99, q + 1));
 
   const handleAdd = () => {
-    // adiciona ao carrinho com a chave correta
+    // item no formato esperado pelo carrinho
     add({
       id: String(product.id),
       name: product.name,
@@ -32,25 +36,22 @@ export default function ProductView({ product }: { product: Product }) {
       quantity,
     });
 
-    const subtotal = (product.price * quantity).toFixed(2).replace(".", ",");
-
-    // toast novo — não usa "action", e sim actionPrimary / actionSecondary
+    // ✅ toast somente com chaves tipadas
     toast({
-      title: "Produto adicionado!",
-      description: `${quantity} × ${product.name} — Subtotal R$ ${subtotal}`,
-      image: product.image,
-      variant: "success",
-      actionPrimary: { label: "Ver carrinho", href: "/checkout" },
-      actionSecondary: { label: "Continuar comprando", href: "/" },
-      duration: 2800,
+      title: 'Produto adicionado!',
+      description: `${quantity} × ${product.name} foi adicionado ao carrinho.`,
+      variant: 'success',
+      actionLabel: 'Ver carrinho',
+      actionHref: '/checkout',
+      durationMs: 2800,
     });
   };
 
   return (
-    <section className="mx-auto max-w-5xl px-4 pb-12">
+    <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-12">
       {/* Imagem */}
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-zinc-900/40 to-zinc-900/20 p-4 shadow-xl">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl ring-1 ring-white/10">
+      <div className="rounded-3xl bg-gradient-to-b from-emerald-900/40 to-transparent p-2 sm:p-3 mb-6 sm:mb-10 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
           <Image
             src={product.image}
             alt={product.name}
@@ -61,63 +62,76 @@ export default function ProductView({ product }: { product: Product }) {
         </div>
       </div>
 
-      {/* Info */}
-      <div className="mt-8">
-        {product.badge && (
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600/15 px-3 py-1 text-sm font-medium text-emerald-300 ring-1 ring-emerald-400/20">
-            {product.badge}
-          </span>
-        )}
+      {/* Conteúdo */}
+      <div className="grid gap-8 sm:grid-cols-2 sm:gap-12">
+        <div>
+          {product.badge && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-900/30 px-3 py-1.5 text-emerald-300 text-sm ring-1 ring-emerald-700/40">
+              {product.badge}
+              <span aria-hidden>🔥</span>
+            </span>
+          )}
 
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">
-          {product.name}
-        </h1>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+            {product.name}
+          </h1>
 
-        {product.description && (
-          <p className="mt-2 max-w-2xl text-zinc-300">{product.description}</p>
-        )}
+          {product.description && (
+            <p className="mt-4 text-zinc-300/90 leading-relaxed">
+              {product.description}
+            </p>
+          )}
 
-        <div className="mt-4 text-3xl font-bold text-emerald-400">
-          R$ {product.price.toFixed(2).replace(".", ",")}
+          <p className="mt-6 text-3xl sm:text-4xl font-bold text-emerald-300">
+            {new Intl.NumberFormat('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            }).format(product.price)}
+          </p>
         </div>
 
-        {/* Quantidade + Ações */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex w-40 items-center justify-between rounded-xl border border-white/10 bg-zinc-900/50 px-4 py-2">
-            <button
-              type="button"
-              onClick={dec}
-              aria-label="Diminuir"
-              className="grid size-8 place-items-center rounded-lg bg-zinc-800/70 text-zinc-200 ring-1 ring-white/10 transition hover:bg-zinc-800 active:scale-95"
-            >
-              –
-            </button>
-            <span className="select-none text-lg font-medium text-white">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={inc}
-              aria-label="Aumentar"
-              className="grid size-8 place-items-center rounded-lg bg-zinc-800/70 text-zinc-200 ring-1 ring-white/10 transition hover:bg-zinc-800 active:scale-95"
-            >
-              +
-            </button>
+        {/* Ações */}
+        <div className="space-y-6">
+          {/* Quantidade */}
+          <div>
+            <label className="block text-zinc-400 mb-2">Quantidade:</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={dec}
+                className="h-12 w-12 rounded-xl bg-zinc-800/80 text-zinc-200 text-xl ring-1 ring-white/10 hover:bg-zinc-800"
+                aria-label="Diminuir quantidade"
+              >
+                –
+              </button>
+              <div className="h-12 min-w-[3rem] px-4 flex items-center justify-center rounded-xl bg-zinc-900/70 text-white ring-1 ring-white/10">
+                {quantity}
+              </div>
+              <button
+                onClick={inc}
+                className="h-12 w-12 rounded-xl bg-zinc-800/80 text-zinc-200 text-xl ring-1 ring-white/10 hover:bg-zinc-800"
+                aria-label="Aumentar quantidade"
+              >
+                +
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={handleAdd}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 text-base font-semibold text-emerald-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 active:scale-[0.98] sm:w-auto"
-          >
-            Adicionar ao carrinho
-          </button>
+          {/* Botões */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleAdd}
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 text-white font-medium shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            >
+              Adicionar ao carrinho
+            </button>
 
-          <Link
-            href="/"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-transparent px-5 py-3 text-base font-semibold text-emerald-300 transition hover:bg-white/5 sm:w-auto"
-          >
-            Voltar para a loja
-          </Link>
+            <Link
+              href="/"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-transparent px-6 text-emerald-300 font-medium ring-1 ring-emerald-700/40 hover:bg-emerald-900/20"
+            >
+              Voltar para a loja
+            </Link>
+          </div>
         </div>
       </div>
     </section>
