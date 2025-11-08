@@ -1,100 +1,227 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-type ToastOptions = {
-  id?: string;
+type ToastItem = {
+  id: number;
   title?: string;
   description?: string;
-  durationMs?: number; // default 2800
-  // Mantemos simples p/ evitar erros de tipagem no build
+  durationMs?: number;
+  image?: string; // opcional, se quiser mostrar miniatura do produto
 };
 
-type ToastContextType = {
-  show: (opts: ToastOptions) => void;
+type ToastCtx = {
+  push: (t: Omit<ToastItem, 'id'>) => void;
 };
 
-const ToastContext = createContext<ToastContextType | null>(null);
+const ToastContext = createContext<ToastCtx | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastOptions[]>([]);
+  const [list, setList] = useState<ToastItem[]>([]);
+  const idRef = useRef(1);
 
-  const show = (opts: ToastOptions) => {
-    const id = opts.id ?? crypto.randomUUID();
-    const duration = opts.durationMs ?? 2800;
-
-    setToasts((t) => [...t, { ...opts, id }]);
+  const push = (t: Omit<ToastItem, 'id'>) => {
+    const id = idRef.current++;
+    const duration = t.durationMs ?? 2800;
+    setList((l) => [...l, { ...t, id, durationMs: duration }]);
+    // auto close
     window.setTimeout(() => {
-      setToasts((t) => t.filter((x) => x.id !== id));
+      setList((l) => l.filter((x) => x.id !== id));
     }, duration);
   };
 
-  const value = useMemo(() => ({ show }), []);
+  const value = useMemo(() => ({ push }), []);
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {createPortal(
-        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex w-full justify-center px-4">
-          <div className="flex w-full max-w-xl flex-col gap-3">
-            {toasts.map((t) => (
-              <div
-                key={t.id}
-                className="pointer-events-auto rounded-2xl border border-emerald-400/30 bg-emerald-500/20 backdrop-blur-md p-4 shadow-lg"
-              >
-                {t.title && (
-                  <div className="mb-0.5 text-emerald-300 font-semibold">
-                    {t.title}
-                  </div>
-                )}
-                {t.description && (
-                  <div className="text-white/90">{t.description}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* fallback no-SSR renderer (sem portal) — só aparece se portal falhar */}
+      <div className="fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4 pointer-events-none sm:justify-end sm:px-6">
+        <div className="w-full max-w-md space-y-2">
+          {list.map((t) => (
+            <ToastCard key={t.id} item={t} />
+          ))}
+        </div>
+      </div>
     </ToastContext.Provider>
   );
 }
 
-// Hook e função utilitária
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within <ToastProvider>');
   return ctx;
 }
 
-export function toast(opts: ToastOptions) {
-  // Fallback para chamadas fora da árvore (SSR não chama)
-  if (typeof window === 'undefined') return;
-  const ev = new CustomEvent<ToastOptions>('__app_toast__', { detail: opts });
-  window.dispatchEvent(ev);
-}
-
-// Listener para `toast()` fora do hook (ex.: em actions)
-if (typeof window !== 'undefined') {
-  let cachedCtx: ToastContextType | null = null;
-
-  // Bridge: injeta a função show do provider no window
-  (window as any).__setToastShow = (fn: (o: ToastOptions) => void) => {
-    cachedCtx = { show: fn };
-  };
-
-  window.addEventListener('__app_toast__', (e: Event) => {
-    const detail = (e as CustomEvent<ToastOptions>).detail;
-    cachedCtx?.show(detail);
-  });
-}
-
-// Efeito para conectar o bridge no provider
+/**
+ * Bridge opcional que cria um portal para o <body>, mas **só** após montar no cliente.
+ * Evita "document is not defined" no build/prerender.
+ */
 export function ToastBridge() {
-  const { show } = useToast();
+  const [mounted, setMounted] = useState(false);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  const { push } = useToast(); // força o Provider acima na árvore
+
+  // estado compartilhado com o Provider (render dos cards)
+  const [list, setList] = useState<ToastItem[]>([]);
+  const origPush = useRef<(t: Omit<ToastItem, 'id'>) => void>();
+
+  // intercepta pushes do Provider para espelhar a lista aqui
   useEffect(() => {
-    (window as any).__setToastShow?.(show);
-  }, [show]);
-  return null;
+    // Monkey-patch leve: ouvimos alterações pela CustomEvent
+    const onAdd = (e: Event) => {
+      const detail = (e as CustomEvent<ToastItem[]>).detail;
+      setList(detail);
+    };
+    window.addEventListener('toast:list', onAdd as EventListener);
+    return () => window.removeEventListener('toast:list', onAdd as EventListener);
+  }, []);
+
+  // monta portal
+  useEffect(() => {
+    setMounted(true);
+    if (typeof document !== 'undefined') {
+      let el = document.getElementById('toast-root') as HTMLElement | null;
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast-root';
+        document.body.appendChild(el);
+      }
+      setContainer(el);
+    }
+  }, []);
+
+  // sincroniza lista do Provider via evento
+  useEffect(() => {
+    // “escuta” mudanças internas do Provider disparadas abaixo
+    return subscribeToastList(setList);
+  }, []);
+
+  if (!mounted || !container) return null;
+
+  return createPortal(
+    <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none sm:justify-end sm:px-6">
+      <div className="w-full max-w-md space-y-2">
+        {list.map((t) => (
+          <ToastCard key={t.id} item={t} />
+        ))}
+      </div>
+    </div>,
+    container
+  );
 }
+
+/* ---------- Helpers públicos ---------- */
+
+export function toast(opts: { title?: string; description?: string; image?: string; durationMs?: number }) {
+  // dispara um CustomEvent para o Provider cuidar do push
+  const event = new CustomEvent('toast:push', { detail: opts });
+  if (typeof window !== 'undefined') window.dispatchEvent(event);
+}
+
+/* ---------- Infra interna para sync Provider <-> Bridge ---------- */
+
+// Mantém uma cópia da lista atual no Provider e emite eventos
+let _providerSetList: React.Dispatch<React.SetStateAction<ToastItem[]>> | null = null;
+
+function subscribeToastList(set: React.Dispatch<React.SetStateAction<ToastItem[]>>) {
+  const onSync = (e: Event) => {
+    const detail = (e as CustomEvent<ToastItem[]>).detail;
+    set(detail);
+  };
+  window.addEventListener('toast:list', onSync as EventListener);
+  return () => window.removeEventListener('toast:list', onSync as EventListener);
+}
+
+// Sobrescreve o setList do Provider para emitir eventos
+function useSyncListWithBridge(list: ToastItem[], setList: React.Dispatch<React.SetStateAction<ToastItem[]>>) {
+  useEffect(() => {
+    _providerSetList = setList;
+  }, [setList]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const evt = new CustomEvent('toast:list', { detail: list });
+      window.dispatchEvent(evt);
+    }
+  }, [list]);
+}
+
+/* ---------- Cartão visual ---------- */
+
+function ToastCard({ item }: { item: ToastItem }) {
+  return (
+    <div className="pointer-events-auto overflow-hidden rounded-2xl border border-white/10 bg-emerald-500/15 backdrop-blur-md shadow-lg">
+      <div className="flex items-start gap-3 p-4">
+        {item.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image}
+            alt={item.title || 'Produto adicionado'}
+            className="mt-0.5 h-10 w-10 rounded-lg object-cover ring-1 ring-white/10"
+          />
+        ) : (
+          <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+        )}
+        <div className="min-w-0">
+          {item.title && <p className="text-sm font-medium text-white">{item.title}</p>}
+          {item.description && <p className="text-sm text-white/80">{item.description}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Patch do Provider para emitir eventos de lista ---------- */
+// Wrap do Provider original para emitir os eventos (chame dentro de ToastProvider)
+const _ToastProviderOrig = ToastProvider;
+(ToastProvider as any) = function PatchedToastProvider({ children }: { children: React.ReactNode }) {
+  const [list, setList] = useState<ToastItem[]>([]);
+  const idRef = useRef(1);
+
+  // sincroniza com o bridge
+  useSyncListWithBridge(list, setList);
+
+  useEffect(() => {
+    const onPush = (e: Event) => {
+      const { title, description, image, durationMs } = (e as CustomEvent<Omit<ToastItem, 'id'>>).detail;
+      const id = idRef.current++;
+      const duration = durationMs ?? 2800;
+      setList((l) => [...l, { id, title, description, image, durationMs: duration }]);
+      window.setTimeout(() => {
+        setList((l) => l.filter((x) => x.id !== id));
+      }, duration);
+    };
+    window.addEventListener('toast:push', onPush as EventListener);
+    return () => window.removeEventListener('toast:push', onPush as EventListener);
+  }, []);
+
+  const ctx = useMemo<ToastCtx>(
+    () => ({
+      push: (t) => {
+        const id = idRef.current++;
+        const duration = t.durationMs ?? 2800;
+        setList((l) => [...l, { ...t, id, durationMs: duration }]);
+        window.setTimeout(() => {
+          setList((l) => l.filter((x) => x.id !== id));
+        }, duration);
+      },
+    }),
+    []
+  );
+
+  return (
+    <ToastContext.Provider value={ctx}>
+      {children}
+      {/* fallback local caso o Bridge não esteja presente */}
+      <div className="fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4 pointer-events-none sm:justify-end sm:px-6">
+        <div className="w-full max-w-md space-y-2">
+          {list.map((t) => (
+            <ToastCard key={t.id} item={t} />
+          ))}
+        </div>
+      </div>
+    </ToastContext.Provider>
+  );
+};
