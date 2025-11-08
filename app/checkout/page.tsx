@@ -1,9 +1,9 @@
-"use client";
+// app/checkout/page.tsx
+'use client';
 
-import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
-import { useCart } from "../../components/CartContext";
-import { money } from "../../lib/products";
+import { useMemo, useRef, useState } from 'react';
+import { useCart } from '../../lib/cart'; // mantém seu hook de carrinho
+import { money } from '../../lib/format'; // <-- agora vem daqui
 
 type Address = {
   name: string;
@@ -15,150 +15,171 @@ type Address = {
   state: string;
 };
 
-const EMPTY: Address = {
-  name: "",
-  phone: "",
-  cep: "",
-  street: "",
-  number: "",
-  city: "",
-  state: "",
-};
-
 export default function CheckoutPage() {
   const { items, remove, clear } = useCart();
-  const [address, setAddress] = useState<Address>(EMPTY);
-  const [error, setError] = useState("");
-  const [okMsg, setOkMsg] = useState("");
 
-  // refs para focar no primeiro campo vazio
-  const refs = {
-    name: useRef<HTMLInputElement>(null),
-    phone: useRef<HTMLInputElement>(null),
-    cep: useRef<HTMLInputElement>(null),
-    street: useRef<HTMLInputElement>(null),
-    number: useRef<HTMLInputElement>(null),
-    city: useRef<HTMLInputElement>(null),
-    state: useRef<HTMLInputElement>(null),
-  };
+  const [address, setAddress] = useState<Address>({
+    name: '',
+    phone: '',
+    cep: '',
+    street: '',
+    number: '',
+    city: '',
+    state: '',
+  });
 
-  const total = useMemo(
-    () => items.reduce((acc, it) => acc + it.product.price * it.q, 0),
-    [items]
-  );
+  // total calculado a partir do carrinho
+  const total = useMemo(() => {
+    if (!Array.isArray(items)) return 0;
+    return items.reduce((acc: number, it: any) => {
+      const qty = Number(it?.quantity ?? 1);
+      const price = Number(it?.price ?? 0);
+      return acc + price * qty;
+    }, 0);
+  }, [items]);
 
-  function onChange<K extends keyof Address>(key: K, v: string) {
-    setAddress((a) => ({ ...a, [key]: v }));
+  // validação simples dos campos obrigatórios
+  function validate(): string[] {
+    const missing: string[] = [];
+    if (!address.name.trim()) missing.push('name');
+    if (!address.phone.trim()) missing.push('phone');
+    if (!address.cep.trim()) missing.push('cep');
+    if (!address.street.trim()) missing.push('street');
+    if (!address.number.trim()) missing.push('number');
+    if (!address.city.trim()) missing.push('city');
+    if (!address.state.trim()) missing.push('state');
+    return missing;
   }
 
-  function firstMissing(): keyof Address | null {
-    const req: (keyof Address)[] = [
-      "name",
-      "phone",
-      "cep",
-      "street",
-      "number",
-      "city",
-      "state",
-    ];
-    for (const k of req) if (!address[k].trim()) return k;
-    return null;
+  function updateField<K extends keyof Address>(key: K, value: string) {
+    setAddress(prev => ({ ...prev, [key]: value }));
   }
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setOkMsg("");
-
-    const miss = firstMissing();
-    if (miss) {
-      setError("Por favor, preencha todos os campos obrigatórios.");
-      refs[miss].current?.focus();
+  function handleFinish() {
+    const missing = validate();
+    if (missing.length) {
+      alert(
+        `Preencha os campos obrigatórios: ${missing.join(', ')}`
+      );
       return;
     }
 
-    // sucesso (simulado)
-    setOkMsg(
-      `Pedido recebido! Total: ${money(total)} — Entrega: ${address.street}, ${address.number} — ${address.city}/${address.state}`
+    // mensagem de confirmação
+    alert(
+      `Pedido recebido!\n` +
+        `Cliente: ${address.name.toUpperCase()}\n` +
+        `Total: ${money(total)}\n` +
+        `Entrega: ${address.street}, ${address.number} - ${address.city}/${address.state}`
     );
 
-    clear();           // limpa o carrinho somente após sucesso
-    setAddress(EMPTY); // limpa o formulário
+    // limpa carrinho depois de confirmar
+    clear();
   }
 
   return (
-    <main className="max-w-4xl mx-auto p-4 text-white">
-      <header className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Checkout</h1>
-        <Link href="/" className="text-sm text-neutral-300 hover:underline">
-          ← Continuar comprando
-        </Link>
-      </header>
+    <main className="mx-auto max-w-2xl px-4 py-8 space-y-8">
+      <h1 className="text-2xl font-semibold">Checkout</h1>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Formulário */}
-        <form onSubmit={submit} className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
-          <div className="grid grid-cols-1 gap-3">
-            <input ref={refs.name}   value={address.name}   onChange={(e)=>onChange("name", e.target.value)}   placeholder="Nome completo *" className="input" />
-            <input ref={refs.phone}  value={address.phone}  onChange={(e)=>onChange("phone", e.target.value)}  placeholder="Telefone *" className="input" />
-            <input ref={refs.cep}    value={address.cep}    onChange={(e)=>onChange("cep", e.target.value)}    placeholder="CEP *" className="input" />
-            <input ref={refs.street} value={address.street} onChange={(e)=>onChange("street", e.target.value)} placeholder="Rua *" className="input" />
-            <input ref={refs.number} value={address.number} onChange={(e)=>onChange("number", e.target.value)} placeholder="Número *" className="input" />
-            <input ref={refs.city}   value={address.city}   onChange={(e)=>onChange("city", e.target.value)}   placeholder="Cidade *" className="input" />
-            <input ref={refs.state}  value={address.state}  onChange={(e)=>onChange("state", e.target.value)}  placeholder="Estado *" className="input" />
-          </div>
-
-          <button type="submit" className="mt-4 w-full bg-green-700 hover:bg-green-600 py-3 rounded-md font-medium">
-            Finalizar pedido
-          </button>
-
-          {error && <p className="mt-3 text-red-400 text-sm">{error}</p>}
-          {okMsg && <p className="mt-3 text-green-400 text-sm">{okMsg}</p>}
-        </form>
-
-        {/* Resumo */}
-        <section className="bg-neutral-900 rounded-xl p-4 border border-neutral-800">
-          <h2 className="font-medium mb-3">Seu carrinho</h2>
-          <div className="space-y-3">
-            {items.length === 0 && <p className="text-neutral-400">Seu carrinho está vazio.</p>}
-            {items.map((it) => (
-              <div key={it.product.id} className="flex items-center justify-between bg-neutral-800 rounded-lg p-3">
-                <div>
-                  <p className="font-medium">{it.product.title}</p>
-                  <p className="text-neutral-400 text-sm">
-                    {it.q} × {money(it.product.price)}
+      {/* Resumo do carrinho */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium">Seu carrinho</h2>
+        <div className="space-y-3">
+          {Array.isArray(items) && items.length > 0 ? (
+            items.map((it: any) => (
+              <div
+                key={String(it?.id)}
+                className="flex items-center justify-between rounded-lg border border-white/10 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{it?.name ?? 'Produto'}</p>
+                  <p className="text-sm text-white/70">
+                    {Number(it?.quantity ?? 1)} × {money(Number(it?.price ?? 0))}
                   </p>
                 </div>
                 <button
-                  onClick={() => remove(it.product.id)}
-                  className="text-sm text-red-300 hover:text-red-200"
+                  onClick={() => remove(it?.id)}
+                  className="text-sm px-3 py-1 rounded-md bg-red-600/80 hover:bg-red-600 transition"
                 >
                   Remover
                 </button>
               </div>
-            ))}
-          </div>
+            ))
+          ) : (
+            <p className="text-white/70">Seu carrinho está vazio.</p>
+          )}
+        </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-neutral-800 pt-3">
-            <span className="text-neutral-300">Total</span>
-            <strong>{money(total)}</strong>
+        <div className="flex items-center justify-between border-t border-white/10 pt-4">
+          <span className="text-lg font-medium">Total</span>
+          <span className="text-lg font-semibold">{money(total)}</span>
+        </div>
+      </section>
+
+      {/* Dados de entrega */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium">Endereço de entrega</h2>
+
+        <div className="grid grid-cols-1 gap-3">
+          <input
+            className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+            placeholder="Nome completo *"
+            value={address.name}
+            onChange={e => updateField('name', e.target.value)}
+          />
+          <input
+            className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+            placeholder="Telefone *"
+            value={address.phone}
+            onChange={e => updateField('phone', e.target.value)}
+            inputMode="tel"
+          />
+          <input
+            className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+            placeholder="CEP *"
+            value={address.cep}
+            onChange={e => updateField('cep', e.target.value)}
+            inputMode="numeric"
+          />
+          <input
+            className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+            placeholder="Rua *"
+            value={address.street}
+            onChange={e => updateField('street', e.target.value)}
+          />
+          <input
+            className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+            placeholder="Número *"
+            value={address.number}
+            onChange={e => updateField('number', e.target.value)}
+            inputMode="numeric"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+              placeholder="Cidade *"
+              value={address.city}
+              onChange={e => updateField('city', e.target.value)}
+            />
+            <input
+              className="rounded-md bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-emerald-500"
+              placeholder="UF *"
+              value={address.state}
+              onChange={e => updateField('state', e.target.value)}
+              maxLength={2}
+            />
           </div>
-        </section>
+        </div>
+      </section>
+
+      <div className="pt-2">
+        <button
+          onClick={handleFinish}
+          disabled={!items?.length}
+          className="w-full h-12 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 transition font-medium"
+        >
+          Finalizar pedido
+        </button>
       </div>
-
-      <style jsx global>{`
-        .input {
-          background: #111213;
-          border: 1px solid #2a2b2d;
-          padding: 0.75rem 0.9rem;
-          border-radius: 0.6rem;
-          outline: none;
-        }
-        .input:focus {
-          border-color: #22c55e;
-          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
-        }
-      `}</style>
     </main>
   );
 }
