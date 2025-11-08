@@ -1,88 +1,103 @@
 'use client';
 
-import { useState } from 'react';
-import { useCart } from '@/lib/cart';
-import { toast } from '@/components/ui/toast';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useCart } from '@/lib/cart'; // mantém como já está no seu projeto
+import { toast } from '@/components/ui/toast'; // <- caminho corrigido (veja a observação abaixo)
 
 type ProductLite = {
   id: string | number;
   name: string;
   price: number;
-  image?: string;
+  image?: string; // caminho de /public (ex.: "/moletom.jpg")
 };
 
 export default function AddToCartButton({ product }: { product: ProductLite }) {
   const { add } = useCart();
-  const [qty, setQty] = useState<number>(1);
+  const [qty, setQty] = useState(1);
 
-  const dec = () => setQty((q) => Math.max(1, q - 1));
-  const inc = () => setQty((q) => Math.min(99, q + 1));
+  function increase() {
+    setQty((q) => Math.min(q + 1, 99));
+  }
+  function decrease() {
+    setQty((q) => Math.max(q - 1, 1));
+  }
 
-  const handleAdd = () => {
+  function handleAdd() {
     if (!product) return;
 
-    add({
+    // garante ID como string para padronizar
+    const item = {
       id: String(product.id),
       name: product.name,
       price: product.price,
-      image: product.image,
-      quantity: qty,
-    });
+      image: product.image, // exemplo: "/moletom.jpg"
+      qty,
+    };
 
-    toast.success({
+    add(item);
+
+    // Toast elegante (sem redirecionar)
+    toast({
       title: 'Produto adicionado!',
       description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
-      action: {
+      variant: 'success',
+      actionPrimary: {
         label: 'Ver carrinho',
-        onClick: () => {
-          // abre o drawer e mantém o toast
-          // @ts-expect-error evento customizado
-          window.dispatchEvent(new Event('open-cart'));
-        },
+        href: '/checkout',
+      },
+      actionSecondary: {
+        label: 'Continuar comprando',
+        href: '/',
       },
     });
 
-    // abre o drawer mesmo se o usuário não clicar no botão do toast
-    // @ts-expect-error evento customizado
-    window.dispatchEvent(new Event('open-cart'));
-  };
+    // opcional: voltar quantidade para 1
+    // setQty(1);
+  }
 
   return (
-    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-      {/* Stepper */}
-      <div className="flex h-12 items-center justify-between rounded-xl border border-white/10 bg-neutral-800/60 px-2 text-white sm:w-40">
+    <div className="space-y-4">
+      {/* Seletor de quantidade */}
+      <div className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2">
         <button
-          onClick={dec}
-          aria-label="Diminuir quantidade"
-          className="h-9 w-9 rounded-lg bg-white/10 text-lg leading-none hover:bg-white/20"
+          className="px-3 py-1 text-2xl leading-none opacity-80 hover:opacity-100"
+          onClick={decrease}
+          aria-label="Diminuir"
+          type="button"
         >
           −
         </button>
-        <span className="select-none tabular-nums">{qty}</span>
+        <span className="mx-4 min-w-[2ch] text-center text-lg tabular-nums">
+          {qty}
+        </span>
         <button
-          onClick={inc}
-          aria-label="Aumentar quantidade"
-          className="h-9 w-9 rounded-lg bg-white/10 text-lg leading-none hover:bg-white/20"
+          className="px-3 py-1 text-2xl leading-none opacity-80 hover:opacity-100"
+          onClick={increase}
+          aria-label="Aumentar"
+          type="button"
         >
           +
         </button>
       </div>
 
-      {/* Botão principal */}
-      <button
-        onClick={handleAdd}
-        className="h-12 flex-1 rounded-xl bg-emerald-600 px-4 text-white font-medium shadow-sm transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-      >
-        Adicionar ao carrinho
-      </button>
+      {/* Ações */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="rounded-xl bg-emerald-600 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+        >
+          Adicionar ao carrinho
+        </button>
 
-      {/* Voltar */}
-      <a
-        href="/"
-        className="h-12 rounded-xl border border-emerald-700/40 bg-emerald-900/10 px-4 text-emerald-300 transition hover:bg-emerald-900/20 flex items-center justify-center"
-      >
-        Voltar para a loja
-      </a>
+        <Link
+          href="/"
+          className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-center text-base font-medium text-emerald-300/90 transition hover:bg-white/10 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        >
+          Voltar para a loja
+        </Link>
+      </div>
     </div>
   );
 }
