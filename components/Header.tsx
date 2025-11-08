@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CartDrawer from './cart/CartDrawer';
 import { useCart } from '@/lib/cart';
 
@@ -14,7 +14,6 @@ export default function Header() {
   const { items } = useCart();
   const [open, setOpen] = useState(false);
 
-  // soma quantidades para o badge do carrinho
   const cartCount = useMemo(
     () =>
       Array.isArray(items)
@@ -22,6 +21,17 @@ export default function Header() {
         : 0,
     [items]
   );
+
+  // 👉 escuta por "open-cart" (disparado quando adiciona um item)
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    // @ts-expect-error evento customizado
+    window.addEventListener('open-cart', onOpen as EventListener);
+    return () => {
+      // @ts-expect-error evento customizado
+      window.removeEventListener('open-cart', onOpen as EventListener);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-neutral-900/70 backdrop-blur">
@@ -45,7 +55,6 @@ export default function Header() {
           </Link>
         </nav>
 
-        {/* Botão do carrinho */}
         <button
           onClick={() => setOpen(true)}
           aria-label="Abrir carrinho"
@@ -58,7 +67,6 @@ export default function Header() {
         </button>
       </div>
 
-      {/* Drawer do carrinho */}
       <CartDrawer open={open} onClose={() => setOpen(false)} />
     </header>
   );
