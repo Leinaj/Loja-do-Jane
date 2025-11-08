@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { useCart } from '../../../lib/cart';
 import { useToast } from '../../../components/ui/toast';
 
-// Mock/Exemplo de fonte de dados (troque pela sua se já existir)
 const products = [
   {
     id: '1',
