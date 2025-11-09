@@ -1,37 +1,12 @@
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
+/* Tema base (dark) */
+:root { color-scheme: dark; }
+html, body { height: 100%; }
+body { @apply bg-zinc-950 text-zinc-100 antialiased; }
 
-html, body {
-  @apply bg-neutral-950 text-neutral-100;
-  background-image:
-    radial-gradient(1200px 600px at 100% -10%, rgba(23,196,113,0.12), transparent),
-    radial-gradient(800px 400px at -10% 110%, rgba(23,196,113,0.07), transparent);
-}
-
-a { @apply text-brand-400 hover:text-brand-300 transition-colors; }
-
-/* botões padrão */
-.btn {
-  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
-         bg-brand-500 text-white hover:bg-brand-400 active:bg-brand-600
-         transition-shadow shadow-soft;
-}
-.btn-outline {
-  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
-         border border-white/15 text-white hover:bg-white/10;
-}
-
-/* cartão base */
-.card {
-  @apply bg-white/5 backdrop-blur border border-white/10 rounded-2xl shadow-card;
-}
-
-/* grade responsiva de produtos */
-.grid-products {
-  @apply grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
-}
+/* Links */
+a { @apply text-emerald-400 hover:text-emerald-300; }
