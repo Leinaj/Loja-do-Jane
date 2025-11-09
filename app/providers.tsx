@@ -1,16 +1,13 @@
 'use client';
 
-import { CartProvider } from '@/lib/cart';
-import { ToastProvider, ToastBridge } from '@/components/ui/toast';
+import React from 'react';
+import { CartProvider } from '@/components/providers/CartProvider';
+import { ToastProvider } from '@/components/ui/toast';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <CartProvider>
-      <ToastProvider>
-        {/* Conecta o helper global toast() ao provider */}
-        <ToastBridge />
-        {children}
-      </ToastProvider>
+      <ToastProvider>{children}</ToastProvider>
     </CartProvider>
   );
 }
