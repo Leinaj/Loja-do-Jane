@@ -1,11 +1,16 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 
-// ========================
-// Tipos
-// ========================
 type ToastVariant = 'success' | 'error' | 'info';
 
 export type ToastItem = {
@@ -15,7 +20,7 @@ export type ToastItem = {
   variant?: ToastVariant;
   actionLabel?: string;
   actionHref?: string;
-  durationMs?: number; // default 2800
+  durationMs?: number;
 };
 
 type ToastContextType = {
@@ -26,9 +31,6 @@ type ToastContextType = {
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
-// ========================
-// Provider
-// ========================
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
@@ -47,14 +49,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
     setItems((prev) => [...prev, item]);
 
-    // auto-close
     const ms = item.durationMs ?? 2800;
-    if (ms > 0) {
-      setTimeout(() => remove(id), ms);
-    }
+    if (ms > 0) setTimeout(() => remove(id), ms);
   }, [remove]);
 
   const value = useMemo(() => ({ items, push, remove }), [items, push, remove]);
+
+  // expõe uma função global só no cliente pra permitir import { toast } em qualquer client component
+  useEffect(() => {
+    (window as any).__toastPush = push;
+    return () => { (window as any).__toastPush = undefined; };
+  }, [push]);
 
   return (
     <ToastContext.Provider value={value}>
@@ -64,36 +69,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// hook
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast deve ser usado dentro de <ToastProvider>.');
   return ctx;
 }
 
-// ========================
-// API simples (igual ao que você importava como "toast")
-// ========================
+// API simples (compatível com import { toast } ...)
 export function toast(opts: Omit<ToastItem, 'id'>) {
-  // Este módulo expõe uma função globalmente através do bridge.
-  if (typeof window !== 'undefined' && (window as any).__toastPush) {
+  if (typeof window !== 'undefined' && typeof (window as any).__toastPush === 'function') {
     (window as any).__toastPush(opts);
   }
 }
 
-// ========================
-// Bridge + Container (com Portal só no cliente)
-// ========================
 export function ToastBridge() {
-  const { items, remove, push } = useToast();
-
-  // expõe a função pro import { toast } funcionar em qualquer arquivo client
-  useEffect(() => {
-    (window as any).__toastPush = push;
-    return () => { (window as any).__toastPush = undefined; };
-  }, [push]);
-
-  if (typeof document === 'undefined') return null; // evita SSR
+  const { items, remove } = useToast();
+  if (typeof document === 'undefined') return null;
 
   return createPortal(
     <ToastContainer items={items} onClose={remove} />,
@@ -103,10 +94,7 @@ export function ToastBridge() {
 
 function ToastContainer({ items, onClose }: { items: ToastItem[]; onClose: (id: number) => void }) {
   return (
-    <div
-      aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex w-full justify-center px-4"
-    >
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex w-full justify-center px-4" aria-live="polite">
       <div className="flex w-full max-w-md flex-col gap-3">
         {items.map((it) => (
           <div
@@ -121,14 +109,9 @@ function ToastContainer({ items, onClose }: { items: ToastItem[]; onClose: (id: 
             <div className="flex items-start gap-3">
               <div className="flex-1">
                 <p className="font-semibold leading-5">{it.title}</p>
-                {it.description ? (
-                  <p className="text-sm/5 opacity-90">{it.description}</p>
-                ) : null}
+                {it.description ? <p className="text-sm/5 opacity-90">{it.description}</p> : null}
                 {it.actionHref && it.actionLabel ? (
-                  <a
-                    href={it.actionHref}
-                    className="mt-2 inline-flex text-sm underline underline-offset-2"
-                  >
+                  <a className="mt-2 inline-flex text-sm underline underline-offset-2" href={it.actionHref}>
                     {it.actionLabel}
                   </a>
                 ) : null}
