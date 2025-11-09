@@ -9,10 +9,9 @@ import React, {
   useEffect,
 } from 'react';
 
-/* ------------------------------------------------------------------ */
-/* 🔧 Fallback de tipagem para react-dom (evita precisar instalar @types/react-dom)
-   Isso é seguro e resolve o erro "Could not find a declaration file..."  */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Fallback de tipos p/ react-dom (evita precisar instalar @types) */
+/* --------------------------------------------------------------- */
 declare module 'react-dom' {
   import * as React from 'react';
   export function createPortal(
@@ -22,9 +21,9 @@ declare module 'react-dom' {
 }
 import { createPortal } from 'react-dom';
 
-/* ------------------------------------------------------------------ */
-/* Tipos e utilidades                                                  */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Tipos                                                           */
+/* --------------------------------------------------------------- */
 type ToastVariant = 'success' | 'error' | 'info';
 export type ToastItem = {
   id: number;
@@ -44,15 +43,40 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+/* --------------------------------------------------------------- */
+/* Singleton de notificação p/ permitir `toast(...)` fora de React */
+/* --------------------------------------------------------------- */
+let notifier: ((t: Omit<ToastItem, 'id'>) => void) | null = null;
+function setNotifier(fn: ((t: Omit<ToastItem, 'id'>) => void) | null) {
+  notifier = fn;
+}
+
+/** API global compatível com `import { toast } from '@/components/ui/toast'` */
+export function toast(
+  input:
+    | string
+    | (Omit<ToastItem, 'id'> & { variant?: ToastVariant; durationMs?: number })
+) {
+  if (!notifier) return;
+  if (typeof input === 'string') {
+    notifier({ title: input, variant: 'info' });
+  } else {
+    notifier(input);
+  }
+}
+
+/* --------------------------------------------------------------- */
+/* Helper                                                          */
+/* --------------------------------------------------------------- */
 const useIsClient = () => {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   return ready;
 };
 
-/* ------------------------------------------------------------------ */
-/* Provider                                                            */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Provider                                                        */
+/* --------------------------------------------------------------- */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const [seq, setSeq] = useState(1);
@@ -62,21 +86,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const notify = useCallback(
-    (toast: Omit<ToastItem, 'id'>) => {
+    (t: Omit<ToastItem, 'id'>) => {
       setSeq((s) => s + 1);
       const id = seq;
       const withDefaults: ToastItem = {
         id,
-        title: toast.title ?? 'Tudo certo!',
-        description: toast.description ?? '',
-        variant: toast.variant ?? 'info',
-        durationMs: toast.durationMs ?? 2800,
-        actionHref: toast.actionHref,
-        actionLabel: toast.actionLabel,
+        title: t.title ?? 'Tudo certo!',
+        description: t.description ?? '',
+        variant: t.variant ?? 'info',
+        durationMs: t.durationMs ?? 2800,
+        actionHref: t.actionHref,
+        actionLabel: t.actionLabel,
       };
       setItems((prev) => [...prev, withDefaults]);
 
-      // auto-close
       const ms = withDefaults.durationMs!;
       if (ms > 0) {
         setTimeout(() => remove(id), ms);
@@ -84,6 +107,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     },
     [remove, seq]
   );
+
+  // registra o notifier global para a função `toast(...)`
+  useEffect(() => {
+    setNotifier(notify);
+    return () => setNotifier(null);
+  }, [notify]);
 
   const value = useMemo<ToastContextValue>(
     () => ({ notify, remove, items }),
@@ -93,28 +122,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Mantemos o container aqui para sempre existir no app */}
       <ToastContainer />
     </ToastContext.Provider>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Hook                                                                */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Hook                                                            */
+/* --------------------------------------------------------------- */
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast deve ser usado dentro de <ToastProvider />');
   return ctx;
 }
 
-/* ------------------------------------------------------------------ */
-/* Container (renderiza via Portal no <body>)                          */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Container                                                       */
+/* --------------------------------------------------------------- */
 export function ToastContainer() {
   const isClient = useIsClient();
   const ctx = useContext(ToastContext);
-
   if (!ctx) return null;
   const { items, remove } = ctx;
 
@@ -166,8 +193,10 @@ export function ToastContainer() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Exemplo de uso:
-   const { notify } = useToast();
-   notify({ title: 'Produto adicionado!', description: '...' })
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------- */
+/* Componente "Bridge" apenas p/ compatibilidade com imports antigos */
+/* --------------------------------------------------------------- */
+export function ToastBridge() {
+  // não precisa fazer nada — o Provider já cuida do portal/notifier
+  return null;
+}
