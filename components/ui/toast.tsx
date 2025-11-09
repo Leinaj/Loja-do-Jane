@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-// caminho relativo a partir de /components/ui
 import { useCart } from '../cart/context';
 
 type Toast = { id: number; text: string };
@@ -13,10 +12,8 @@ export default function ToastBridge() {
   useEffect(() => {
     if (!lastAdded) return;
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, text: `Produto adicionado: ${lastAdded.name}` }]);
-    const t = setTimeout(() => {
-      setToasts((prev) => prev.filter((x) => x.id !== id));
-    }, 3000);
+    setToasts((p) => [...p, { id, text: `Produto adicionado: ${lastAdded.name}` }]);
+    const t = setTimeout(() => setToasts((p) => p.filter((x) => x.id !== id)), 3000);
     return () => clearTimeout(t);
   }, [lastAdded]);
 
