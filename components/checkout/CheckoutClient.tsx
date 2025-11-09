@@ -20,12 +20,19 @@ const fmtBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CheckoutClient() {
-  const { items, removeItem, clear, total } = useCart();
+  // ⚠️ NÃO pegamos mais "total" do contexto
+  const { items, removeItem, clear } = useCart();
+
+  // Calcula o total localmente
+  const total = useMemo(
+    () => items.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || 0), 0),
+    [items]
+  );
+
   const [addr, setAddr] = useState<Address>({ name: '', phone: '' });
   const [coupon, setCoupon] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  // aplica cupom (mantém seu padrão JANE10 = 10%)
   const applyCoupon = () => {
     if (coupon.trim().toUpperCase() === 'JANE10') {
       setDiscountPercent(10);
@@ -41,7 +48,6 @@ export default function CheckoutClient() {
   const finalTotal = useMemo(() => Math.max(total - discount, 0), [total, discount]);
 
   const handleFinish = () => {
-    // monta mensagem com itens + endereço
     const lines: string[] = [];
     lines.push('*Novo pedido*');
     if (items.length === 0) lines.push('_Carrinho vazio_');
@@ -199,7 +205,7 @@ export default function CheckoutClient() {
             value={coupon}
             onChange={(e) => setCoupon(e.target.value)}
           />
-        <button
+          <button
             onClick={applyCoupon}
             className="rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white px-4 py-2 text-sm"
           >
