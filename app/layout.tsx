@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import RootProviders from '@/components/providers/RootProviders';
+import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'Loja da Jane — Ofertas e Moda',
@@ -11,8 +11,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body>
-        {/* ✅ Providers no nível raiz — cobre TODAS as rotas */}
-        <RootProviders>{children}</RootProviders>
+        {/* ✅ Todos os componentes (home, produto, checkout) agora estão dentro do CartProvider e ToastProvider */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
