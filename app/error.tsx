@@ -9,7 +9,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // Mostra erro real em produção para conseguirmos debugar
   return (
     <html>
       <body
