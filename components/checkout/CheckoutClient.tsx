@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 
 type Address = {
@@ -12,15 +13,15 @@ type Address = {
   number?: string;
   city?: string;
   state?: string;
-  complement?: string;
+  complemento?: string;
 };
 
-const fmtBRL = (v: number) =>
+const currencyBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CheckoutClient() {
-  // <- AQUI: nada de removeItem e nada de subtotal/total no contexto
-  const { items, remove, setQty, clear } = useCart();
+  // ⬇️ ATENÇÃO: agora desestrutura `remove` (não `removeItem`)
+  const { items, remove, setQty, clear, subtotal } = useCart();
 
   const [addr, setAddr] = useState<Address>({
     name: '',
@@ -30,195 +31,209 @@ export default function CheckoutClient() {
     number: '',
     city: '',
     state: '',
-    complement: '',
+    complemento: '',
   });
 
-  // subtotal calculado localmente
-  const subtotal = useMemo(
-    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
-    [items]
-  );
+  const total = useMemo(() => subtotal, [subtotal]);
 
-  const onQtyDec = (id: string, current: number) =>
-    setQty(id, Math.max(1, current - 1));
-  const onQtyInc = (id: string, current: number) => setQty(id, current + 1);
+  function updateField<K extends keyof Address>(key: K, value: Address[K]) {
+    setAddr((prev) => ({ ...prev, [key]: value }));
+  }
 
-  const handleFinishOrder = () => {
-    const phone = '5544988606483';
-    const itensTxt =
+  function finalizeOrder() {
+    const resumoItens =
       items.length === 0
-        ? 'Sem itens'
+        ? 'Carrinho vazio'
         : items
             .map(
-              (i) =>
-                `• ${i.quantity}x ${i.name} — ${fmtBRL(i.price)} = ${fmtBRL(
-                  i.price * i.quantity
-                )}`
+              (it) =>
+                `${it.quantity} × ${it.name} (${currencyBRL(it.price * it.quantity)})`
             )
-            .join('%0A');
+            .join('\n');
 
-    const enderecoTxt = [
-      addr.name && `Nome: ${addr.name}`,
-      addr.phone && `Telefone: ${addr.phone}`,
-      addr.cep && `CEP: ${addr.cep}`,
-      (addr.street || addr.number) &&
-        `Endereço: ${addr.street ?? ''}, ${addr.number ?? ''}`,
-      (addr.city || addr.state) && `Cidade/UF: ${addr.city ?? ''} - ${addr.state ?? ''}`,
-      addr.complement && `Complemento: ${addr.complement}`,
-    ]
-      .filter(Boolean)
-      .join('%0A');
+    const resumoEndereco = `
+Nome: ${addr.name || '-'}
+Telefone: ${addr.phone || '-'}
+CEP: ${addr.cep || '-'}
+Rua: ${addr.street || '-'}, Nº ${addr.number || '-'}
+Cidade: ${addr.city || '-'} - ${addr.state || '-'}
+Comp.: ${addr.complemento || '-'}`.trim();
 
-    const msg =
-      `*Novo pedido*%0A%0A` +
-      `*Itens:*%0A${itensTxt}%0A%0A` +
-      `*Subtotal:* ${fmtBRL(subtotal)}%0A%0A` +
-      `*Dados para entrega*%0A${enderecoTxt || '—'}`;
-
-    const url = `https://wa.me/${phone}?text=${msg}`;
-    window.open(url, '_blank');
-  };
+    // Apenas mostra uma mensagem com o resumo (sem integração de frete/pagamento)
+    alert(
+      `Resumo do pedido:\n\n${resumoItens}\n\nTotal: ${currencyBRL(
+        total
+      )}\n\nEndereço:\n${resumoEndereco}`
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-3xl p-4 sm:p-6 space-y-6">
-      <section className="rounded-2xl bg-zinc-900/50 p-4 sm:p-6 shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Carrinho</h2>
-
-        {items.length === 0 ? (
-          <p className="text-zinc-400">Seu carrinho está vazio.</p>
-        ) : (
-          <div className="space-y-4">
-            {items.map((it) => (
-              <div
-                key={it.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-zinc-800/60 p-3"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{it.name}</p>
-                  <p className="text-zinc-400 text-sm">{fmtBRL(it.price)}</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    aria-label="Diminuir"
-                    onClick={() => onQtyDec(it.id, it.quantity)}
-                    className="h-9 w-9 rounded-lg bg-zinc-700 hover:bg-zinc-600"
-                  >
-                    –
-                  </button>
-                  <span className="w-6 text-center">{it.quantity}</span>
-                  <button
-                    aria-label="Aumentar"
-                    onClick={() => onQtyInc(it.id, it.quantity)}
-                    className="h-9 w-9 rounded-lg bg-zinc-700 hover:bg-zinc-600"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="text-right">
-                  <p className="font-semibold">{fmtBRL(it.price * it.quantity)}</p>
-                </div>
-
-                <button
-                  onClick={() => remove(it.id)}
-                  className="rounded-xl bg-rose-700/80 hover:bg-rose-600 px-3 py-2 text-sm"
-                >
-                  Remover
-                </button>
-              </div>
-            ))}
-
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-lg">
-                <span className="text-zinc-400">Total: </span>
-                <span className="font-semibold">{fmtBRL(subtotal)}</span>
-              </p>
-              <button
-                onClick={clear}
-                className="rounded-xl border border-zinc-700 px-4 py-2 hover:bg-zinc-800"
-              >
-                Limpar carrinho
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Endereço (sem frete) */}
-      <section className="rounded-2xl bg-zinc-900/50 p-4 sm:p-6 shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Endereço</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Nome *"
-            value={addr.name}
-            onChange={(e) => setAddr((s) => ({ ...s, name: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Telefone *"
-            value={addr.phone}
-            onChange={(e) => setAddr((s) => ({ ...s, phone: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="CEP"
-            value={addr.cep}
-            onChange={(e) => setAddr((s) => ({ ...s, cep: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Rua"
-            value={addr.street}
-            onChange={(e) => setAddr((s) => ({ ...s, street: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Número"
-            value={addr.number}
-            onChange={(e) => setAddr((s) => ({ ...s, number: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Cidade"
-            value={addr.city}
-            onChange={(e) => setAddr((s) => ({ ...s, city: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
-            placeholder="Estado"
-            value={addr.state}
-            onChange={(e) => setAddr((s) => ({ ...s, state: e.target.value }))}
-          />
-          <input
-            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none sm:col-span-2"
-            placeholder="Complemento"
-            value={addr.complement}
-            onChange={(e) =>
-              setAddr((s) => ({ ...s, complement: e.target.value }))
-            }
-          />
-        </div>
-      </section>
-
-      <section className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={handleFinishOrder}
-          disabled={items.length === 0}
-          className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3 font-semibold disabled:opacity-60"
-        >
-          Finalizar pedido (WhatsApp)
-        </button>
-
+    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Carrinho</h1>
         <Link
           href="/"
-          className="flex-1 rounded-2xl border border-zinc-700 px-6 py-3 text-center hover:bg-zinc-800"
+          className="rounded-xl border border-emerald-800/40 px-4 py-2 text-emerald-300 hover:bg-emerald-900/20"
         >
           Voltar para a loja
         </Link>
-      </section>
+      </div>
+
+      {/* Lista de itens */}
+      <div className="rounded-3xl bg-neutral-900/60 p-4 sm:p-6 space-y-4">
+        {items.length === 0 && (
+          <p className="text-neutral-400">Seu carrinho está vazio.</p>
+        )}
+
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="rounded-2xl bg-neutral-800/60 p-4 sm:p-5 grid grid-cols-[72px_1fr_auto] sm:grid-cols-[88px_1fr_auto] gap-4 items-center"
+          >
+            <div className="overflow-hidden rounded-xl bg-neutral-700/50">
+              {item.image ? (
+                <Image
+                  src={item.image}
+                  width={88}
+                  height={88}
+                  alt={item.name}
+                  className="h-18 w-18 object-cover"
+                />
+              ) : (
+                <div className="h-[72px] w-[72px] sm:h-[88px] sm:w-[88px]" />
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="font-medium">{item.name}</div>
+              <div className="text-neutral-400">{currencyBRL(item.price)}</div>
+
+              {/* Controles de quantidade */}
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  aria-label="Diminuir"
+                  onClick={() => setQty(item.id, Math.max(1, item.quantity - 1))}
+                  className="h-9 w-9 rounded-xl bg-neutral-700 text-lg"
+                >
+                  –
+                </button>
+                <span className="w-6 text-center">{item.quantity}</span>
+                <button
+                  aria-label="Aumentar"
+                  onClick={() => setQty(item.id, item.quantity + 1)}
+                  className="h-9 w-9 rounded-xl bg-neutral-700 text-lg"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-emerald-300 font-semibold">
+                {currencyBRL(item.price * item.quantity)}
+              </div>
+              <button
+                onClick={() => remove(item.id)} // ⬅️ usa remove()
+                className="rounded-xl bg-rose-900/60 px-3 py-1.5 text-sm hover:bg-rose-900"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {items.length > 0 && (
+          <div className="flex items-center justify-between pt-4">
+            <div className="text-lg font-semibold">
+              Total: <span className="text-emerald-300">{currencyBRL(total)}</span>
+            </div>
+            <button
+              onClick={() => clear()}
+              className="rounded-xl bg-neutral-700/70 px-4 py-2 hover:bg-neutral-700"
+            >
+              Limpar carrinho
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Endereço (sem cálculo de frete) */}
+      <div className="rounded-3xl bg-neutral-900/60 p-4 sm:p-6 space-y-4">
+        <h2 className="text-xl font-semibold">Endereço</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Nome *"
+            value={addr.name}
+            onChange={(e) => updateField('name', e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Telefone *"
+            value={addr.phone}
+            onChange={(e) => updateField('phone', e.target.value)}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="CEP"
+            value={addr.cep}
+            onChange={(e) => updateField('cep', e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Rua"
+            value={addr.street}
+            onChange={(e) => updateField('street', e.target.value)}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Número"
+            value={addr.number}
+            onChange={(e) => updateField('number', e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Cidade"
+            value={addr.city}
+            onChange={(e) => updateField('city', e.target.value)}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Estado"
+            value={addr.state}
+            onChange={(e) => updateField('state', e.target.value)}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-3 outline-none"
+            placeholder="Complemento"
+            value={addr.complemento}
+            onChange={(e) => updateField('complemento', e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Ações finais */}
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <Link
+          href="/"
+          className="rounded-2xl border border-emerald-800/40 px-5 py-3 text-center text-emerald-300 hover:bg-emerald-900/20"
+        >
+          Voltar para a loja
+        </Link>
+
+        <button
+          disabled={items.length === 0}
+          onClick={finalizeOrder}
+          className="rounded-2xl bg-emerald-600 px-6 py-3 font-medium text-black enabled:hover:bg-emerald-500 disabled:opacity-50"
+        >
+          Finalizar pedido
+        </button>
+      </div>
     </div>
   );
 }
