@@ -1,11 +1,11 @@
 // app/layout.tsx
-import './globals.css'; // <- IMPORTANTE: garante os estilos
+import './globals.css';
 import type { Metadata } from 'next';
 import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'Loja da Jane — Ofertas e Moda',
-  description: 'Ofertas com até 50% OFF',
+  description: 'E-commerce da Jane',
 };
 
 export default function RootLayout({
@@ -15,7 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+      <body>
+        {/* Tudo da app ficará dentro do CartProvider */}
         <Providers>{children}</Providers>
       </body>
     </html>
