@@ -1,93 +1,107 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useState } from 'react';
-import * as ReactDOM from 'react-dom';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type ToastData = {
   id: number;
-  title?: string;
+  title: string;
   description?: string;
-  action?: { label: string; onClick: () => void };
+  actionLabel?: string;
+  onAction?: () => void;
 };
 
-type ToastContextType = {
+type ToastCtx = {
   push: (t: Omit<ToastData, 'id'>) => void;
 };
 
-const ToastContext = createContext<ToastContextType | null>(null);
+const ToastContext = createContext<ToastCtx | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<ToastData[]>([]);
-  const push = useCallback((t: Omit<ToastData, 'id'>) => {
-    setItems((prev) => [...prev, { ...t, id: Date.now() + Math.random() }]);
-    setTimeout(() => {
-      setItems((prev) => prev.slice(1));
-    }, 3500);
-  }, []);
+  const [list, setList] = useState<ToastData[]>([]);
+
+  const push: ToastCtx['push'] = (t) =>
+    setList((prev) => [...prev, { id: Date.now(), ...t }]);
+
+  const remove = (id: number) =>
+    setList((prev) => prev.filter((x) => x.id !== id));
 
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      <ToastViewport items={items} />
+      {/* BRIDGE */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
+        {list.map((t) => (
+          <div
+            key={t.id}
+            className="pointer-events-auto w-full max-w-xl rounded-2xl bg-emerald-700/90 text-white shadow-xl backdrop-blur-md"
+          >
+            <div className="flex items-start gap-3 p-4">
+              <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-white/90" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{t.title}</p>
+                {t.description && (
+                  <p className="truncate text-sm opacity-90">{t.description}</p>
+                )}
+
+                <div className="mt-3 flex gap-2">
+                  {t.actionLabel && t.onAction && (
+                    <button
+                      onClick={() => {
+                        t.onAction?.();
+                        remove(t.id);
+                      }}
+                      className="rounded-xl border border-white/30 px-4 py-2 text-sm hover:bg-white/10"
+                    >
+                      {t.actionLabel}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <button
+                aria-label="Fechar"
+                onClick={() => remove(t.id)}
+                className="rounded-md p-1 hover:bg-white/10"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </ToastContext.Provider>
   );
 }
 
-function ToastViewport({ items }: { items: ToastData[] }) {
-  if (typeof document === 'undefined') return null;
-  return ReactDOM.createPortal(
-    <div className="fixed bottom-4 left-4 right-4 z-[9999] mx-auto max-w-xl space-y-2">
-      {items.map((t) => (
-        <div
-          key={t.id}
-          className="rounded-xl bg-neutral-800/90 backdrop-blur px-4 py-3 text-neutral-50 shadow-lg border border-neutral-700"
-        >
-          {t.title && <div className="font-semibold">{t.title}</div>}
-          {t.description && (
-            <div className="text-sm text-neutral-200">{t.description}</div>
-          )}
-          {t.action && (
-            <button
-              onClick={t.action.onClick}
-              className="mt-3 inline-flex items-center rounded-lg border border-neutral-600 px-3 py-1 text-sm hover:bg-neutral-700"
-            >
-              {t.action.label}
-            </button>
-          )}
-        </div>
-      ))}
-    </div>,
-    document.body
-  );
-}
-
-/** Hook público */
-export const useToast = () => {
+export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within <ToastProvider>');
   return ctx;
+}
+
+// helper simpático
+export const toast = {
+  success: (
+    title: string,
+    opts?: { description?: string; actionLabel?: string; onAction?: () => void }
+  ) => {
+    (window as any).__toastPush?.({
+      title,
+      description: opts?.description,
+      actionLabel: opts?.actionLabel,
+      onAction: opts?.onAction,
+    });
+  },
 };
 
-/** API simples estilo “toast()” */
-export const toast = (msg: {
-  title?: string;
-  description?: string;
-  action?: { label: string; onClick: () => void };
-}) => {
-  // ponte leve via evento — evita importar o provider em todo lugar
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: msg }));
-};
-
-/** Ponte opcional (não precisa mexer) */
+// Bridge para poder chamar toast.success fora de componentes
 export function ToastBridge() {
   const { push } = useToast();
-  React.useEffect(() => {
-    const handler = (e: Event) => {
-      // @ts-ignore
-      push((e as CustomEvent).detail);
+  useEffect(() => {
+    (window as any).__toastPush = push;
+    return () => {
+      (window as any).__toastPush = undefined;
     };
-    window.addEventListener('app:toast', handler as any);
-    return () => window.removeEventListener('app:toast', handler as any);
   }, [push]);
   return null;
 }
