@@ -1,16 +1,13 @@
-import { notFound } from 'next/navigation';
-import ProductView from './parts/ProductView';
-import { products } from '@/lib/products';
+import CartProviderClient from '../../cart-provider';
+// ... seus outros imports (GetProduct, etc.)
 
-type Params = { params: { slug: string } };
+export default async function Page({ params }: { params: { slug: string } }) {
+  const product = await getProduct(params.slug);
 
-export default function Page({ params }: Params) {
-  const product = products.find((p) => p.slug === params.slug);
-
-  if (!product) {
-    notFound();
-  }
-
-  // Server component pode passar props para um Client component sem problemas
-  return <ProductView product={product!} />;
+  return (
+    <CartProviderClient>
+      {/* seu JSX da página do produto, incluindo AddToCart */}
+      <ProductView product={product} />
+    </CartProviderClient>
+  );
 }
