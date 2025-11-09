@@ -2,12 +2,15 @@
 
 import React from 'react';
 import { CartProvider } from '@/components/providers/CartProvider';
-import { ToastProvider } from '@/components/ui/toast';
+import { ToastProvider, ToastBridge } from '@/components/ui/toast';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <CartProvider>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <ToastBridge />
+        {children}
+      </ToastProvider>
     </CartProvider>
   );
 }
