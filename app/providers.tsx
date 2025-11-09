@@ -1,12 +1,9 @@
+// app/providers.tsx
 'use client';
 
 import React from 'react';
-import { CartProvider } from '@/lib/cart';
+import { CartProvider } from '@/components/cart/context';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <CartProvider>
-      {children}
-    </CartProvider>
-  );
+  return <CartProvider>{children}</CartProvider>;
 }
