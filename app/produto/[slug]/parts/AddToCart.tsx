@@ -18,13 +18,15 @@ export default function AddToCart({ product }: { product: ProductLite }) {
   const [qty, setQty] = useState(1);
 
   const add = () => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: qty,
-      image: product.image,
-    });
+    // Adiciona o item normalmente (sem quantity)
+    for (let i = 0; i < qty; i++) {
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+      });
+    }
 
     toast.success('Produto adicionado!', {
       description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
