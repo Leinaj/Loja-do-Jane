@@ -1,15 +1,8 @@
 'use client';
 
-import React from 'react';
-import { CartProvider } from '../providers/CartProvider';
-// Se tiver um ToastBridge, importe aqui. Senão, pode remover a linha abaixo.
-// import ToastBridge from '../ui/ToastBridge';
+import React, { ReactNode } from 'react';
+import CartProvider from './CartProvider';
 
-export default function RootProviders({ children }: { children: React.ReactNode }) {
-  return (
-    <CartProvider>
-      {/* <ToastBridge /> */}
-      {children}
-    </CartProvider>
-  );
+export default function RootProviders({ children }: { children: ReactNode }) {
+  return <CartProvider>{children}</CartProvider>;
 }
