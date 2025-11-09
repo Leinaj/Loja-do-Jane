@@ -1,157 +1,226 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useCart } from '@/lib/cart';
 
 type Address = {
   name: string;
   phone: string;
-  cep: string;
-  rua: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
-  complemento?: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  city?: string;
+  state?: string;
+  complement?: string;
 };
 
-export default function CheckoutClient() {
-  const { items, remove, clear, setQty } = useCart();
+const fmtBRL = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const total = useMemo(
-    () => items.reduce((acc, i) => acc + i.price * i.qty, 0),
+export default function CheckoutClient() {
+  // ATENÇÃO: removi `removeItem` e `subtotal/total` do contexto.
+  const { items, remove, setQty, clear } = useCart();
+
+  const [addr, setAddr] = useState<Address>({
+    name: '',
+    phone: '',
+    cep: '',
+    street: '',
+    number: '',
+    city: '',
+    state: '',
+    complement: '',
+  });
+
+  // Calcula subtotal localmente
+  const subtotal = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
     [items]
   );
 
-  const [addr, setAddr] = useState<Address>({
-    name: '', phone: '', cep: '', rua: '', numero: '',
-    bairro: '', cidade: '', uf: '', complemento: ''
-  });
+  const onQtyDec = (id: string, current: number) =>
+    setQty(id, Math.max(1, current - 1));
+  const onQtyInc = (id: string, current: number) => setQty(id, current + 1);
 
-  // CEP -> ViaCEP
-  async function fillByCep(cep: string) {
-    const only = cep.replace(/\D/g, '');
-    if (only.length !== 8) return;
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${only}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
-        setAddr(a => ({
-          ...a,
-          rua: data.logradouro || a.rua,
-          bairro: data.bairro || a.bairro,
-          cidade: data.localidade || a.cidade,
-          uf: data.uf || a.uf,
-        }));
-      }
-    } catch {}
-  }
+  const handleFinishOrder = () => {
+    const phone = '5544988606483'; // WhatsApp da loja (com DDI 55)
+    const itensTxt =
+      items.length === 0
+        ? 'Sem itens'
+        : items
+            .map(
+              (i) =>
+                `• ${i.quantity}x ${i.name} — ${fmtBRL(i.price)} = ${fmtBRL(
+                  i.price * i.quantity
+                )}`
+            )
+            .join('%0A');
 
-  function onFinish() {
-    const linhas = [
-      '*Novo pedido*',
-      '',
-      '*Itens:*',
-      ...items.map(i => `• ${i.qty} × ${i.name} — R$ ${(i.price * i.qty).toFixed(2).replace('.', ',')}`),
-      '',
-      `*Total:* R$ ${total.toFixed(2).replace('.', ',')}`,
-      '',
-      '*Dados do cliente:*',
-      `Nome: ${addr.name}`,
-      `Telefone: ${addr.phone}`,
-      `Endereço: ${addr.rua}, ${addr.numero} - ${addr.bairro}`,
-      `Cidade/UF: ${addr.cidade}/${addr.uf}`,
-      addr.complemento ? `Compl.: ${addr.complemento}` : '',
-      `CEP: ${addr.cep}`,
-    ].filter(Boolean).join('\n');
+    const enderecoTxt = [
+      addr.name && `Nome: ${addr.name}`,
+      addr.phone && `Telefone: ${addr.phone}`,
+      addr.cep && `CEP: ${addr.cep}`,
+      (addr.street || addr.number) &&
+        `Endereço: ${addr.street ?? ''}, ${addr.number ?? ''}`,
+      (addr.city || addr.state) && `Cidade/UF: ${addr.city ?? ''} - ${addr.state ?? ''}`,
+      addr.complement && `Complemento: ${addr.complement}`,
+    ]
+      .filter(Boolean)
+      .join('%0A');
 
-    const url = `https://wa.me/5544988606483?text=${encodeURIComponent(linhas)}`;
-    window.location.href = url;
-  }
+    const msg =
+      `*Novo pedido*%0A%0A` +
+      `*Itens:*%0A${itensTxt}%0A%0A` +
+      `*Subtotal:* ${fmtBRL(subtotal)}%0A%0A` +
+      `*Dados para entrega*%0A${enderecoTxt || '—'}`;
+
+    const url = `https://wa.me/${phone}?text=${msg}`;
+    window.open(url, '_blank');
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Lista do carrinho */}
-      <div className="rounded-3xl bg-black/20 p-5">
-        <h2 className="text-xl font-semibold mb-3">Carrinho</h2>
+    <div className="mx-auto max-w-3xl p-4 sm:p-6 space-y-6">
+      {/* Carrinho */}
+      <section className="rounded-2xl bg-zinc-900/50 p-4 sm:p-6 shadow-lg">
+        <h2 className="text-xl font-semibold mb-4">Carrinho</h2>
 
-        {items.map(i => (
-          <div key={i.id} className="flex items-center justify-between rounded-2xl bg-black/20 p-4 mb-3">
-            <div className="min-w-0">
-              <div className="font-medium">{i.name}</div>
-              <div className="text-sm opacity-80">R$ {i.price.toFixed(2).replace('.', ',')}</div>
+        {items.length === 0 ? (
+          <p className="text-zinc-400">Seu carrinho está vazio.</p>
+        ) : (
+          <div className="space-y-4">
+            {items.map((it) => (
+              <div
+                key={it.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-zinc-800/60 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{it.name}</p>
+                  <p className="text-zinc-400 text-sm">{fmtBRL(it.price)}</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    aria-label="Diminuir"
+                    onClick={() => onQtyDec(it.id, it.quantity)}
+                    className="h-9 w-9 rounded-lg bg-zinc-700 hover:bg-zinc-600"
+                  >
+                    –
+                  </button>
+                  <span className="w-6 text-center">{it.quantity}</span>
+                  <button
+                    aria-label="Aumentar"
+                    onClick={() => onQtyInc(it.id, it.quantity)}
+                    className="h-9 w-9 rounded-lg bg-zinc-700 hover:bg-zinc-600"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="text-right">
+                  <p className="font-semibold">{fmtBRL(it.price * it.quantity)}</p>
+                </div>
+
+                <button
+                  onClick={() => remove(it.id)}
+                  className="rounded-xl bg-rose-700/80 hover:bg-rose-600 px-3 py-2 text-sm"
+                >
+                  Remover
+                </button>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-lg">
+                <span className="text-zinc-400">Total: </span>
+                <span className="font-semibold">{fmtBRL(subtotal)}</span>
+              </p>
+              <button
+                onClick={clear}
+                className="rounded-xl border border-zinc-700 px-4 py-2 hover:bg-zinc-800"
+              >
+                Limpar carrinho
+              </button>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button onClick={() => setQty(i.id, i.qty - 1)} className="w-10 h-10 rounded-xl bg-black/30">−</button>
-              <div className="w-8 text-center">{i.qty}</div>
-              <button onClick={() => setQty(i.id, i.qty + 1)} className="w-10 h-10 rounded-xl bg-black/30">+</button>
-            </div>
-
-            <div className="w-28 text-right">R$ {(i.price * i.qty).toFixed(2).replace('.', ',')}</div>
-            <button onClick={() => remove(i.id)} className="ml-3 rounded-xl bg-rose-800 px-3 py-2">Remover</button>
           </div>
-        ))}
-
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-lg font-semibold">Total: <span className="text-emerald-400">R$ {total.toFixed(2).replace('.', ',')}</span></div>
-          <button onClick={clear} className="rounded-xl bg-black/40 px-4 py-2">Limpar carrinho</button>
-        </div>
-      </div>
+        )}
+      </section>
 
       {/* Endereço (sem frete) */}
-      <div className="rounded-3xl bg-black/20 p-5 space-y-3">
-        <h2 className="text-xl font-semibold">Endereço</h2>
+      <section className="rounded-2xl bg-zinc-900/50 p-4 sm:p-6 shadow-lg">
+        <h2 className="text-xl font-semibold mb-4">Endereço</h2>
 
-        <input className="w-full rounded-2xl bg-black/30 px-4 py-3"
-               placeholder="Nome *" value={addr.name}
-               onChange={e => setAddr({ ...addr, name: e.target.value })} />
-
-        <input className="w-full rounded-2xl bg-black/30 px-4 py-3"
-               placeholder="Telefone *" value={addr.phone}
-               onChange={e => setAddr({ ...addr, phone: e.target.value })} />
-
-        <input className="w-full rounded-2xl bg-black/30 px-4 py-3"
-               placeholder="CEP *" value={addr.cep}
-               onChange={e => setAddr({ ...addr, cep: e.target.value })}
-               onBlur={e => fillByCep(e.target.value)} />
-
-        <input className="w-full rounded-2xl bg-black/30 px-4 py-3"
-               placeholder="Rua *" value={addr.rua}
-               onChange={e => setAddr({ ...addr, rua: e.target.value })} />
-
-        <div className="grid grid-cols-2 gap-3">
-          <input className="rounded-2xl bg-black/30 px-4 py-3"
-                 placeholder="Número *" value={addr.numero}
-                 onChange={e => setAddr({ ...addr, numero: e.target.value })}/>
-          <input className="rounded-2xl bg-black/30 px-4 py-3"
-                 placeholder="Bairro *" value={addr.bairro}
-                 onChange={e => setAddr({ ...addr, bairro: e.target.value })}/>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Nome *"
+            value={addr.name}
+            onChange={(e) => setAddr((s) => ({ ...s, name: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Telefone *"
+            value={addr.phone}
+            onChange={(e) => setAddr((s) => ({ ...s, phone: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="CEP"
+            value={addr.cep}
+            onChange={(e) => setAddr((s) => ({ ...s, cep: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Rua"
+            value={addr.street}
+            onChange={(e) => setAddr((s) => ({ ...s, street: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Número"
+            value={addr.number}
+            onChange={(e) => setAddr((s) => ({ ...s, number: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Cidade"
+            value={addr.city}
+            onChange={(e) => setAddr((s) => ({ ...s, city: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none"
+            placeholder="Estado"
+            value={addr.state}
+            onChange={(e) => setAddr((s) => ({ ...s, state: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-zinc-800/60 px-3 py-2 outline-none sm:col-span-2"
+            placeholder="Complemento"
+            value={addr.complement}
+            onChange={(e) =>
+              setAddr((s) => ({ ...s, complement: e.target.value }))
+            }
+          />
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <input className="rounded-2xl bg-black/30 px-4 py-3"
-                 placeholder="Cidade *" value={addr.cidade}
-                 onChange={e => setAddr({ ...addr, cidade: e.target.value })}/>
-          <input className="rounded-2xl bg-black/30 px-4 py-3"
-                 placeholder="UF *" value={addr.uf}
-                 onChange={e => setAddr({ ...addr, uf: e.target.value })}/>
-        </div>
-
-        <input className="w-full rounded-2xl bg-black/30 px-4 py-3"
-               placeholder="Complemento" value={addr.complemento}
-               onChange={e => setAddr({ ...addr, complemento: e.target.value })}/>
-      </div>
+      </section>
 
       {/* Ações */}
-      <div className="flex flex-col gap-3">
-        <button onClick={onFinish} className="h-12 rounded-2xl bg-emerald-600 text-white font-medium">
+      <section className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={handleFinishOrder}
+          disabled={items.length === 0}
+          className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3 font-semibold disabled:opacity-60"
+        >
           Finalizar pedido (WhatsApp)
         </button>
-        <a href="/" className="h-12 rounded-2xl border border-white/20 flex items-center justify-center">
+
+        <Link
+          href="/"
+          className="flex-1 rounded-2xl border border-zinc-700 px-6 py-3 text-center hover:bg-zinc-800"
+        >
           Voltar para a loja
-        </a>
-      </div>
+        </Link>
+      </section>
     </div>
   );
 }
