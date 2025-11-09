@@ -1,161 +1,104 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCart } from '../../components/providers/CartProvider';
+import { useCart } from '@/components/providers/CartProvider';
+import { toast } from '@/components/ui/toast';
 
 type Address = {
   name: string;
-  phone?: string;
-  cep?: string;
-  street?: string;
-  number?: string;
-  city?: string;
-  state?: string;
+  phone: string;
+  cep: string;
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  coupon?: string;
 };
 
 const formatBRL = (v: number) =>
-  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 export default function CheckoutClient() {
-  const { items, clear } = useCart();
+  const { items, subtotal, updateQty, removeItem, clear } = useCart();
+  const [addr, setAddr] = useState<Address>({
+    name: '',
+    phone: '',
+    cep: '',
+    street: '',
+    number: '',
+    city: '',
+    state: '',
+    coupon: '',
+  });
 
-  const subtotal = useMemo(
-    () => items.reduce((a, i) => a + i.price * i.qty, 0),
-    [items]
-  );
+  const shipping = useMemo(() => (items.length ? 24.4 : 0), [items]);
+  const total = subtotal + shipping;
 
-  const [coupon, setCoupon] = useState('');
-  const discount = 0;
-  const freight = 24.4; // exemplo
-  const total = subtotal - discount + freight;
+  const change = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setAddr(a => ({ ...a, [k]: e.target.value }));
 
-  const [addr, setAddr] = useState<Address>({ name: '' });
-
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert('Pedido finalizado!');
+  const finish = () => {
+    if (!items.length) {
+      toast('Seu carrinho está vazio');
+      return;
+    }
+    toast('Pedido finalizado! 🎉');
     clear();
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-semibold mb-6">Checkout</h1>
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <h1 className="text-3xl font-semibold">Checkout</h1>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <section className="rounded-2xl border border-emerald-900/40 p-4">
-            <h2 className="text-lg font-semibold mb-3">Carrinho</h2>
-            <ul className="space-y-2">
-              {items.map(it => (
-                <li key={String(it.id)} className="flex justify-between text-sm">
-                  <span>
-                    {it.name} × {it.qty}
-                  </span>
-                  <span>{formatBRL(it.price * it.qty)}</span>
-                </li>
-              ))}
-              {items.length === 0 && (
-                <li className="text-sm opacity-70">Seu carrinho está vazio.</li>
-              )}
-            </ul>
-          </section>
-
-          <section className="rounded-2xl border border-emerald-900/40 p-4">
-            <h2 className="text-lg font-semibold mb-3">Endereço</h2>
-            <form onSubmit={onSubmit} className="space-y-3">
-              <input
-                className="w-full rounded-lg bg-black/30 p-2"
-                placeholder="Nome completo"
-                value={addr.name}
-                onChange={e => setAddr({ ...addr, name: e.target.value })}
-                required
-              />
-              <input
-                className="w-full rounded-lg bg-black/30 p-2"
-                placeholder="Telefone"
-                value={addr.phone || ''}
-                onChange={e => setAddr({ ...addr, phone: e.target.value })}
-              />
-              <input
-                className="w-full rounded-lg bg-black/30 p-2"
-                placeholder="CEP"
-                value={addr.cep || ''}
-                onChange={e => setAddr({ ...addr, cep: e.target.value })}
-              />
-              <div className="flex gap-3">
-                <input
-                  className="flex-1 rounded-lg bg-black/30 p-2"
-                  placeholder="Rua"
-                  value={addr.street || ''}
-                  onChange={e => setAddr({ ...addr, street: e.target.value })}
-                />
-                <input
-                  className="w-32 rounded-lg bg-black/30 p-2"
-                  placeholder="Número"
-                  value={addr.number || ''}
-                  onChange={e => setAddr({ ...addr, number: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-3">
-                <input
-                  className="flex-1 rounded-lg bg-black/30 p-2"
-                  placeholder="Cidade"
-                  value={addr.city || ''}
-                  onChange={e => setAddr({ ...addr, city: e.target.value })}
-                />
-                <input
-                  className="w-24 rounded-lg bg-black/30 p-2"
-                  placeholder="UF"
-                  value={addr.state || ''}
-                  onChange={e => setAddr({ ...addr, state: e.target.value })}
-                />
-              </div>
-
-              <div className="flex gap-3 items-center pt-2">
-                <input
-                  className="flex-1 rounded-lg bg-black/30 p-2"
-                  placeholder="Cupom de desconto"
-                  value={coupon}
-                  onChange={e => setCoupon(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="rounded-lg px-4 py-2 bg-emerald-600 text-white"
-                >
-                  Aplicar
-                </button>
-              </div>
-
-              <button className="w-full mt-2 rounded-xl bg-emerald-600 text-white py-3 font-semibold">
-                Finalizar pedido
-              </button>
-            </form>
-          </section>
-        </div>
-
-        <aside className="rounded-2xl border border-emerald-900/40 p-4 h-fit">
-          <h2 className="text-lg font-semibold mb-3">Resumo</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatBRL(subtotal)}</span>
+      {/* CARRINHO */}
+      <section className="rounded-xl border border-white/10 p-4 space-y-4">
+        <h2 className="text-xl font-medium">Carrinho</h2>
+        {!items.length && <p className="text-white/70">Seu carrinho está vazio.</p>}
+        {items.map(it => (
+          <div key={it.id} className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+            <div className="min-w-0">
+              <p className="font-medium truncate">{it.name}</p>
+              <p className="text-sm text-white/70">{formatBRL(it.price)}</p>
             </div>
-            <div className="flex justify-between">
-              <span>Desconto</span>
-              <span>{formatBRL(discount)}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => updateQty(it.id, Math.max(1, it.qty - 1))} className="px-2 py-1 rounded bg-emerald-900/40">−</button>
+              <span>{it.qty}</span>
+              <button onClick={() => updateQty(it.id, it.qty + 1)} className="px-2 py-1 rounded bg-emerald-900/40">+</button>
             </div>
-            <div className="flex justify-between">
-              <span>Frete</span>
-              <span>{formatBRL(freight)}</span>
-            </div>
-            <hr className="my-2 border-emerald-900/40" />
-            <div className="flex justify-between font-semibold text-base">
-              <span>Total</span>
-              <span>{formatBRL(total)}</span>
-            </div>
+            <div className="w-24 text-right">{formatBRL(it.price * it.qty)}</div>
+            <button onClick={() => removeItem(it.id)} className="px-2 py-1 rounded bg-red-900/40">Remover</button>
           </div>
-        </aside>
-      </div>
+        ))}
+      </section>
+
+      {/* ENDEREÇO */}
+      <section className="rounded-xl border border-white/10 p-4 space-y-4">
+        <h2 className="text-xl font-medium">Endereço</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Nome *" value={addr.name} onChange={change('name')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Telefone *" value={addr.phone} onChange={change('phone')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="CEP *" value={addr.cep} onChange={change('cep')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Rua *" value={addr.street} onChange={change('street')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Número *" value={addr.number} onChange={change('number')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Cidade *" value={addr.city} onChange={change('city')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Estado *" value={addr.state} onChange={change('state')} />
+          <input className="rounded bg-white/5 px-3 py-2" placeholder="Cupom (opcional)" value={addr.coupon} onChange={change('coupon')} />
+        </div>
+      </section>
+
+      {/* RESUMO */}
+      <section className="rounded-xl border border-white/10 p-4 space-y-3">
+        <h2 className="text-xl font-medium">Resumo</h2>
+        <div className="flex justify-between"><span>Subtotal</span><span>{formatBRL(subtotal)}</span></div>
+        <div className="flex justify-between"><span>Frete • PAC (5–8 dias)</span><span>{formatBRL(shipping)}</span></div>
+        <div className="border-t border-white/10 my-2" />
+        <div className="flex justify-between text-lg font-semibold"><span>Total</span><span>{formatBRL(total)}</span></div>
+
+        <div className="pt-3 flex gap-3">
+          <button onClick={finish} className="px-4 py-2 rounded bg-emerald-600 text-white">Finalizar pedido</button>
+        </div>
+      </section>
     </div>
   );
 }
