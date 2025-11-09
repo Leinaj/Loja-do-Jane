@@ -1,193 +1,149 @@
 'use client';
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  useEffect,
-} from 'react';
-
-// Ignora types do react-dom no build (evita precisar instalar @types/react-dom)
-// @ts-ignore
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/* --------------------------------------------------------------- */
-/* Tipos                                                           */
-/* --------------------------------------------------------------- */
+// ========================
+// Tipos
+// ========================
 type ToastVariant = 'success' | 'error' | 'info';
+
 export type ToastItem = {
   id: number;
-  title?: string;
+  title: string;
   description?: string;
+  variant?: ToastVariant;
   actionLabel?: string;
   actionHref?: string;
-  variant?: ToastVariant;
-  durationMs?: number;
+  durationMs?: number; // default 2800
 };
 
-type ToastContextValue = {
-  notify: (toast: Omit<ToastItem, 'id'>) => void;
-  remove: (id: number) => void;
+type ToastContextType = {
   items: ToastItem[];
+  push: (t: Omit<ToastItem, 'id'>) => void;
+  remove: (id: number) => void;
 };
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+const ToastContext = createContext<ToastContextType | null>(null);
 
-/* --------------------------------------------------------------- */
-/* Singleton p/ permitir `toast(...)` fora de componentes          */
-/* --------------------------------------------------------------- */
-let notifier: ((t: Omit<ToastItem, 'id'>) => void) | null = null;
-function setNotifier(fn: ((t: Omit<ToastItem, 'id'>) => void) | null) {
-  notifier = fn;
-}
-
-/** API global: `import { toast } from '@/components/ui/toast'` */
-export function toast(
-  input:
-    | string
-    | (Omit<ToastItem, 'id'> & { variant?: ToastVariant; durationMs?: number })
-) {
-  if (!notifier) return;
-  if (typeof input === 'string') {
-    notifier({ title: input, variant: 'info' });
-  } else {
-    notifier(input);
-  }
-}
-
-/* --------------------------------------------------------------- */
-/* Helpers                                                         */
-/* --------------------------------------------------------------- */
-const useIsClient = () => {
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  return ready;
-};
-
-/* --------------------------------------------------------------- */
-/* Provider                                                        */
-/* --------------------------------------------------------------- */
+// ========================
+// Provider
+// ========================
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
-  const [seq, setSeq] = useState(1);
+  const nextId = useRef(1);
 
   const remove = useCallback((id: number) => {
-    setItems((prev) => prev.filter((t) => t.id !== id));
+    setItems((prev) => prev.filter((it) => it.id !== id));
   }, []);
 
-  const notify = useCallback(
-    (t: Omit<ToastItem, 'id'>) => {
-      setSeq((s) => s + 1);
-      const id = seq;
-      const withDefaults: ToastItem = {
-        id,
-        title: t.title ?? 'Tudo certo!',
-        description: t.description ?? '',
-        variant: t.variant ?? 'info',
-        durationMs: t.durationMs ?? 2800,
-        actionHref: t.actionHref,
-        actionLabel: t.actionLabel,
-      };
-      setItems((prev) => [...prev, withDefaults]);
+  const push = useCallback((t: Omit<ToastItem, 'id'>) => {
+    const id = nextId.current++;
+    const item: ToastItem = {
+      id,
+      durationMs: 2800,
+      variant: 'success',
+      ...t,
+    };
+    setItems((prev) => [...prev, item]);
 
-      const ms = withDefaults.durationMs!;
-      if (ms > 0) {
-        setTimeout(() => remove(id), ms);
-      }
-    },
-    [remove, seq]
-  );
+    // auto-close
+    const ms = item.durationMs ?? 2800;
+    if (ms > 0) {
+      setTimeout(() => remove(id), ms);
+    }
+  }, [remove]);
 
-  // registra o notifier global para a função `toast(...)`
-  useEffect(() => {
-    setNotifier(notify);
-    return () => setNotifier(null);
-  }, [notify]);
-
-  const value = useMemo<ToastContextValue>(
-    () => ({ notify, remove, items }),
-    [notify, remove, items]
-  );
+  const value = useMemo(() => ({ items, push, remove }), [items, push, remove]);
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer />
+      <ToastBridge />
     </ToastContext.Provider>
   );
 }
 
-/* --------------------------------------------------------------- */
-/* Hook                                                            */
-/* --------------------------------------------------------------- */
+// hook
 export function useToast() {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast deve ser usado dentro de <ToastProvider />');
+  if (!ctx) throw new Error('useToast deve ser usado dentro de <ToastProvider>.');
   return ctx;
 }
 
-/* --------------------------------------------------------------- */
-/* Container                                                       */
-/* --------------------------------------------------------------- */
-export function ToastContainer() {
-  const isClient = useIsClient();
-  const ctx = useContext(ToastContext);
-  if (!ctx) return null;
-  const { items, remove } = ctx;
+// ========================
+// API simples (igual ao que você importava como "toast")
+// ========================
+export function toast(opts: Omit<ToastItem, 'id'>) {
+  // Este módulo expõe uma função globalmente através do bridge.
+  if (typeof window !== 'undefined' && (window as any).__toastPush) {
+    (window as any).__toastPush(opts);
+  }
+}
 
-  if (!isClient || typeof document === 'undefined') return null;
+// ========================
+// Bridge + Container (com Portal só no cliente)
+// ========================
+export function ToastBridge() {
+  const { items, remove, push } = useToast();
+
+  // expõe a função pro import { toast } funcionar em qualquer arquivo client
+  useEffect(() => {
+    (window as any).__toastPush = push;
+    return () => { (window as any).__toastPush = undefined; };
+  }, [push]);
+
+  if (typeof document === 'undefined') return null; // evita SSR
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[1000] flex w-full justify-center">
-      <ul className="flex w-full max-w-md flex-col gap-2 px-3">
-        {items.map((t) => (
-          <li
-            key={t.id}
+    <ToastContainer items={items} onClose={remove} />,
+    document.body
+  );
+}
+
+function ToastContainer({ items, onClose }: { items: ToastItem[]; onClose: (id: number) => void }) {
+  return (
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex w-full justify-center px-4"
+    >
+      <div className="flex w-full max-w-md flex-col gap-3">
+        {items.map((it) => (
+          <div
+            key={it.id}
             className={[
-              'pointer-events-auto rounded-lg border px-4 py-3 shadow-md backdrop-blur',
-              t.variant === 'success' && 'border-emerald-600/30 bg-emerald-900/50',
-              t.variant === 'error' && 'border-rose-600/30 bg-rose-900/50',
-              t.variant === 'info' && 'border-white/15 bg-black/60',
-            ]
-              .filter(Boolean)
-              .join(' ')}
+              'pointer-events-auto rounded-2xl px-4 py-3 shadow-lg ring-1 ring-black/10',
+              it.variant === 'error' && 'bg-red-600 text-white',
+              it.variant === 'success' && 'bg-emerald-600 text-white',
+              it.variant === 'info' && 'bg-slate-700 text-white',
+            ].filter(Boolean).join(' ')}
           >
             <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                {t.title && <p className="font-medium leading-tight">{t.title}</p>}
-                {t.description && (
-                  <p className="text-sm text-white/80">{t.description}</p>
-                )}
-                {t.actionHref && t.actionLabel && (
+              <div className="flex-1">
+                <p className="font-semibold leading-5">{it.title}</p>
+                {it.description ? (
+                  <p className="text-sm/5 opacity-90">{it.description}</p>
+                ) : null}
+                {it.actionHref && it.actionLabel ? (
                   <a
-                    href={t.actionHref}
-                    className="mt-2 inline-block rounded-md bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
+                    href={it.actionHref}
+                    className="mt-2 inline-flex text-sm underline underline-offset-2"
                   >
-                    {t.actionLabel}
+                    {it.actionLabel}
                   </a>
-                )}
+                ) : null}
               </div>
               <button
-                onClick={() => remove(t.id)}
-                className="rounded-md px-2 py-1 text-sm text-white/70 hover:bg-white/10"
+                onClick={() => onClose(it.id)}
+                className="ml-1 rounded-md px-2 text-sm/5 opacity-80 hover:opacity-100"
                 aria-label="Fechar"
               >
                 ×
               </button>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
-    </div>,
-    document.body
+      </div>
+    </div>
   );
-}
-
-/* --------------------------------------------------------------- */
-/* Bridge opcional p/ compatibilidade com imports antigos          */
-/* --------------------------------------------------------------- */
-export function ToastBridge() {
-  return null;
 }
