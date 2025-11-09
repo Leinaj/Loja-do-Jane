@@ -1,70 +1,47 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import React from 'react';
-import { useCart } from '@/lib/cart';
+import Image from 'next/image';
+import { useCart } from '../providers/CartProvider';
 
-const FALLBACK_IMG_DATAURL =
-  'data:image/svg+xml;utf8,' +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" fill="#6b7280">sem imagem</text></svg>`
-  );
+const formatBRL = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CartDrawer() {
-  const { items, remove, clear, total } = useCart();
+  const { items, removeItem, getTotal } = useCart();
 
   return (
-    <div className="space-y-4 p-4">
-      <h2 className="text-lg font-semibold">Carrinho</h2>
-
+    <div>
       <ul className="space-y-3">
-        {items.map((it: any) => {
-          const imgSrc = typeof it?.image === 'string' && it.image ? it.image : FALLBACK_IMG_DATAURL;
-          const altTxt = it?.name ?? 'Produto';
-          const id = String(it?.id ?? Math.random());
-
+        {items.map(it => {
+          const imgSrc = it.image ?? '/placeholder.png';
+          const altTxt = it.name ?? 'Produto';
           return (
-            <li key={id} className="flex items-center gap-3">
-              <div className="relative h-16 w-16 overflow-hidden rounded-md ring-1 ring-black/10">
-                <Image src={imgSrc} alt={altTxt} fill className="object-cover" sizes="64px" />
+            <li key={String(it.id)} className="flex gap-3 items-center">
+              <div className="relative w-14 h-14 rounded overflow-hidden border border-emerald-900/40">
+                <Image src={imgSrc} alt={altTxt} fill className="object-cover" />
               </div>
-
               <div className="flex-1">
-                <p className="font-medium">{altTxt}</p>
-                <p className="text-sm opacity-70">{formatBRL(Number(it?.price ?? 0))}</p>
+                <div className="text-sm font-medium">{it.name}</div>
+                <div className="text-xs opacity-80">Qtd: {it.qty}</div>
               </div>
-
               <button
-                onClick={() => remove(it?.id)}
-                className="rounded-md bg-rose-600 px-3 py-1 text-sm text-white hover:bg-rose-700"
+                onClick={() => removeItem(it.id)}
+                className="text-red-500 text-sm"
               >
                 Remover
               </button>
             </li>
           );
         })}
+        {items.length === 0 && (
+          <li className="text-sm opacity-70">Seu carrinho está vazio.</li>
+        )}
       </ul>
 
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-base font-semibold">Total</span>
-        <span className="text-base font-semibold">{formatBRL(total)}</span>
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <button onClick={clear} className="rounded-md border px-3 py-2">Limpar carrinho</button>
-        <Link href="/checkout" className="rounded-md bg-emerald-600 px-3 py-2 text-white hover:bg-emerald-700">
-          Finalizar pedido
-        </Link>
+      <div className="mt-4 font-semibold">
+        Total: {formatBRL(getTotal())}
       </div>
     </div>
   );
-}
-
-function formatBRL(value: number) {
-  try {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(Number(value) || 0);
-  } catch {
-    return `R$ ${(Number(value || 0)).toFixed(2)}`;
-  }
 }
