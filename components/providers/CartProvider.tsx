@@ -1,81 +1,56 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState, ReactNode } from 'react';
 
-export type CartItem = {
+export type ProductLite = {
   id: string | number;
   name: string;
-  price: number;
-  image?: string | null;
-  qty: number;
+  price: number;       // ex.: 159.9
+  image?: string;
 };
+
+export type CartItem = ProductLite & { qty: number };
 
 type CartContextType = {
   items: CartItem[];
-  add: (it: Omit<CartItem, 'qty'>, qty?: number) => void;
-  remove: (id: string | number) => void;
+  addItem: (p: ProductLite, qty?: number) => void;
+  removeItem: (id: string | number) => void;
   clear: () => void;
-  total: number;
-  count: number;
+  getCount: () => number;
+  getTotal: () => number;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
-
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-
-  // carrega do localStorage (client only)
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('cart:v1');
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  // persiste no localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('cart:v1', JSON.stringify(items));
-    } catch {}
-  }, [items]);
-
-  const add: CartContextType['add'] = (it, qty = 1) => {
-    setItems((prev) => {
-      const idx = prev.findIndex((p) => String(p.id) === String(it.id));
-      if (idx >= 0) {
-        const clone = [...prev];
-        clone[idx] = { ...clone[idx], qty: clone[idx].qty + qty };
-        return clone;
-      }
-      return [...prev, { ...it, qty }];
-    });
-  };
-
-  const remove: CartContextType['remove'] = (id) =>
-    setItems((prev) => prev.filter((p) => String(p.id) !== String(id)));
-
-  const clear = () => setItems([]);
-
-  const { total, count } = useMemo(() => {
-    let t = 0;
-    let c = 0;
-    for (const it of items) {
-      t += (Number(it.price) || 0) * (Number(it.qty) || 0);
-      c += Number(it.qty) || 0;
-    }
-    return { total: t, count: c };
-  }, [items]);
-
-  const value = useMemo<CartContextType>(
-    () => ({ items, add, remove, clear, total, count }),
-    [items, total, count]
-  );
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-}
 
 export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error('useCart must be used within <CartProvider>');
   return ctx;
+}
+
+export default function CartProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  const addItem = (p: ProductLite, qty = 1) =>
+    setItems(prev => {
+      const idx = prev.findIndex(i => i.id === p.id);
+      if (idx >= 0) {
+        const cp = [...prev];
+        cp[idx] = { ...cp[idx], qty: cp[idx].qty + qty };
+        return cp;
+      }
+      return [...prev, { ...p, qty }];
+    });
+
+  const removeItem = (id: string | number) => setItems(prev => prev.filter(i => i.id !== id));
+  const clear = () => setItems([]);
+  const getCount = () => items.reduce((a, i) => a + i.qty, 0);
+  const getTotal = () => items.reduce((a, i) => a + i.qty * i.price, 0);
+
+  const value = useMemo(
+    () => ({ items, addItem, removeItem, clear, getCount, getTotal }),
+    [items]
+  );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
