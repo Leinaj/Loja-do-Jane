@@ -15,7 +15,8 @@ type Address = {
 };
 
 export default function CheckoutClient() {
-  const { items, remove, setQty, clear, subtotal } = useCart(); // ✅ agora é remove
+  // 👇 AQUI ESTÁ A MUDANÇA: removeItem -> remove
+  const { items, remove, setQty, clear, subtotal } = useCart();
 
   const [addr, setAddr] = useState<Address>({
     name: '',
@@ -28,19 +29,19 @@ export default function CheckoutClient() {
     complement: '',
   });
 
-  // Auto-preenche endereço ao digitar CEP
+  // Preencher endereço via CEP (ViaCEP)
   useEffect(() => {
     const cep = addr.cep.replace(/\D/g, '');
     if (cep.length === 8) {
       fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.erro) return;
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.erro) return;
           setAddr((a) => ({
             ...a,
-            street: data.logradouro || '',
-            city: data.localidade || '',
-            state: data.uf || '',
+            street: d.logradouro || '',
+            city: d.localidade || '',
+            state: d.uf || '',
           }));
         })
         .catch(() => {});
@@ -52,8 +53,8 @@ export default function CheckoutClient() {
   function finalizeOrder() {
     const msg = encodeURIComponent(
       `Novo pedido - Loja da Jane:\n\n${items
-        .map((i) => `${i.qty}x ${i.title} — R$${i.price.toFixed(2)}`)
-        .join('\n')}\n\nTotal: R$${total.toFixed(
+        .map((i) => `${i.qty}x ${i.title} — R$ ${i.price.toFixed(2)}`)
+        .join('\n')}\n\nTotal: R$ ${total.toFixed(
         2
       )}\n\nEndereço:\n${addr.street}, ${addr.number}, ${addr.city}/${addr.state}\nCEP: ${
         addr.cep
@@ -61,7 +62,6 @@ export default function CheckoutClient() {
         addr.phone
       }`
     );
-
     window.open(`https://wa.me/5544988606483?text=${msg}`, '_blank');
   }
 
@@ -87,9 +87,7 @@ export default function CheckoutClient() {
                 <div className="flex items-center gap-3">
                   <button
                     className="bg-neutral-700 px-3 py-1 rounded-lg"
-                    onClick={() =>
-                      setQty(item.id, Math.max(1, item.qty - 1))
-                    }
+                    onClick={() => setQty(item.id, Math.max(1, item.qty - 1))}
                   >
                     -
                   </button>
@@ -102,13 +100,13 @@ export default function CheckoutClient() {
                   </button>
                 </div>
 
-                <div>
+                <div className="text-right">
                   <p className="font-semibold">
                     R$ {(item.price * item.qty).toFixed(2)}
                   </p>
                   <button
                     className="text-rose-400 mt-1"
-                    onClick={() => remove(item.id)} // ✅ usa remove()
+                    onClick={() => remove(item.id)} // usa remove()
                   >
                     Remover
                   </button>
@@ -170,7 +168,9 @@ export default function CheckoutClient() {
               className="w-full p-3 rounded-lg bg-neutral-800"
               placeholder="Complemento"
               value={addr.complement}
-              onChange={(e) => setAddr({ ...addr, complement: e.target.value })}
+              onChange={(e) =>
+                setAddr({ ...addr, complement: e.target.value })
+              }
             />
           </div>
 
@@ -179,6 +179,13 @@ export default function CheckoutClient() {
             className="w-full mt-6 py-4 bg-emerald-600 text-black font-semibold rounded-xl hover:bg-emerald-500 transition"
           >
             Finalizar pedido no WhatsApp
+          </button>
+
+          <button
+            onClick={clear}
+            className="w-full mt-3 py-3 bg-neutral-700 rounded-xl"
+          >
+            Limpar carrinho
           </button>
         </>
       )}
