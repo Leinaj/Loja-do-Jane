@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-
-// ✅ Importa do app/providers/CartProvider.tsx
-import { useCart } from '../providers/CartProvider';
+import { useCart } from '../../components/providers/CartProvider';
 
 type Address = {
   name: string;
@@ -16,25 +13,35 @@ type Address = {
   state: string;
 };
 
-type CartItem = {
-  id: string;
-  name: string;
-  price: number; // R$
-  qty: number;
-  image?: string;
-};
+const currency = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-function formatMoney(n: number) {
-  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-function onlyDigits(s: string) {
-  return s.replace(/\D/g, '');
-}
+const FREIGHT_PAC = 24.4; // R$ 24,40
 
 export default function CheckoutClient() {
   const { items, removeItem, clear } = useCart();
 
-  const [address, setAddress] = useState<Address>({
+  // ------- Resumo / Totais -------
+  const subtotal = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * it.qty, 0),
+    [items]
+  );
+
+  const [coupon, setCoupon] = useState('JANE10');
+  const [discountPct, setDiscountPct] = useState(0);
+  const discountValue = useMemo(
+    () => subtotal * (discountPct / 100),
+    [subtotal, discountPct]
+  );
+
+  const total = useMemo(
+    () => Math.max(0, subtotal - discountValue) + (items.length ? FREIGHT_PAC : 0),
+    [subtotal, discountValue, items.length]
+  );
+
+  // ------- Endereço -------
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [addr, setAddr] = useState<Address>({
     name: '',
     phone: '',
     cep: '',
@@ -44,280 +51,259 @@ export default function CheckoutClient() {
     state: '',
   });
 
-  const [coupon, setCoupon] = useState('');
-  const [discountPct, setDiscountPct] = useState(0);
-  const [shippingName] = useState('PAC (5-8 dias)');
-  const [shippingValue, setShippingValue] = useState(24.4);
+  function setField<K extends keyof Address>(key: K, value: Address[K]) {
+    setAddr((a) => ({ ...a, [key]: value }));
+  }
 
-  const subtotal = useMemo(
-    () => (items as CartItem[]).reduce((acc, it) => acc + it.price * it.qty, 0),
-    [items]
-  );
-  const discountValue = useMemo(
-    () => (subtotal * discountPct) / 100,
-    [subtotal, discountPct]
-  );
-  const total = useMemo(
-    () => Math.max(subtotal - discountValue, 0) + (items.length ? shippingValue : 0),
-    [subtotal, discountValue, shippingValue, items.length]
-  );
-
-  // CEP → ViaCEP
+  // Busca automática do endereço ao digitar CEP completo (8 dígitos)
   useEffect(() => {
-    const digits = onlyDigits(address.cep);
+    const digits = addr.cep.replace(/\D/g, '');
     if (digits.length !== 8) return;
+    setLoadingCep(true);
 
-    let abort = false;
-    (async () => {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
-        const data = await res.json();
-        if (abort || data?.erro) return;
-
-        setAddress((a) => ({
+    // ViaCEP
+    fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.erro) return;
+        setAddr((a) => ({
           ...a,
           street: data.logradouro ?? a.street,
           city: data.localidade ?? a.city,
-          state: (data.uf ?? a.state)?.toUpperCase(),
+          state: data.uf ?? a.state,
         }));
+      })
+      .finally(() => setLoadingCep(false));
+  }, [addr.cep]);
 
-        // frete simbólico por região
-        const uf: string = String(data.uf || '').toUpperCase();
-        const base = 22;
-        const extra = ['AM', 'RR', 'AP', 'PA', 'RO', 'AC'].includes(uf)
-          ? 18
-          : ['RS', 'PE', 'CE', 'RN', 'PB', 'AL', 'SE', 'BA', 'MA', 'PI'].includes(uf)
-          ? 10
-          : 6;
-        setShippingValue(base + extra);
-      } catch {}
-    })();
-    return () => {
-      abort = true;
-    };
-  }, [address.cep]);
-
+  // ------- Cupom -------
   function applyCoupon() {
-    const c = coupon.trim().toUpperCase();
-    if (!c) return setDiscountPct(0);
-    if (c === 'JANE10') setDiscountPct(10);
-    else if (c === 'JANE15' && subtotal >= 300) setDiscountPct(15);
-    else setDiscountPct(0);
+    const code = coupon.trim().toUpperCase();
+    // Exemplo simples de cupons
+    if (code === 'JANE10') {
+      setDiscountPct(10);
+    } else if (code === 'JANE15') {
+      setDiscountPct(15);
+    } else {
+      setDiscountPct(0);
+    }
   }
 
-  function onChange<K extends keyof Address>(key: K, value: Address[K]) {
-    setAddress((a) => ({ ...a, [key]: value }));
+  function finalizeOrder() {
+    if (!addr.name || !addr.phone || !addr.cep || !addr.street || !addr.number || !addr.city || !addr.state) {
+      alert('Preencha todos os campos obrigatórios do endereço.');
+      return;
+    }
+    alert('Pedido finalizado! (exemplo)');
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-semibold tracking-tight text-white">Checkout</h1>
-
+    <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
       {/* Carrinho */}
-      <section className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-        <h2 className="mb-4 text-xl font-medium text-white">Carrinho</h2>
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4">Carrinho</h2>
 
-        <div className="space-y-4">
-          {(items as CartItem[]).map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                {item.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover" />
-                ) : (
-                  <div className="h-14 w-14 rounded-lg bg-white/10" />
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-white">{item.name}</p>
-                  <p className="text-sm text-white/70">
-                    {item.qty} × {formatMoney(item.price)}
-                  </p>
-                </div>
-              </div>
+        {items.length === 0 ? (
+          <p className="opacity-70">Seu carrinho está vazio.</p>
+        ) : (
+          <>
+            <ul className="space-y-4">
+              {items.map((it) => (
+                <li
+                  key={it.id}
+                  className="flex items-center gap-4 rounded-xl bg-black/30 p-3"
+                >
+                  {it.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={it.name}
+                      src={it.image}
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-14 w-14 rounded-lg bg-white/10" />
+                  )}
+
+                  <div className="flex-1">
+                    <p className="font-medium">{it.name}</p>
+                    <p className="text-sm opacity-70">
+                      {it.qty} × {currency(it.price)}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => removeItem(it.id)}
+                    className="rounded-lg bg-rose-900/50 px-3 py-2 text-sm hover:bg-rose-900/70"
+                  >
+                    Remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-lg">
+                Total: <span className="font-semibold">{currency(subtotal)}</span>
+              </p>
               <button
-                onClick={() => removeItem(item.id)}
-                className="rounded-xl bg-rose-900/60 px-3 py-2 text-sm font-medium text-rose-50 hover:bg-rose-900"
+                onClick={clear}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 hover:bg-white/10"
               >
-                Remover
+                Limpar carrinho
               </button>
             </div>
-          ))}
-
-          {items.length === 0 && <p className="text-white/70">Seu carrinho está vazio.</p>}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-white">
-            Total itens: <span className="font-semibold">{formatMoney(subtotal)}</span>
-          </p>
-          <button
-            onClick={() => clear()}
-            disabled={!items.length}
-            className="rounded-xl border border-white/10 px-4 py-2 text-white/90 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Limpar carrinho
-          </button>
-        </div>
+          </>
+        )}
       </section>
 
       {/* Endereço */}
-      <section className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-        <h2 className="mb-4 text-xl font-medium text-white">Endereço</h2>
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4">Endereço</h2>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="col-span-2">
-            <label className="mb-1 block text-sm text-white/80">Nome *</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm opacity-80">Nome *</label>
             <input
-              value={address.name}
-              onChange={(e) => onChange('name', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="Seu nome completo"
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.name}
+              onChange={(e) => setField('name', e.target.value)}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm opacity-80">Telefone *</label>
+            <input
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.phone}
+              onChange={(e) => setField('phone', e.target.value)}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-white/80">Telefone *</label>
+            <label className="mb-1 block text-sm opacity-80">CEP *</label>
             <input
-              value={address.phone}
-              onChange={(e) => onChange('phone', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm text-white/80">CEP *</label>
-            <input
-              value={address.cep}
-              onChange={(e) => onChange('cep', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
               placeholder="00000-000"
+              value={addr.cep}
+              onChange={(e) => setField('cep', e.target.value)}
             />
+            <p className="mt-1 text-xs opacity-60">
+              {loadingCep ? 'Buscando endereço…' : '\u00A0'}
+            </p>
           </div>
 
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-white/80">Rua *</label>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm opacity-80">Rua *</label>
             <input
-              value={address.street}
-              onChange={(e) => onChange('street', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="Rua / Avenida"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm text-white/80">Número *</label>
-            <input
-              value={address.number}
-              onChange={(e) => onChange('number', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="Nº"
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.street}
+              onChange={(e) => setField('street', e.target.value)}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-white/80">Cidade *</label>
+            <label className="mb-1 block text-sm opacity-80">Número *</label>
             <input
-              value={address.city}
-              onChange={(e) => onChange('city', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="Cidade"
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.number}
+              onChange={(e) => setField('number', e.target.value)}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-white/80">Estado *</label>
+            <label className="mb-1 block text-sm opacity-80">Cidade *</label>
             <input
-              value={address.state}
-              onChange={(e) => onChange('state', e.target.value.toUpperCase())}
-              maxLength={2}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-              placeholder="UF"
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.city}
+              onChange={(e) => setField('city', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm opacity-80">Estado *</label>
+            <input
+              className="w-full rounded-xl bg-black/40 px-4 py-3 outline-none"
+              value={addr.state}
+              onChange={(e) => setField('state', e.target.value)}
             />
           </div>
         </div>
       </section>
 
-      {/* Cupom / Frete / Resumo */}
-      <section className="mb-8 space-y-4">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <h3 className="mb-3 text-lg font-medium text-white">Cupom de desconto</h3>
-          <div className="flex gap-3">
-            <input
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-              placeholder="EX.: JANE10"
-              className="flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
-            />
-            <button
-              onClick={applyCoupon}
-              className="rounded-xl bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
-            >
-              Aplicar
-            </button>
-          </div>
-          {discountPct > 0 && (
-            <p className="mt-2 text-sm text-emerald-300">Cupom aplicado: {discountPct}% de desconto.</p>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <h3 className="mb-3 text-lg font-medium text-white">Frete</h3>
-          <div className="flex items-center justify-between">
-            <p className="text-white/90">{shippingName}</p>
-            <p className="text-emerald-400">{formatMoney(shippingValue)}</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <h3 className="mb-3 text-lg font-medium text-white">Resumo</h3>
-
-          <div className="space-y-2 text-white/90">
-            <div className="flex items-center justify-between">
-              <span>Subtotal</span>
-              <span>{formatMoney(subtotal)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Desconto ({discountPct}%)</span>
-              <span>-{formatMoney(discountValue)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Frete • {shippingName}</span>
-              <span>{items.length ? formatMoney(shippingValue) : formatMoney(0)}</span>
-            </div>
-            <hr className="border-white/10" />
-            <div className="flex items-center justify-between text-lg font-semibold text-white">
-              <span>Total:</span>
-              <span>{formatMoney(total)}</span>
-            </div>
-          </div>
-
+      {/* Cupom */}
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4">Cupom de desconto</h2>
+        <div className="flex gap-3">
+          <input
+            className="flex-1 rounded-xl bg-black/40 px-4 py-3 outline-none"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value)}
+            placeholder="Ex.: JANE10"
+          />
           <button
-            disabled={
-              !items.length ||
-              !address.name ||
-              !address.cep ||
-              !address.street ||
-              !address.number ||
-              !address.city ||
-              !address.state
-            }
-            className="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-3 text-center text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={applyCoupon}
+            className="rounded-xl bg-emerald-600 px-5 py-3 font-medium hover:bg-emerald-700"
+          >
+            Aplicar
+          </button>
+        </div>
+        {discountPct > 0 && (
+          <p className="mt-2 text-sm opacity-80">
+            Cupom aplicado: <b>{discountPct}%</b> de desconto.
+          </p>
+        )}
+      </section>
+
+      {/* Frete / Resumo */}
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Frete</h3>
+          <div className="flex items-center justify-between rounded-xl bg-black/30 px-4 py-3">
+            <span>PAC (5–8 dias)</span>
+            <span className="font-semibold">{currency(items.length ? FREIGHT_PAC : 0)}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Resumo</h3>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>{currency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Desconto ({discountPct}%)</span>
+              <span>-{currency(discountValue)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Frete • PAC (5–8 dias)</span>
+              <span>{currency(items.length ? FREIGHT_PAC : 0)}</span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-lg">
+            <span className="opacity-80">Total:</span>
+            <span className="font-semibold">{currency(total)}</span>
+          </div>
+        </div>
+
+        <div className="pt-2 flex gap-3">
+          <button
+            onClick={finalizeOrder}
+            className="flex-1 rounded-xl bg-emerald-600 px-5 py-3 font-medium hover:bg-emerald-700"
+            disabled={items.length === 0}
           >
             Finalizar pedido
           </button>
-
-          <Link
+          <a
             href="/"
-            className="mt-3 block w-full rounded-xl border border-white/10 px-4 py-3 text-center text-white/90 hover:bg-white/10"
+            className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-center hover:bg-white/10"
           >
             Voltar para a loja
-          </Link>
+          </a>
         </div>
       </section>
     </div>
   );
 }
+```0
