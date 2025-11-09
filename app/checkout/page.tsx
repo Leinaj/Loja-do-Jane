@@ -1,6 +1,6 @@
-export const dynamic = "force-dynamic"; // evita prerender estático que quebra o hook
+import CheckoutClient from './CheckoutClient';
 
-import CheckoutClient from "@/components/checkout/CheckoutClient";
+export const dynamic = 'force-dynamic';
 
 export default function CheckoutPage() {
   return <CheckoutClient />;
