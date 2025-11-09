@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useCart } from '../cart/context';
+import { useCart } from '@/components/cart/context';
 
 type Toast = { id: number; text: string };
 
