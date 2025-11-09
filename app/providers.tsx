@@ -1,10 +1,14 @@
-// app/providers.tsx
 'use client';
 
 import React from 'react';
-// troque o alias "@/..." pelo caminho relativo:
-import { CartProvider } from '../components/cart/context';
+import { CartProvider } from '@/components/cart/context';
+import ToastBridge from '@/components/ui/toast';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <CartProvider>{children}</CartProvider>;
+  return (
+    <CartProvider>
+      <ToastBridge />
+      {children}
+    </CartProvider>
+  );
 }
