@@ -1,14 +1,14 @@
+// components/providers/RootProviders.tsx
 'use client';
 
 import React from 'react';
 import { CartProvider } from './CartProvider';
-import { ToastBridge } from '@/components/ui/toast';
 
-export default function RootProviders({ children }: { children: React.ReactNode }) {
-  return (
-    <CartProvider>
-      {children}
-      <ToastBridge />
-    </CartProvider>
-  );
+export default function RootProviders({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Sem ToastBridge global — apenas o CartProvider
+  return <CartProvider>{children}</CartProvider>;
 }
