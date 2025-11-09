@@ -1,14 +1,14 @@
-// components/providers/RootProviders.tsx
 'use client';
 
 import React from 'react';
 import { CartProvider } from '@/lib/cart';
-import { ToastProvider } from '@/components/ui/toast';
+import ToastBridge from '@/components/ui/toast'; // se seu toast está em outro caminho, ajuste
 
 export default function RootProviders({ children }: { children: React.ReactNode }) {
   return (
     <CartProvider>
-      <ToastProvider>{children}</ToastProvider>
+      {children}
+      <ToastBridge />
     </CartProvider>
   );
 }
