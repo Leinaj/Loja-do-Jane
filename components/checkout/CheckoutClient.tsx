@@ -1,4 +1,3 @@
-// components/checkout/CheckoutClient.tsx
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -16,10 +15,12 @@ type Address = {
   complement?: string;
 };
 
-const OWNER_WHATS = '5544988606483'; // destino
+const OWNER_WHATS = '5544988606483';
 
 export default function CheckoutClient() {
-  const { items, removeItem, clear, total } = useCart(); // total/subtotal vindo do contexto
+  // ⬇️ sem "total" aqui
+  const { items, removeItem, clear } = useCart();
+
   const [addr, setAddr] = useState<Address>({
     name: '',
     phone: '',
@@ -32,7 +33,11 @@ export default function CheckoutClient() {
   });
   const [coupon, setCoupon] = useState('');
 
-  const subtotal = useMemo(() => total(), [total]); // sem frete
+  // ⬇️ calcula o subtotal em centavos a partir dos itens
+  const subtotal = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
+    [items]
+  );
 
   const message = useMemo(() => {
     const lines = [
@@ -79,7 +84,7 @@ export default function CheckoutClient() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <h2 className="text-2xl font-semibold mb-6">Carrinho</h2>
 
-      {/* Lista de itens */}
+      {/* Itens */}
       <div className="rounded-2xl bg-white/5 border border-white/10 p-4 mb-8">
         {items.map((it) => (
           <div
@@ -88,7 +93,6 @@ export default function CheckoutClient() {
           >
             <div className="flex items-center gap-3">
               {it.image && (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={it.image} alt={it.name} className="w-12 h-12 rounded-lg object-cover" />
               )}
               <div>
@@ -109,7 +113,10 @@ export default function CheckoutClient() {
 
         <div className="flex items-center justify-between mt-4">
           <div className="text-lg">
-            Total: <span className="font-semibold text-emerald-400">R$ {(subtotal / 100).toFixed(2)}</span>
+            Total:{' '}
+            <span className="font-semibold text-emerald-400">
+              R$ {(subtotal / 100).toFixed(2)}
+            </span>
           </div>
           <button
             onClick={clear}
@@ -120,7 +127,7 @@ export default function CheckoutClient() {
         </div>
       </div>
 
-      {/* Dados / Cupom */}
+      {/* Dados + Resumo (sem frete) */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
           <h3 className="font-semibold mb-4">Endereço</h3>
@@ -195,7 +202,6 @@ export default function CheckoutClient() {
             <span className="text-emerald-400">R$ {(subtotal / 100).toFixed(2)}</span>
           </div>
 
-          {/* Finalizar pedido → WhatsApp */}
           <a
             href={waLink}
             target="_blank"
