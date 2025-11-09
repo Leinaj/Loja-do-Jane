@@ -1,93 +1,57 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-export type CartItem = {
-  id: string | number;
-  name: string;
-  price: number;          // em centavos ou número normal – aqui tratamos como número normal (ex: 159.9)
-  image?: string;
-  quantity: number;
-};
-
-type CartContextType = {
+export type CartItem = { id: string; name: string; price: number; image?: string; qty: number; };
+type Ctx = {
   items: CartItem[];
-  addItem: (item: CartItem) => void;
-  removeItem: (id: CartItem['id']) => void;
-  setQty: (id: CartItem['id'], qty: number) => void;
+  add: (item: Omit<CartItem,'qty'>, qty?: number) => void;
+  remove: (id: string) => void;
   clear: () => void;
-  subtotal: number; // soma de price * quantity
+  setQty: (id: string, qty: number) => void;
+  lastAdded?: { name: string };
 };
 
-const CartContext = createContext<CartContextType | null>(null);
-
-const STORAGE_KEY = 'jdj:cart:v1';
+const CartCtx = createContext<Ctx | null>(null);
+const LS_KEY = 'cart_v1';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [lastAdded, setLastAdded] = useState<{ name: string }>();
 
-  // hidrata do localStorage
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(LS_KEY);
       if (raw) setItems(JSON.parse(raw));
     } catch {}
-    setHydrated(true);
   }, []);
-
-  // salva no localStorage
   useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
-  }, [items, hydrated]);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {}
+  }, [items]);
 
-  const addItem: CartContextType['addItem'] = (incoming) => {
-    setItems((prev) => {
-      const idx = prev.findIndex((p) => String(p.id) === String(incoming.id));
-      if (idx >= 0) {
-        const clone = [...prev];
-        clone[idx] = {
-          ...clone[idx],
-          quantity: clone[idx].quantity + incoming.quantity,
-        };
-        return clone;
+  const add: Ctx['add'] = (item, qty = 1) => {
+    setItems(prev => {
+      const i = prev.findIndex(p => p.id === item.id);
+      if (i >= 0) {
+        const cp = [...prev]; cp[i] = { ...cp[i], qty: cp[i].qty + qty };
+        return cp;
       }
-      return [...prev, incoming];
+      return [...prev, { ...item, qty }];
     });
+    setLastAdded({ name: item.name });
   };
 
-  const removeItem: CartContextType['removeItem'] = (id) => {
-    setItems((prev) => prev.filter((p) => String(p.id) !== String(id)));
-  };
+  const remove: Ctx['remove'] = (id) => setItems(prev => prev.filter(i => i.id !== id));
+  const clear  : Ctx['clear']  = () => setItems([]);
+  const setQty : Ctx['setQty'] = (id, qty) =>
+    setItems(prev => prev.map(i => i.id === id ? { ...i, qty: Math.max(1, qty) } : i));
 
-  const setQty: CartContextType['setQty'] = (id, qty) => {
-    setItems((prev) =>
-      prev.map((p) =>
-        String(p.id) === String(id) ? { ...p, quantity: Math.max(1, qty) } : p
-      )
-    );
-  };
-
-  const clear = () => setItems([]);
-
-  const subtotal = useMemo(
-    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
-    [items]
-  );
-
-  const value: CartContextType = { items, addItem, removeItem, setQty, clear, subtotal };
-
-  // evita piscar conteúdo antes de hidratar
-  if (!hydrated) return null;
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  const value = useMemo(() => ({ items, add, remove, clear, setQty, lastAdded }), [items, lastAdded]);
+  return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
+  const ctx = useContext(CartCtx);
   if (!ctx) throw new Error('useCart must be used within <CartProvider>');
   return ctx;
 }
