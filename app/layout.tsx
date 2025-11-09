@@ -1,22 +1,17 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
-import RootProviders from '@/components/providers/RootProviders';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
 import './globals.css';
+import RootProviders from '../components/providers/RootProviders';
 
 export const metadata: Metadata = {
   title: 'Loja da Jane — Ofertas e Moda',
+  description: 'Sua loja de ofertas e moda com checkout simples.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-br">
+    <html lang="pt-BR">
       <body>
-        <RootProviders>
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-        </RootProviders>
+        <RootProviders>{children}</RootProviders>
       </body>
     </html>
   );
