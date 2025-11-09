@@ -1,78 +1,61 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 
-export type ProductLite = {
+export type CartItem = {
   id: string | number;
   name: string;
-  price: number;
-  image?: string | null;
+  price: number;         // em reais (ex.: 159.9)
+  image?: string;
+  quantity: number;      // quantidade no carrinho
 };
-
-export type CartItem = ProductLite & { qty: number };
 
 type CartContextType = {
   items: CartItem[];
-  addItem: (p: ProductLite, qty?: number) => void;
-  updateQty: (id: CartItem['id'], qty: number) => void;
+  addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
   removeItem: (id: CartItem['id']) => void;
   clear: () => void;
-  subtotal: number;
-  count: number;
+  getTotal: () => number;          // subtotal em reais
+  getCount: () => number;          // total de itens
 };
 
 const CartContext = createContext<CartContextType | null>(null);
 
-const LS_KEY = 'loja-jane:cart';
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // carrega do localStorage no cliente
-  useEffect(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(LS_KEY) : null;
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  // persiste
-  useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(LS_KEY, JSON.stringify(items));
-      }
-    } catch {}
-  }, [items]);
-
-  const addItem = (p: ProductLite, qty = 1) =>
-    setItems(curr => {
-      const i = curr.findIndex(it => it.id === p.id);
+  const addItem: CartContextType['addItem'] = (item, qty = 1) => {
+    setItems((prev) => {
+      const i = prev.findIndex((p) => p.id === item.id);
       if (i >= 0) {
-        const next = [...curr];
-        next[i] = { ...next[i], qty: next[i].qty + qty };
-        return next;
+        const copy = [...prev];
+        copy[i] = { ...copy[i], quantity: copy[i].quantity + qty };
+        return copy;
       }
-      return [...curr, { ...p, qty }];
+      return [...prev, { ...item, quantity: qty }];
     });
+  };
 
-  const updateQty = (id: CartItem['id'], qty: number) =>
-    setItems(curr => curr.map(it => (it.id === id ? { ...it, qty: Math.max(1, qty) } : it)));
-
-  const removeItem = (id: CartItem['id']) =>
-    setItems(curr => curr.filter(it => it.id !== id));
+  const removeItem: CartContextType['removeItem'] = (id) =>
+    setItems((prev) => prev.filter((p) => p.id !== id));
 
   const clear = () => setItems([]);
 
-  const subtotal = useMemo(() => items.reduce((s, it) => s + it.price * it.qty, 0), [items]);
-  const count = useMemo(() => items.reduce((s, it) => s + it.qty, 0), [items]);
+  const getTotal = () =>
+    items.reduce((sum, it) => sum + (Number(it.price) || 0) * it.quantity, 0);
 
-  const value = { items, addItem, updateQty, removeItem, clear, subtotal, count };
+  const getCount = () => items.reduce((sum, it) => sum + it.quantity, 0);
+
+  const value = useMemo(
+    () => ({ items, addItem, removeItem, clear, getTotal, getCount }),
+    [items]
+  );
+
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export function useCart() {
+export const useCart = () => {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error('useCart must be used within <CartProvider>');
   return ctx;
-}
+};
