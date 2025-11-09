@@ -1,239 +1,248 @@
+// components/checkout/CheckoutClient.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useCart } from '@/lib/cart';
-import CouponField from '@/components/cart/CouponField';
-import ShippingCalc from '@/components/cart/ShippingCalc';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useCart } from '@/lib/cart';
 
 type Address = {
   name: string;
   phone: string;
-  cep: string;
-  street: string;
-  number: string;
-  city: string;
-  state: string;
+  zip?: string;
+  street?: string;
+  number?: string;
+  city?: string;
+  state?: string;
+  complement?: string;
 };
 
+const fmtBRL = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
 export default function CheckoutClient() {
-  const { items, remove, clear, total } = useCart();
-
-  // valores em reais (mantendo o seu padrão atual)
+  const { items, removeItem, clear, total } = useCart();
+  const [addr, setAddr] = useState<Address>({ name: '', phone: '' });
+  const [coupon, setCoupon] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [shippingValue, setShippingValue] = useState(0);
-  const [shippingLabel, setShippingLabel] = useState<string>('Calcular frete');
 
-  const [address, setAddress] = useState<Address>({
-    name: '',
-    phone: '',
-    cep: '',
-    street: '',
-    number: '',
-    city: '',
-    state: '',
-  });
-
-  // --------- CEP AUTOFILL (ViaCEP)
-  useEffect(() => {
-    const limpo = (address.cep || '').replace(/\D/g, '');
-    if (limpo.length !== 8) return;
-
-    let cancel = false;
-    async function run() {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
-        const data = await res.json();
-        if (!cancel && !data?.erro) {
-          setAddress((a) => ({
-            ...a,
-            street: data.logradouro || a.street,
-            city: data.localidade || a.city,
-            state: data.uf || a.state,
-          }));
-        }
-      } catch {}
+  // aplica cupom (mantém seu padrão JANE10 = 10%)
+  const applyCoupon = () => {
+    if (coupon.trim().toUpperCase() === 'JANE10') {
+      setDiscountPercent(10);
+    } else {
+      setDiscountPercent(0);
     }
-    run();
-    return () => {
-      cancel = true;
-    };
-  }, [address.cep]);
+  };
 
-  // --------- TOTAIS
-  const subtotal = useMemo(() => total, [total]);
-  const desconto = useMemo(() => (subtotal * discountPercent) / 100, [subtotal, discountPercent]);
-  const totalFinal = useMemo(() => Math.max(0, subtotal - desconto + shippingValue), [subtotal, desconto, shippingValue]);
+  const discount = useMemo(
+    () => Math.round((total * discountPercent) / 100),
+    [total, discountPercent]
+  );
+  const finalTotal = useMemo(() => Math.max(total - discount, 0), [total, discount]);
+
+  const handleFinish = () => {
+    // monta mensagem com itens + endereço
+    const lines: string[] = [];
+    lines.push('*Novo pedido*');
+    if (items.length === 0) lines.push('_Carrinho vazio_');
+    items.forEach((it) => {
+      lines.push(`• ${it.name} — ${fmtBRL(it.price)} x ${it.quantity}`);
+    });
+    if (discountPercent > 0) {
+      lines.push(`Desconto: ${discountPercent}% (${fmtBRL(discount)})`);
+    }
+    lines.push(`*Total*: ${fmtBRL(finalTotal)}`);
+    lines.push('');
+    lines.push('*Dados para entrega*');
+    if (addr.name) lines.push(`Nome: ${addr.name}`);
+    if (addr.phone) lines.push(`Telefone: ${addr.phone}`);
+    if (addr.zip) lines.push(`CEP: ${addr.zip}`);
+    if (addr.street) lines.push(`Rua: ${addr.street}`);
+    if (addr.number) lines.push(`Número: ${addr.number}`);
+    if (addr.city) lines.push(`Cidade: ${addr.city}`);
+    if (addr.state) lines.push(`Estado: ${addr.state}`);
+    if (addr.complement) lines.push(`Complemento: ${addr.complement}`);
+
+    const text = encodeURIComponent(lines.join('\n'));
+    const phone = '5544988606483'; // seu número com DDI +55
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+  };
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[2fr_1fr]">
-      {/* Coluna esquerda */}
-      <div className="space-y-6">
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-6">
-          <h2 className="mb-4 text-xl font-semibold">Carrinho</h2>
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-8">
+      {/* Carrinho */}
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/40 p-4 md:p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Carrinho</h2>
 
-          <div className="space-y-3">
-            {items.length === 0 && <p className="text-white/60">Seu carrinho está vazio.</p>}
-
+        {items.length === 0 ? (
+          <p className="text-sm text-white/70">Seu carrinho está vazio.</p>
+        ) : (
+          <ul className="space-y-4">
             {items.map((it) => (
-              <div
-                key={it.id}
-                className="flex items-center justify-between rounded-2xl bg-black/30 p-3 ring-1 ring-white/5"
+              <li
+                key={String(it.id)}
+                className="flex items-center justify-between gap-4 rounded-xl bg-neutral-800/40 p-3"
               >
                 <div className="flex items-center gap-3">
                   {it.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.image} alt={it.name} className="h-12 w-12 rounded-xl object-cover" />
+                    <img
+                      src={it.image}
+                      alt={it.name}
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
                   ) : (
-                    <div className="h-12 w-12 rounded-xl bg-white/5" />
+                    <div className="h-14 w-14 rounded-lg bg-neutral-700" />
                   )}
                   <div>
-                    <div className="font-medium">{it.name}</div>
-                    <div className="text-sm text-white/60">
-                      {it.quantity} × {it.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </div>
+                    <p className="text-white font-medium">{it.name}</p>
+                    <p className="text-white/70 text-sm">
+                      {it.quantity} × {fmtBRL(it.price)}
+                    </p>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => remove(it.id)}
-                  className="rounded-xl bg-rose-600/20 px-3 py-2 text-sm font-medium text-rose-200 hover:bg-rose-600/30"
+                  onClick={() => removeItem(it.id)}
+                  className="rounded-full bg-rose-600/80 hover:bg-rose-600 text-white px-4 py-1.5 text-sm"
                 >
                   Remover
                 </button>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
+        )}
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-lg">
-              Total:{' '}
-              <span className="font-semibold text-emerald-300">
-                {subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </span>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={clear}
+            className="rounded-xl border border-white/15 bg-neutral-800/50 px-4 py-2 text-sm text-white hover:bg-neutral-700/50"
+            disabled={items.length === 0}
+          >
+            Limpar carrinho
+          </button>
+
+          <Link
+            href="/"
+            className="rounded-xl border border-emerald-500/30 text-emerald-400 px-4 py-2 text-sm hover:bg-emerald-500/10"
+          >
+            Voltar para a loja
+          </Link>
+        </div>
+      </section>
+
+      {/* Endereço */}
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/40 p-4 md:p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Endereço</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Nome *"
+            value={addr.name}
+            onChange={(e) => setAddr((a) => ({ ...a, name: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Telefone *"
+            value={addr.phone}
+            onChange={(e) => setAddr((a) => ({ ...a, phone: e.target.value }))}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="CEP"
+            value={addr.zip ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, zip: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Rua"
+            value={addr.street ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, street: e.target.value }))}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Número"
+            value={addr.number ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, number: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Cidade"
+            value={addr.city ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, city: e.target.value }))}
+          />
+
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Estado"
+            value={addr.state ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, state: e.target.value }))}
+          />
+          <input
+            className="rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Complemento"
+            value={addr.complement ?? ''}
+            onChange={(e) => setAddr((a) => ({ ...a, complement: e.target.value }))}
+          />
+        </div>
+      </section>
+
+      {/* Cupom + Resumo (sem frete) */}
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/40 p-4 md:p-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            className="flex-1 min-w-[220px] rounded-xl bg-neutral-800/60 px-4 py-2 text-white placeholder:text-white/40 outline-none border border-white/10"
+            placeholder="Cupom de desconto"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value)}
+          />
+        <button
+            onClick={applyCoupon}
+            className="rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white px-4 py-2 text-sm"
+          >
+            Aplicar
+          </button>
+        </div>
+
+        <div className="rounded-xl bg-neutral-800/40 border border-white/10 p-4">
+          <h3 className="text-white font-semibold mb-3">Resumo</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-white/80">
+              <span>Subtotal</span>
+              <span>{fmtBRL(total)}</span>
             </div>
-            <button
-              onClick={clear}
-              disabled={items.length === 0}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 hover:bg-white/10 disabled:opacity-50"
-            >
-              Limpar carrinho
-            </button>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-6">
-          <h2 className="mb-4 text-xl font-semibold">Endereço</h2>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Input
-              label="Nome *"
-              value={address.name}
-              onChange={(v) => setAddress({ ...address, name: v })}
-              className="sm:col-span-2"
-            />
-            <Input label="Telefone *" value={address.phone} onChange={(v) => setAddress({ ...address, phone: v })} />
-            <Input label="CEP *" value={address.cep} onChange={(v) => setAddress({ ...address, cep: v })} />
-
-            <div className="sm:col-span-2">
-              <p className="mb-2 text-sm text-white/50">Buscando endereço…</p>
-              <Input
-                label="Rua *"
-                value={address.street}
-                onChange={(v) => setAddress({ ...address, street: v })}
-                className="mb-3"
-              />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Input label="Número *" value={address.number} onChange={(v) => setAddress({ ...address, number: v })} />
-                <Input label="Cidade *" value={address.city} onChange={(v) => setAddress({ ...address, city: v })} />
-                <Input label="Estado *" value={address.state} onChange={(v) => setAddress({ ...address, state: v })} />
-              </div>
+            <div className="flex justify-between text-white/80">
+              <span>Desconto ({discountPercent}%)</span>
+              <span>-{fmtBRL(discount)}</span>
+            </div>
+            <div className="h-px bg-white/10 my-2" />
+            <div className="flex justify-between text-lg font-semibold text-white">
+              <span>Total</span>
+              <span>{fmtBRL(finalTotal)}</span>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
 
-      {/* Coluna direita (resumo) */}
-      <aside className="space-y-4">
-        <CouponField
-          onApply={(percent) => {
-            setDiscountPercent(percent);
-          }}
-        />
-
-        <ShippingCalc
-          subtotal={Math.round(subtotal * 100) / 100}
-          cep={address.cep}
-          onFreight={(valor, label) => {
-            setShippingValue(valor / 100); // valor veio em centavos no componente (ajuste aqui se já usa reais)
-            setShippingLabel(label);
-          }}
-        />
-
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="mb-3 text-sm font-medium text-white/80">Resumo</div>
-          <ResumoRow label="Subtotal" value={subtotal} />
-          <ResumoRow label={`Desconto (${discountPercent}% )`} value={-desconto} />
-          <div className="flex items-center justify-between text-sm text-white/70">
-            <span>Frete • {shippingLabel}</span>
-            <span>
-              {shippingValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </span>
-          </div>
-          <div className="mt-3 border-t border-white/10 pt-3 text-lg">
-            Total:{' '}
-            <span className="font-semibold text-emerald-300">
-              {totalFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </span>
-          </div>
-
-          <button className="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-black hover:bg-emerald-500">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleFinish}
+            disabled={items.length === 0}
+            className="rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white px-5 py-3 font-medium disabled:opacity-40"
+          >
             Finalizar pedido
           </button>
 
           <Link
             href="/"
-            className="mt-3 block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-white/80 hover:bg-white/10"
+            className="rounded-xl border border-white/15 px-5 py-3 text-white/90 hover:bg-white/5"
           >
             Voltar para a loja
           </Link>
         </div>
-      </aside>
-    </div>
-  );
-}
-
-// ------------------ UI helpers ------------------
-function Input({
-  label,
-  value,
-  onChange,
-  className,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  className?: string;
-}) {
-  return (
-    <label className={`block ${className || ''}`}>
-      <span className="mb-1 block text-sm text-white/70">{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/40"
-      />
-    </label>
-  );
-}
-
-function ResumoRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="mb-1 flex items-center justify-between text-sm text-white/70">
-      <span>{label}</span>
-      <span className={value < 0 ? 'text-rose-200' : ''}>
-        {value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-      </span>
+      </section>
     </div>
   );
 }
