@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useCart } from '@/components/providers/CartProvider';
-import { toast } from '@/components/ui/toast';
+import React, { useEffect, useState } from 'react';
+import { useCart } from '@/lib/cart';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 type ProductLite = {
   id: string | number;
@@ -14,54 +12,100 @@ type ProductLite = {
 };
 
 export default function AddToCart({ product }: { product: ProductLite }) {
-  const router = useRouter();
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
 
-  const add = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, image: product.image, quantity: qty });
+  // --- Toast leve, no próprio componente ---
+  const [showToast, setShowToast] = useState(false);
+  useEffect(() => {
+    if (!showToast) return;
+    const t = setTimeout(() => setShowToast(false), 3000);
+    return () => clearTimeout(t);
+  }, [showToast]);
 
-    toast.success({
-      title: 'Produto adicionado!',
-      description: `${qty} × ${product.name} foi adicionado ao carrinho.`,
-      actionLabel: 'Ver carrinho',
-      onAction: () => router.push('/checkout'),
+  const handleAdd = () => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: qty,
     });
+    setShowToast(true);
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
+    <>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            className="h-12 w-12 rounded-xl bg-neutral-800 text-2xl"
+            onClick={() => setQty((q) => Math.max(1, q - 1))}
+            aria-label="Diminuir"
+          >
+            –
+          </button>
+          <div className="h-12 min-w-12 rounded-xl bg-neutral-800 grid place-items-center text-xl">
+            {qty}
+          </div>
+          <button
+            className="h-12 w-12 rounded-xl bg-neutral-800 text-2xl"
+            onClick={() => setQty((q) => q + 1)}
+            aria-label="Aumentar"
+          >
+            +
+          </button>
+        </div>
+
         <button
-          aria-label="Diminuir"
-          onClick={() => setQty((q) => Math.max(1, q - 1))}
-          className="h-12 w-12 rounded-2xl bg-neutral-800 text-2xl leading-none hover:bg-neutral-700"
+          className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 transition font-medium"
+          onClick={handleAdd}
         >
-          –
-        </button>
-        <div className="w-14 text-center text-lg">{qty}</div>
-        <button
-          aria-label="Aumentar"
-          onClick={() => setQty((q) => q + 1)}
-          className="h-12 w-12 rounded-2xl bg-neutral-800 text-2xl leading-none hover:bg-neutral-700"
-        >
-          +
+          Adicionar ao carrinho
         </button>
       </div>
 
-      <button
-        onClick={add}
-        className="w-full rounded-2xl bg-emerald-600 px-6 py-4 text-center text-lg font-medium hover:bg-emerald-500"
-      >
-        Adicionar ao carrinho
-      </button>
+      {/* Botão secundário “Voltar para a loja” (fica igual ao seu print) */}
+      <div className="mt-4">
+        <Link
+          href="/"
+          className="block h-12 rounded-xl border border-emerald-700/40 bg-transparent grid place-items-center"
+        >
+          Voltar para a loja
+        </Link>
+      </div>
 
-      <Link
-        href="/"
-        className="block w-full rounded-2xl border border-emerald-700/40 px-6 py-4 text-center text-lg hover:bg-emerald-600/10"
-      >
-        Voltar para a loja
-      </Link>
-    </div>
+      {/* TOAST verde translúcido ao estilo do seu print */}
+      {showToast && (
+        <div className="fixed left-4 right-4 bottom-6 z-50">
+          <div className="mx-auto max-w-2xl rounded-2xl bg-emerald-600/90 backdrop-blur px-5 py-4 shadow-lg text-white">
+            <div className="flex items-center gap-3">
+              <span className="inline-block h-2 w-2 rounded-full bg-white" />
+              <div className="flex-1 font-medium">Produto adicionado!</div>
+              <button
+                onClick={() => setShowToast(false)}
+                aria-label="Fechar"
+                className="opacity-80 hover:opacity-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-2 text-white/90">
+              1 × {product.name} foi adicionado ao carrinho.
+            </div>
+
+            <div className="mt-3">
+              <Link
+                href="/checkout"
+                className="inline-flex items-center rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm"
+              >
+                Ver carrinho
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
