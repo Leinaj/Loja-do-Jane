@@ -1,25 +1,21 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '@/lib/cart';
 
 type Address = {
   name: string;
   phone: string;
-  cep?: string;
-  street?: string;
-  number?: string;
-  city?: string;
-  state?: string;
+  cep: string;
+  street: string;
+  number: string;
+  city: string;
+  state: string;
   complement?: string;
 };
 
-const BRL = (n: number) =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
 export default function CheckoutClient() {
-  const { items, removeItem, setQty, clear, subtotal } = useCart();
+  const { items, remove, setQty, clear, subtotal } = useCart(); // ✅ remove aqui
 
   const [addr, setAddr] = useState<Address>({
     name: '',
@@ -32,206 +28,138 @@ export default function CheckoutClient() {
     complement: '',
   });
 
-  const total = useMemo(() => subtotal, [subtotal]); // sem frete/sem cupom
+  useEffect(() => {
+    const cep = addr.cep.replace(/\D/g, '');
+    if (cep.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.erro) {
+            setAddr((a) => ({
+              ...a,
+              street: data.logradouro || '',
+              city: data.localidade || '',
+              state: data.uf || '',
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [addr.cep]);
 
-  const handleSendWhatsApp = () => {
-    const linhasItens =
-      items.length === 0
-        ? '- (carrinho vazio)'
-        : items
-            .map(
-              (it) =>
-                `• ${it.name} x${it.quantity} — ${BRL(it.price * it.quantity)}`
-            )
-            .join('%0A');
+  const total = subtotal;
 
-    const endereco = [
-      addr.name && `Nome: ${addr.name}`,
-      addr.phone && `Telefone: ${addr.phone}`,
-      addr.cep && `CEP: ${addr.cep}`,
-      addr.street && `Rua: ${addr.street}`,
-      addr.number && `Número: ${addr.number}`,
-      addr.city && `Cidade: ${addr.city}`,
-      addr.state && `Estado: ${addr.state}`,
-      addr.complement && `Compl.: ${addr.complement}`,
-    ]
-      .filter(Boolean)
-      .join('%0A');
-
-    const texto = [
-      'Novo pedido via Loja da Jane 🛍️',
-      '',
-      'Itens:',
-      linhasItens,
-      '',
-      `Total: ${BRL(total)}`,
-      '',
-      'Endereço:',
-      endereco || '- não informado -',
-    ]
-      .filter(Boolean)
-      .join('%0A');
-
-    // WhatsApp: 55 + DDD + número
-    const url = `https://wa.me/5544988606483?text=${texto}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  function finalizeOrder() {
+    const msg = encodeURIComponent(
+      `Novo pedido - Loja da Jane\n\n${items
+        .map((i) => `${i.qty}x ${i.title} - R$ ${i.price.toFixed(2)}`)
+        .join('\n')}\n\nTotal: R$ ${total.toFixed(2)}\n\nCliente: ${
+        addr.name
+      }\nTelefone: ${addr.phone}\nEndereço: ${addr.street}, ${addr.number} - ${
+        addr.city
+      }/${addr.state}\nCEP: ${addr.cep}\nComplemento: ${
+        addr.complement || '-'
+      }`
+    );
+    window.open(`https://wa.me/5544988606483?text=${msg}`, '_blank');
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* Carrinho */}
-      <section className="rounded-3xl bg-neutral-900 p-6">
-        <h2 className="text-2xl font-semibold mb-4">Carrinho</h2>
+    <div className="max-w-4xl mx-auto p-6 text-white space-y-8">
+      <h1 className="text-2xl font-bold">Carrinho</h1>
 
-        {items.length === 0 ? (
-          <div className="text-neutral-400">Seu carrinho está vazio.</div>
-        ) : (
-          <ul className="space-y-4">
-            {items.map((it) => (
-              <li
-                key={String(it.id)}
-                className="flex items-center gap-4 rounded-2xl bg-neutral-800 p-4"
+      {items.length === 0 ? (
+        <p>Seu carrinho está vazio.</p>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-center bg-neutral-800 rounded-xl p-4"
               >
-                {it.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={it.image}
-                    alt={it.name}
-                    className="h-16 w-16 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="h-16 w-16 rounded-xl bg-neutral-700" />
-                )}
-
-                <div className="flex-1">
-                  <div className="font-medium">{it.name}</div>
-                  <div className="text-sm text-neutral-400">
-                    {BRL(it.price)} • Qtd:
-                  </div>
+                <div>
+                  <h2 className="font-semibold">{item.title}</h2>
+                  <p>R$ {item.price.toFixed(2)}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button
-                    className="h-9 w-9 rounded-lg bg-neutral-700"
-                    onClick={() => setQty(it.id, Math.max(1, it.quantity - 1))}
-                    aria-label="Diminuir"
+                    className="bg-neutral-700 px-3 py-1 rounded-lg"
+                    onClick={() => setQty(item.id, Math.max(1, item.qty - 1))}
                   >
-                    –
+                    -
                   </button>
-                  <div className="min-w-10 text-center">{it.quantity}</div>
+                  <span>{item.qty}</span>
                   <button
-                    className="h-9 w-9 rounded-lg bg-neutral-700"
-                    onClick={() => setQty(it.id, it.quantity + 1)}
-                    aria-label="Aumentar"
+                    className="bg-neutral-700 px-3 py-1 rounded-lg"
+                    onClick={() => setQty(item.id, item.qty + 1)}
                   >
                     +
                   </button>
                 </div>
 
-                <div className="w-28 text-right font-medium">
-                  {BRL(it.price * it.quantity)}
+                <div className="text-right">
+                  <p className="font-semibold">
+                    R$ {(item.price * item.qty).toFixed(2)}
+                  </p>
+                  <button
+                    className="text-rose-400 mt-1"
+                    onClick={() => remove(item.id)} // ✅ usa remove()
+                  >
+                    Remover
+                  </button>
                 </div>
-
-                <button
-                  className="ml-2 rounded-xl bg-rose-800/60 px-4 py-2"
-                  onClick={() => removeItem(it.id)}
-                >
-                  Remover
-                </button>
-              </li>
+              </div>
             ))}
-          </ul>
-        )}
+          </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-xl">
-            <span className="text-neutral-400 mr-2">Total:</span>
-            <span className="font-semibold">{BRL(total)}</span>
+          <div className="text-right text-lg mt-4">
+            <p>Total: R$ {total.toFixed(2)}</p>
+          </div>
+
+          <div className="bg-neutral-900 rounded-xl p-4 space-y-3">
+            <h2 className="text-xl font-semibold">Endereço</h2>
+            {[
+              ['Nome completo', 'name'],
+              ['Telefone', 'phone'],
+              ['CEP', 'cep'],
+              ['Rua', 'street'],
+              ['Número', 'number'],
+              ['Cidade', 'city'],
+              ['Estado', 'state'],
+              ['Complemento', 'complement'],
+            ].map(([label, key]) => (
+              <input
+                key={key}
+                className="w-full p-3 rounded-lg bg-neutral-800"
+                placeholder={label}
+                value={addr[key as keyof Address] || ''}
+                onChange={(e) =>
+                  setAddr((a) => ({
+                    ...a,
+                    [key]: e.target.value,
+                  }))
+                }
+              />
+            ))}
           </div>
 
           <button
-            className="rounded-xl bg-neutral-800 px-4 py-2"
+            onClick={finalizeOrder}
+            className="w-full mt-6 py-4 bg-emerald-600 text-black font-semibold rounded-xl hover:bg-emerald-500 transition"
+          >
+            Finalizar pedido no WhatsApp
+          </button>
+
+          <button
             onClick={clear}
-            disabled={items.length === 0}
+            className="w-full mt-3 py-3 bg-neutral-700 rounded-xl"
           >
             Limpar carrinho
           </button>
-        </div>
-      </section>
-
-      {/* Endereço (campos simples) */}
-      <section className="rounded-3xl bg-neutral-900 p-6 space-y-4">
-        <h2 className="text-2xl font-semibold">Endereço</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            placeholder="Nome *"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.name}
-            onChange={(e) => setAddr({ ...addr, name: e.target.value })}
-          />
-          <input
-            placeholder="Telefone *"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.phone}
-            onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
-          />
-          <input
-            placeholder="CEP"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.cep}
-            onChange={(e) => setAddr({ ...addr, cep: e.target.value })}
-          />
-          <input
-            placeholder="Rua"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.street}
-            onChange={(e) => setAddr({ ...addr, street: e.target.value })}
-          />
-          <input
-            placeholder="Número"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.number}
-            onChange={(e) => setAddr({ ...addr, number: e.target.value })}
-          />
-          <input
-            placeholder="Cidade"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.city}
-            onChange={(e) => setAddr({ ...addr, city: e.target.value })}
-          />
-          <input
-            placeholder="Estado"
-            className="h-12 rounded-xl bg-neutral-800 px-4"
-            value={addr.state}
-            onChange={(e) => setAddr({ ...addr, state: e.target.value })}
-          />
-          <input
-            placeholder="Complemento"
-            className="h-12 rounded-xl bg-neutral-800 px-4 md:col-span-2"
-            value={addr.complement}
-            onChange={(e) => setAddr({ ...addr, complement: e.target.value })}
-          />
-        </div>
-      </section>
-
-      {/* Ações */}
-      <section className="flex flex-col md:flex-row gap-4">
-        <button
-          onClick={handleSendWhatsApp}
-          disabled={items.length === 0}
-          className="h-12 flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 transition font-medium"
-        >
-          Finalizar pedido
-        </button>
-
-        <Link
-          href="/"
-          className="h-12 flex-1 grid place-items-center rounded-xl border border-emerald-700/40"
-        >
-          Voltar para a loja
-        </Link>
-      </section>
+        </>
+      )}
     </div>
   );
 }
