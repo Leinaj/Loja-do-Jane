@@ -6,11 +6,9 @@ import { ToastProvider, ToastBridge } from '@/components/ui/toast';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <CartProvider>
-      <ToastProvider>
-        <ToastBridge />
-        {children}
-      </ToastProvider>
-    </CartProvider>
+    <ToastProvider>
+      <ToastBridge />
+      <CartProvider>{children}</CartProvider>
+    </ToastProvider>
   );
 }
