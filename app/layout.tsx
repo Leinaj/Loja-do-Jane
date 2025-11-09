@@ -10,13 +10,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <body>
-        {/* Tudo da app ficará dentro do CartProvider */}
         <Providers>{children}</Providers>
       </body>
     </html>
