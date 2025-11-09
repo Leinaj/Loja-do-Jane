@@ -1,11 +1,9 @@
-// app/cart-provider.tsx
 'use client';
 
 import { ReactNode } from 'react';
-import { CartProvider } from '@/components/cart/context'; // 👈 ajuste o caminho se seu context estiver em outro lugar
+// ajuste o caminho conforme a sua pasta real de components
+import { CartProvider } from '../components/cart/context';
 
-type Props = { children: ReactNode };
-
-export default function CartProviderClient({ children }: Props) {
+export default function CartProviderClient({ children }: { children: ReactNode }) {
   return <CartProvider>{children}</CartProvider>;
 }
