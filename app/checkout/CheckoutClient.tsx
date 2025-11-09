@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { maskCEP, maskPhoneBR, isCEPValid } from '@/utils/mask';
-import { formatBRL, saneShipping, tryFixCents } from '@/utils/format';
-import { useCep } from '@/hooks/useCep';
+import Link from 'next/link';
 
-// ⚠️ AJUSTE este import se o seu hook do carrinho estiver em outro caminho
-import { useCart } from '@/components/cart/CartContext';
+// ✅ Import RELATIVO para não depender de alias '@/'
+import { useCart } from '../../components/providers/CartProvider';
 
 type Address = {
   name: string;
@@ -16,11 +14,27 @@ type Address = {
   number: string;
   city: string;
   state: string;
-  complement?: string;
 };
 
+type CartItem = {
+  id: string;
+  name: string;
+  price: number; // em R$
+  qty: number;
+  image?: string;
+};
+
+function formatMoney(n: number) {
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function onlyDigits(s: string) {
+  return s.replace(/\D/g, '');
+}
+
 export default function CheckoutClient() {
-  const { items, removeItem, clear, subtotal } = useCart(); // supõe que já exista
+  const { items, removeItem, clear, totalQty } = useCart();
+
   const [address, setAddress] = useState<Address>({
     name: '',
     phone: '',
@@ -29,99 +43,135 @@ export default function CheckoutClient() {
     number: '',
     city: '',
     state: '',
-    complement: '',
   });
 
-  // frete (null quando inválido/indefinido)
-  const [shipping, setShipping] = useState<number | null>(null);
-  const [shippingLabel, setShippingLabel] = useState('PAC (5-8 dias)');
+  const [coupon, setCoupon] = useState('');
+  const [discountPct, setDiscountPct] = useState(0);
+  const [shippingName, setShippingName] = useState('PAC (5-8 dias)');
+  const [shippingValue, setShippingValue] = useState(24.4); // valor simbólico
 
-  // CEP → ViaCEP
-  const { data: cepData, loading: cepLoading } = useCep(address.cep);
+  const subtotal = useMemo(() => {
+    return (items as CartItem[]).reduce((acc, it) => acc + it.price * it.qty, 0);
+  }, [items]);
 
-  // Preenche endereço quando CEP válido retorna
-  useEffect(() => {
-    if (cepData) {
-      const street = [cepData.logradouro, cepData.bairro].filter(Boolean).join(' - ');
-      setAddress((a) => ({
-        ...a,
-        street,
-        city: cepData.localidade || '',
-        state: cepData.uf || '',
-      }));
-    }
-  }, [cepData]);
-
-  // Quando CEP fica válido, simule/obtenha frete real
-  useEffect(() => {
-    if (!isCEPValid(address.cep)) {
-      setShipping(null);
-      return;
-    }
-    // TODO: trocar pela sua chamada real de frete
-    // Exemplo de simulação:
-    const priceFromApi: unknown = 24.4; // 24,40
-    const fixed = tryFixCents(priceFromApi);
-    const sane = saneShipping(fixed ?? priceFromApi);
-    setShipping(sane); // null se inválido
-  }, [address.cep]);
+  const discountValue = useMemo(() => (subtotal * discountPct) / 100, [subtotal, discountPct]);
 
   const total = useMemo(() => {
-    return subtotal + (shipping ?? 0);
-  }, [subtotal, shipping]);
+    return Math.max(subtotal - discountValue, 0) + (items.length ? shippingValue : 0);
+  }, [subtotal, discountValue, shippingValue, items.length]);
 
-  function handleChange<K extends keyof Address>(key: K, value: string) {
-    setAddress((prev) => ({ ...prev, [key]: value }));
+  // CEP → ViaCEP auto-preencher
+  useEffect(() => {
+    const digits = onlyDigits(address.cep);
+    if (digits.length !== 8) return;
+
+    let abort = false;
+
+    async function fetchCep() {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+        const data = await res.json();
+        if (abort) return;
+        if (data?.erro) return;
+
+        setAddress((a) => ({
+          ...a,
+          street: data.logradouro ?? a.street,
+          city: data.localidade ?? a.city,
+          state: data.uf ?? a.state,
+        }));
+
+        // frete simbólico variável por UF só para ficar “real”
+        const uf = String(data.uf || '').toUpperCase();
+        const base = 22; // base
+        const extra = ['AM', 'RR', 'AP', 'PA', 'RO', 'AC'].includes(uf) ? 18 : ['RS', 'PE', 'CE', 'RN', 'PB', 'AL', 'SE', 'BA', 'MA', 'PI'].includes(uf) ? 10 : 6;
+        setShippingValue((base + extra) * 1.0);
+      } catch {
+        // silencioso
+      }
+    }
+
+    fetchCep();
+    return () => {
+      abort = true;
+    };
+  }, [address.cep]);
+
+  function applyCoupon() {
+    const c = coupon.trim().toUpperCase();
+    if (!c) {
+      setDiscountPct(0);
+      return;
+    }
+    // Regras simples de exemplo
+    if (c === 'JANE10') {
+      setDiscountPct(10);
+    } else if (c === 'JANE15' && subtotal >= 300) {
+      setDiscountPct(15);
+    } else {
+      setDiscountPct(0);
+    }
+  }
+
+  function onChange<K extends keyof Address>(key: K, value: Address[K]) {
+    setAddress((a) => ({ ...a, [key]: value }));
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <h1 className="mb-6 text-3xl font-semibold tracking-tight text-white">Checkout</h1>
 
       {/* Carrinho */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Carrinho</h2>
+      <section className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <h2 className="mb-4 text-xl font-medium text-white">Carrinho</h2>
 
-        <ul className="space-y-3">
-          {items.map((it: any) => (
-            <li
-              key={it.id}
-              className="flex items-center justify-between rounded-xl bg-white/5 p-3"
+        <div className="space-y-4">
+          {(items as CartItem[]).map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3"
             >
-              <div className="flex items-center gap-3">
-                {it.image && (
+              <div className="flex min-w-0 items-center gap-3">
+                {item.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={it.image}
-                    alt={it.name}
+                    src={item.image}
+                    alt={item.name}
                     className="h-14 w-14 rounded-lg object-cover"
                   />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg bg-white/10" />
                 )}
-                <div>
-                  <p className="font-medium">{it.name}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-white">{item.name}</p>
                   <p className="text-sm text-white/70">
-                    {it.qty} × {formatBRL(it.price)}
+                    {item.qty} × {formatMoney(item.price)}
                   </p>
                 </div>
               </div>
 
               <button
-                onClick={() => removeItem(it.id)}
-                className="rounded-xl bg-rose-900/50 px-3 py-2 text-sm font-medium hover:bg-rose-900/70"
+                onClick={() => removeItem(item.id)}
+                className="rounded-xl bg-rose-900/60 px-3 py-2 text-sm font-medium text-rose-50 hover:bg-rose-900"
               >
                 Remover
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+
+          {items.length === 0 && (
+            <p className="text-white/70">Seu carrinho está vazio.</p>
+          )}
+        </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-lg">
-            Total:{' '}
-            <span className="font-semibold text-emerald-400">{formatBRL(subtotal)}</span>
+          <p className="text-white">
+            Total itens: <span className="font-semibold">{formatMoney(subtotal)}</span>
           </p>
           <button
-            onClick={clear}
-            className="rounded-xl border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+            onClick={() => clear()}
+            disabled={!items.length}
+            className="rounded-xl border border-white/10 px-4 py-2 text-white/90 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Limpar carrinho
           </button>
@@ -129,16 +179,16 @@ export default function CheckoutClient() {
       </section>
 
       {/* Endereço */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Endereço</h2>
+      <section className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+        <h2 className="mb-4 text-xl font-medium text-white">Endereço</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="col-span-1 md:col-span-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="col-span-2">
             <label className="mb-1 block text-sm text-white/80">Nome *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={(e) => onChange('name', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
               placeholder="Seu nome completo"
             />
           </div>
@@ -146,9 +196,9 @@ export default function CheckoutClient() {
           <div>
             <label className="mb-1 block text-sm text-white/80">Telefone *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.phone}
-              onChange={(e) => handleChange('phone', maskPhoneBR(e.target.value))}
+              onChange={(e) => onChange('phone', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
               placeholder="(00) 00000-0000"
             />
           </div>
@@ -156,24 +206,19 @@ export default function CheckoutClient() {
           <div>
             <label className="mb-1 block text-sm text-white/80">CEP *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.cep}
-              onChange={(e) => handleChange('cep', maskCEP(e.target.value))}
+              onChange={(e) => onChange('cep', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
               placeholder="00000-000"
             />
-            {address.cep && (
-              <p className="mt-1 text-xs text-white/50">
-                {cepLoading ? 'Buscando endereço…' : (address.street ? '' : 'CEP válido, preencha o número')}
-              </p>
-            )}
           </div>
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm text-white/80">Rua *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.street}
-              onChange={(e) => handleChange('street', e.target.value)}
+              onChange={(e) => onChange('street', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
               placeholder="Rua / Avenida"
             />
           </div>
@@ -181,19 +226,19 @@ export default function CheckoutClient() {
           <div>
             <label className="mb-1 block text-sm text-white/80">Número *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.number}
-              onChange={(e) => handleChange('number', e.target.value)}
-              placeholder="Número"
+              onChange={(e) => onChange('number', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
+              placeholder="Nº"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-sm text-white/80">Cidade *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
               value={address.city}
-              onChange={(e) => handleChange('city', e.target.value)}
+              onChange={(e) => onChange('city', e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
               placeholder="Cidade"
             />
           </div>
@@ -201,90 +246,85 @@ export default function CheckoutClient() {
           <div>
             <label className="mb-1 block text-sm text-white/80">Estado *</label>
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 uppercase outline-none"
               value={address.state}
-              onChange={(e) => handleChange('state', e.target.value.toUpperCase())}
-              placeholder="UF"
+              onChange={(e) => onChange('state', e.target.value.toUpperCase())}
               maxLength={2}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
+              placeholder="UF"
             />
           </div>
+        </div>
+      </section>
 
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-white/80">Complemento</label>
+      {/* Cupom / Frete / Resumo */}
+      <section className="mb-8 space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <h3 className="mb-3 text-lg font-medium text-white">Cupom de desconto</h3>
+          <div className="flex gap-3">
             <input
-              className="w-full rounded-xl bg-white/10 px-3 py-2 outline-none"
-              value={address.complement ?? ''}
-              onChange={(e) => handleChange('complement', e.target.value)}
-              placeholder="Apto / Referência (opcional)"
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value)}
+              placeholder="EX.: JANE10"
+              className="flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white outline-none ring-emerald-500/30 focus:ring"
             />
+            <button
+              onClick={applyCoupon}
+              className="rounded-xl bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+            >
+              Aplicar
+            </button>
+          </div>
+          {discountPct > 0 && (
+            <p className="mt-2 text-sm text-emerald-300">
+              Cupom aplicado: {discountPct}% de desconto.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <h3 className="mb-3 text-lg font-medium text-white">Frete</h3>
+          <div className="flex items-center justify-between">
+            <p className="text-white/90">{shippingName}</p>
+            <p className="text-emerald-400">{formatMoney(shippingValue)}</p>
           </div>
         </div>
-      </section>
 
-      {/* Cupom + Frete */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-sm text-white/80">Cupom de desconto</label>
-            <div className="flex gap-2">
-              <input
-                className="flex-1 rounded-xl bg-white/10 px-3 py-2 outline-none"
-                placeholder="JANE10"
-              />
-              <button className="rounded-xl bg-emerald-600 px-4 py-2 font-medium hover:bg-emerald-700">
-                Aplicar
-              </button>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <h3 className="mb-3 text-lg font-medium text-white">Resumo</h3>
+
+          <div className="space-y-2 text-white/90">
+            <div className="flex items-center justify-between">
+              <span>Subtotal</span>
+              <span>{formatMoney(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Desconto ({discountPct}%)</span>
+              <span>-{formatMoney(discountValue)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Frete • {shippingName}</span>
+              <span>{items.length ? formatMoney(shippingValue) : formatMoney(0)}</span>
+            </div>
+            <hr className="border-white/10" />
+            <div className="flex items-center justify-between text-lg font-semibold text-white">
+              <span>Total:</span>
+              <span>{formatMoney(total)}</span>
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-white/80">Frete</label>
-            <div className="flex items-center justify-between rounded-xl bg-white/10 px-3 py-2">
-              <span>{shippingLabel}</span>
-              <span className="font-semibold text-emerald-400">
-                {shipping ? formatBRL(shipping) : '—'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Resumo */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <h2 className="text-xl font-semibold mb-4">Resumo</h2>
-
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-white/80">Subtotal</span>
-            <span>{formatBRL(subtotal)}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-white/80">Desconto (0%)</span>
-            <span>- {formatBRL(0)}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-white/80">Frete • {shippingLabel}</span>
-            <span>{shipping ? formatBRL(shipping) : '—'}</span>
-          </div>
-
-          <div className="mt-3 border-t border-white/10 pt-3 flex items-center justify-between text-lg">
-            <span className="text-white/90">Total:</span>
-            <span className="font-semibold text-emerald-400">{formatBRL(total)}</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col md:flex-row gap-3">
-          <button className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold hover:bg-emerald-700">
+          <button
+            disabled={!items.length || !address.name || !address.cep || !address.street || !address.number || !address.city || !address.state}
+            className="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-3 text-center text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             Finalizar pedido
           </button>
-          <a
+
+          <Link
             href="/"
-            className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-center hover:bg-white/5"
+            className="mt-3 block w-full rounded-xl border border-white/10 px-4 py-3 text-center text-white/90 hover:bg-white/10"
           >
             Voltar para a loja
-          </a>
+          </Link>
         </div>
       </section>
     </div>
