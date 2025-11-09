@@ -9,16 +9,8 @@ import React, {
   useEffect,
 } from 'react';
 
-/* --------------------------------------------------------------- */
-/* Fallback de tipos p/ react-dom (evita precisar instalar @types) */
-/* --------------------------------------------------------------- */
-declare module 'react-dom' {
-  import * as React from 'react';
-  export function createPortal(
-    children: React.ReactNode,
-    container: Element | DocumentFragment
-  ): React.ReactPortal;
-}
+// Ignora types do react-dom no build (evita precisar instalar @types/react-dom)
+// @ts-ignore
 import { createPortal } from 'react-dom';
 
 /* --------------------------------------------------------------- */
@@ -44,14 +36,14 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 /* --------------------------------------------------------------- */
-/* Singleton de notificação p/ permitir `toast(...)` fora de React */
+/* Singleton p/ permitir `toast(...)` fora de componentes          */
 /* --------------------------------------------------------------- */
 let notifier: ((t: Omit<ToastItem, 'id'>) => void) | null = null;
 function setNotifier(fn: ((t: Omit<ToastItem, 'id'>) => void) | null) {
   notifier = fn;
 }
 
-/** API global compatível com `import { toast } from '@/components/ui/toast'` */
+/** API global: `import { toast } from '@/components/ui/toast'` */
 export function toast(
   input:
     | string
@@ -66,7 +58,7 @@ export function toast(
 }
 
 /* --------------------------------------------------------------- */
-/* Helper                                                          */
+/* Helpers                                                         */
 /* --------------------------------------------------------------- */
 const useIsClient = () => {
   const [ready, setReady] = useState(false);
@@ -194,9 +186,8 @@ export function ToastContainer() {
 }
 
 /* --------------------------------------------------------------- */
-/* Componente "Bridge" apenas p/ compatibilidade com imports antigos */
+/* Bridge opcional p/ compatibilidade com imports antigos          */
 /* --------------------------------------------------------------- */
 export function ToastBridge() {
-  // não precisa fazer nada — o Provider já cuida do portal/notifier
   return null;
 }
