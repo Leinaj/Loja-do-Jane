@@ -19,7 +19,7 @@ const fmtBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CheckoutClient() {
-  // ATENÇÃO: removi `removeItem` e `subtotal/total` do contexto.
+  // <- AQUI: nada de removeItem e nada de subtotal/total no contexto
   const { items, remove, setQty, clear } = useCart();
 
   const [addr, setAddr] = useState<Address>({
@@ -33,7 +33,7 @@ export default function CheckoutClient() {
     complement: '',
   });
 
-  // Calcula subtotal localmente
+  // subtotal calculado localmente
   const subtotal = useMemo(
     () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
     [items]
@@ -44,7 +44,7 @@ export default function CheckoutClient() {
   const onQtyInc = (id: string, current: number) => setQty(id, current + 1);
 
   const handleFinishOrder = () => {
-    const phone = '5544988606483'; // WhatsApp da loja (com DDI 55)
+    const phone = '5544988606483';
     const itensTxt =
       items.length === 0
         ? 'Sem itens'
@@ -81,7 +81,6 @@ export default function CheckoutClient() {
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6 space-y-6">
-      {/* Carrinho */}
       <section className="rounded-2xl bg-zinc-900/50 p-4 sm:p-6 shadow-lg">
         <h2 className="text-xl font-semibold mb-4">Carrinho</h2>
 
@@ -204,7 +203,6 @@ export default function CheckoutClient() {
         </div>
       </section>
 
-      {/* Ações */}
       <section className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleFinishOrder}
