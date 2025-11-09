@@ -2,9 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 
-// ✅ import absoluto usando o alias configurado no tsconfig
-//    Se o seu CartProvider NÃO estiver nessa pasta, me fale que eu mando a linha certa.
-import { useCart } from '@/components/providers/CartProvider';
+// ✅ caminho relativo (CheckoutClient.tsx está em /app/checkout)
+import { useCart } from '../providers/CartProvider';
+
+// (opcional) se você já tiver um formatador no projeto, use-o no lugar
+const formatBRL = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    Number.isFinite(value) ? value : 0,
+  );
 
 type Address = {
   name: string;
@@ -14,145 +19,130 @@ type Address = {
   number: string;
   city: string;
   state: string;
+  complement?: string;
 };
 
-type FreightOption = {
+type ShippingOption = {
   id: 'PAC' | 'SEDEX';
   label: string;
-  days: string;
+  eta: string; // prazo
   price: number;
 };
 
-const BRL = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    isFinite(value) ? value : 0
-  );
-
-const onlyDigits = (s: string) => s.replace(/\D/g, '');
+const SHIPPING_OPTIONS: ShippingOption[] = [
+  { id: 'PAC', label: 'PAC', eta: '5-8 dias', price: 24.4 },
+  { id: 'SEDEX', label: 'SEDEX', eta: '1-3 dias', price: 39.9 },
+];
 
 export default function CheckoutClient() {
-  // ⚠️ Qualquer estrutura do seu provider vai funcionar (tipado como any)
-  const cart = (useCart as unknown as () => any)();
+  // Para evitar que diferenças de tipo do seu provider quebrem o build,
+  // usamos 'any' ao extrair. Ajuste se seu provider já exporta os tipos.
+  const { items = [], removeItem, clearCart } = (useCart() as any) ?? {};
 
-  const items: Array<{
-    id?: string;
-    slug?: string;
-    name: string;
-    price: number;
-    quantity: number;
-    image?: string;
-  }> = cart?.items ?? [];
-
-  const subtotal = useMemo<number>(() => {
-    if (!Array.isArray(items)) return 0;
-    return items.reduce((acc, it) => acc + (it?.price ?? 0) * (it?.quantity ?? 0), 0);
+  const subtotal = useMemo(() => {
+    return Array.isArray(items)
+      ? items.reduce(
+          (acc: number, it: any) => acc + (Number(it?.price) || 0) * (Number(it?.quantity) || 0),
+          0,
+        )
+      : 0;
   }, [items]);
 
-  // Cupom simples (ex.: JANE10 => 10%)
   const [coupon, setCoupon] = useState('');
-  const discountPct = coupon.trim().toUpperCase() === 'JANE10' ? 10 : 0;
-  const discountValue = useMemo(
-    () => Math.round((subtotal * discountPct) / 100),
-    [subtotal, discountPct]
-  );
+  const [discountPct, setDiscountPct] = useState(0);
+  const [shippingId, setShippingId] = useState<ShippingOption['id']>('PAC');
 
-  // Frete
-  const [freight, setFreight] = useState<FreightOption | null>(null);
+  const selectedShipping =
+    SHIPPING_OPTIONS.find((opt) => opt.id === shippingId) ?? SHIPPING_OPTIONS[0];
 
-  const freightOptions: FreightOption[] = useMemo(
-    () => [
-      { id: 'PAC', label: 'PAC', days: '5-8 dias', price: 2440 }, // R$ 24,40
-      { id: 'SEDEX', label: 'SEDEX', days: '2-4 dias', price: 3890 } // R$ 38,90
-    ],
-    []
-  );
-
-  // Endereço
-  const [address, setAddress] = useState<Address>({
+  const [addr, setAddr] = useState<Address>({
     name: '',
     phone: '',
     cep: '',
     street: '',
     number: '',
     city: '',
-    state: ''
+    state: '',
+    complement: '',
   });
-  const [loadingCEP, setLoadingCEP] = useState(false);
 
-  // Busca endereço automático ao digitar CEP válido
+  const [fetchingCEP, setFetchingCEP] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
+  // Preenche endereço pelo CEP (ViaCEP)
   useEffect(() => {
-    const cep = onlyDigits(address.cep);
-    if (cep.length !== 8) return;
+    const digits = addr.cep.replace(/\D/g, '');
+    if (digits.length !== 8) return;
 
-    let active = true;
-    const fetchAddress = async () => {
-      try {
-        setLoadingCEP(true);
-        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-        const data = (await res.json()) as
-          | { erro?: boolean; logradouro?: string; localidade?: string; uf?: string }
-          | undefined;
+    let cancelled = false;
+    setFetchingCEP(true);
+    setCepError(null);
 
-        if (!active || !data || (data as any).erro) return;
-
-        setAddress(prev => ({
+    fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.erro) {
+          setCepError('CEP não encontrado.');
+          return;
+        }
+        setAddr((prev) => ({
           ...prev,
-          street: (data.logradouro ?? prev.street) as string,
-          city: (data.localidade ?? prev.city) as string,
-          state: (data.uf ?? prev.state) as string
+          street: data.logradouro ?? prev.street,
+          city: data.localidade ?? prev.city,
+          state: data.uf ?? prev.state,
         }));
-      } catch {
-        // silencia; sem toast pra garantir build
-      } finally {
-        if (active) setLoadingCEP(false);
-      }
-    };
+      })
+      .catch(() => !cancelled && setCepError('Falha ao buscar CEP.'))
+      .finally(() => !cancelled && setFetchingCEP(false));
 
-    fetchAddress();
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [address.cep]);
+  }, [addr.cep]);
 
-  const total = Math.max(0, subtotal - discountValue) + (freight?.price ?? 0);
-
-  const removeItem = (idx: number) => {
-    try {
-      cart?.removeItem?.(items[idx]);
-    } catch {
-      // no-op
+  function applyCoupon() {
+    const code = coupon.trim().toUpperCase();
+    // Exemplo simples: JANE10 = 10% off
+    if (code === 'JANE10') {
+      setDiscountPct(10);
+    } else {
+      setDiscountPct(0);
     }
-  };
+  }
 
-  const clearCart = () => {
-    try {
-      cart?.clearCart?.();
-    } catch {
-      // no-op
-    }
-  };
+  const discountValue = (subtotal * discountPct) / 100;
+  const total = Math.max(0, subtotal - discountValue) + (selectedShipping?.price || 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleChange<K extends keyof Address>(key: K, value: Address[K]) {
+    setAddr((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Aqui você pode redirecionar / chamar sua API de pagamento
-    alert(
-      [
-        'Pedido criado!',
-        `Itens: ${items.length}`,
-        `Subtotal: ${BRL(subtotal)}`,
-        `Desconto: ${discountPct}%`,
-        `Frete: ${freight ? `${freight.label} (${freight.days}) — ${BRL(freight.price / 100)}` : '—'}`,
-        `Total: ${BRL(total / 100)}`,
-        '',
-        'Endereço:',
-        `${address.name}`,
-        `Tel: ${address.phone}`,
-        `CEP: ${address.cep}`,
-        `${address.street}, ${address.number}`,
-        `${address.city} - ${address.state}`
-      ].join('\n')
-    );
-  };
+
+    // Validação mínima
+    if (!addr.name || !addr.phone || !addr.cep || !addr.street || !addr.number || !addr.city || !addr.state) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (!items?.length) {
+      alert('Seu carrinho está vazio.');
+      return;
+    }
+
+    // Aqui você enviaria os dados para sua API /pagamento
+    console.log('Pedido:', {
+      items,
+      address: addr,
+      coupon: coupon.trim().toUpperCase(),
+      discountPct,
+      shipping: selectedShipping,
+      totals: { subtotal, discountValue, total },
+    });
+
+    alert('Pedido realizado! (simulação)');
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -160,211 +150,228 @@ export default function CheckoutClient() {
 
       {/* CARRINHO */}
       <section className="mb-8 rounded-xl border border-white/10 bg-black/20 p-5">
-        <h2 className="text-xl font-medium mb-4">Carrinho</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-medium">Carrinho</h2>
+          <button
+            type="button"
+            onClick={() => clearCart?.()}
+            className="rounded-lg px-3 py-2 border border-white/15 hover:bg-white/5 transition"
+          >
+            Limpar carrinho
+          </button>
+        </div>
 
-        {items?.length ? (
-          <div className="space-y-4">
-            {items.map((it, idx) => (
-              <div
-                key={(it.id ?? it.slug ?? it.name) + idx}
-                className="flex items-center gap-4 rounded-lg bg-white/5 p-4"
-              >
-                {/* imagem */}
-                {it.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={it.image}
-                    alt={it.name}
-                    className="h-16 w-16 rounded-md object-cover"
-                  />
-                ) : (
-                  <div className="h-16 w-16 rounded-md bg-white/10" />
-                )}
+        {(!items || items.length === 0) && (
+          <p className="text-white/70">Seu carrinho está vazio.</p>
+        )}
 
-                <div className="flex-1">
-                  <p className="font-medium">{it.name}</p>
-                  <p className="text-sm opacity-70">
-                    {it.quantity} × {BRL(it.price / 100)}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeItem(idx)}
-                  className="rounded-md bg-rose-800/40 px-3 py-2 text-sm hover:bg-rose-800/60"
-                >
-                  Remover
-                </button>
+        <ul className="space-y-3">
+          {items?.map((it: any) => (
+            <li
+              key={String(it?.id)}
+              className="flex items-center justify-between rounded-lg border border-white/10 bg-black/10 p-3"
+            >
+              <div className="min-w-0">
+                <p className="font-medium truncate">{it?.name ?? 'Produto'}</p>
+                <p className="text-sm text-white/70">
+                  {Number(it?.quantity) || 0} × {formatBRL(Number(it?.price) || 0)}
+                </p>
               </div>
-            ))}
-
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-lg">
-                Total: <span className="font-semibold">{BRL(subtotal / 100)}</span>
-              </p>
               <button
                 type="button"
-                onClick={clearCart}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+                onClick={() => removeItem?.(it?.id)}
+                className="rounded-lg px-3 py-2 bg-rose-700/70 hover:bg-rose-700 transition"
               >
-                Limpar carrinho
+                Remover
               </button>
-            </div>
-          </div>
-        ) : (
-          <p className="opacity-70">Seu carrinho está vazio.</p>
-        )}
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-4 text-right text-lg">
+          <span className="text-white/70 mr-2">Subtotal:</span>
+          <span className="font-semibold">{formatBRL(subtotal)}</span>
+        </div>
       </section>
 
-      {/* FORM */}
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-8 md:grid-cols-2"
-        autoComplete="on"
-      >
+      {/* FORMULÁRIO */}
+      <form onSubmit={handleSubmit} className="grid gap-8 md:grid-cols-2" autoComplete="on">
         {/* Endereço */}
         <section className="rounded-xl border border-white/10 bg-black/20 p-5">
-          <h2 className="text-xl font-medium mb-4">Endereço</h2>
+          <h3 className="text-lg font-medium mb-4">Endereço</h3>
 
           <div className="grid gap-4">
-            <div>
-              <label className="mb-1 block text-sm opacity-80">Nome *</label>
+            <label className="grid gap-2">
+              <span className="text-sm text-white/70">Nome *</span>
               <input
+                className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                value={addr.name}
+                onChange={(e) => handleChange('name', e.target.value)}
                 required
-                className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                value={address.name}
-                onChange={e => setAddress(prev => ({ ...prev, name: e.target.value }))}
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="mb-1 block text-sm opacity-80">Telefone *</label>
+            <label className="grid gap-2">
+              <span className="text-sm text-white/70">Telefone *</span>
               <input
+                className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                value={addr.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
                 required
-                inputMode="tel"
-                className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                value={address.phone}
-                onChange={e => setAddress(prev => ({ ...prev, phone: e.target.value }))}
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="mb-1 block text-sm opacity-80">CEP *</label>
+            <label className="grid gap-2">
+              <span className="text-sm text-white/70">CEP *</span>
               <input
+                className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                value={addr.cep}
+                onChange={(e) => handleChange('cep', e.target.value)}
+                placeholder="87020-550"
                 required
-                inputMode="numeric"
-                placeholder="00000-000"
-                className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                value={address.cep}
-                onChange={e => setAddress(prev => ({ ...prev, cep: e.target.value }))}
               />
-              <p className="mt-1 text-xs opacity-60">
-                {loadingCEP ? 'Buscando endereço…' : ' '}
-              </p>
-            </div>
+              <span className="text-xs text-white/60">
+                {fetchingCEP ? 'Buscando endereço…' : cepError ?? ''}
+              </span>
+            </label>
 
-            <div>
-              <label className="mb-1 block text-sm opacity-80">Rua *</label>
+            <label className="grid gap-2">
+              <span className="text-sm text-white/70">Rua *</span>
               <input
+                className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                value={addr.street}
+                onChange={(e) => handleChange('street', e.target.value)}
                 required
-                className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                value={address.street}
-                onChange={e => setAddress(prev => ({ ...prev, street: e.target.value }))}
               />
+            </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="grid gap-2">
+                <span className="text-sm text-white/70">Número *</span>
+                <input
+                  className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                  value={addr.number}
+                  onChange={(e) => handleChange('number', e.target.value)}
+                  required
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm text-white/70">Complemento</span>
+                <input
+                  className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                  value={addr.complement ?? ''}
+                  onChange={(e) => handleChange('complement', e.target.value)}
+                />
+              </label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-sm opacity-80">Número *</label>
+              <label className="grid gap-2">
+                <span className="text-sm text-white/70">Cidade *</span>
                 <input
+                  className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                  value={addr.city}
+                  onChange={(e) => handleChange('city', e.target.value)}
                   required
-                  className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                  value={address.number}
-                  onChange={e => setAddress(prev => ({ ...prev, number: e.target.value }))}
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="mb-1 block text-sm opacity-80">Cidade *</label>
+              <label className="grid gap-2">
+                <span className="text-sm text-white/70">Estado *</span>
                 <input
+                  className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
+                  value={addr.state}
+                  onChange={(e) => handleChange('state', e.target.value)}
                   required
-                  className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                  value={address.city}
-                  onChange={e => setAddress(prev => ({ ...prev, city: e.target.value }))}
                 />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm opacity-80">Estado *</label>
-              <input
-                required
-                className="w-full rounded-lg bg-white/5 px-3 py-2 uppercase outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
-                value={address.state}
-                onChange={e => setAddress(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
-              />
+              </label>
             </div>
           </div>
         </section>
 
-        {/* Pagamento / Resumo */}
-        <section className="rounded-xl border border-white/10 bg-black/20 p-5">
-          <h2 className="text-xl font-medium mb-4">Pagamento</h2>
-
-          <div className="mb-6">
-            <label className="mb-1 block text-sm opacity-80">Cupom de desconto</label>
-            <div className="flex gap-2">
+        {/* Cupom / Frete / Resumo */}
+        <section className="rounded-xl border border-white/10 bg-black/20 p-5 grid gap-6 h-fit">
+          {/* Cupom */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">Cupom de desconto</h3>
+            <div className="flex gap-3">
               <input
-                placeholder="JANE10"
-                className="flex-1 rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-emerald-500/60"
+                className="flex-1 rounded-lg bg-black/30 border border-white/15 px-3 py-2 outline-none focus:ring-2 ring-emerald-500"
                 value={coupon}
-                onChange={e => setCoupon(e.target.value)}
+                onChange={(e) => setCoupon(e.target.value)}
+                placeholder="Ex.: JANE10"
               />
               <button
                 type="button"
-                onClick={() => setCoupon(coupon.trim())}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
+                onClick={applyCoupon}
+                className="rounded-lg px-4 py-2 bg-emerald-600 hover:bg-emerald-500 transition"
               >
                 Aplicar
               </button>
             </div>
+            {discountPct > 0 && (
+              <p className="text-sm text-emerald-400 mt-2">Desconto aplicado: {discountPct}%</p>
+            )}
           </div>
 
-          <div className="mb-6">
-            <p className="mb-2 text-sm opacity-80">Frete</p>
-            <div className="space-y-2">
-              {freightOptions.map(opt => (
-                <label key={opt.id} className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
+          {/* Frete */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">Frete</h3>
+            <div className="grid gap-2">
+              {SHIPPING_OPTIONS.map((opt) => (
+                <label
+                  key={opt.id}
+                  className="flex items-center justify-between rounded-lg border border-white/15 px-3 py-2"
+                >
+                  <span>
+                    {opt.label} <span className="text-white/60">({opt.eta})</span>
+                  </span>
+                  <span className="font-medium">{formatBRL(opt.price)}</span>
                   <input
                     type="radio"
-                    name="freight"
-                    checked={freight?.id === opt.id}
-                    onChange={() => setFreight(opt)}
+                    name="shipping"
+                    className="ml-3"
+                    checked={shippingId === opt.id}
+                    onChange={() => setShippingId(opt.id)}
                   />
-                  <span className="flex-1">
-                    {opt.label} <span className="opacity-60">({opt.days})</span>
-                  </span>
-                  <span>{BRL(opt.price / 100)}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="rounded-lg bg-white/5 p-4">
-            <h3 className="mb-3 text-sm opacity-80">Resumo</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>{BRL(subtotal / 100)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Desconto ({discountPct}%)</span>
-                <span>-{BRL(discountValue / 100)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Frete {freight ? `• ${freight.label} (${freight.days})` : ''}</span>
-                <span>{freight ? BRL(freight.price / 100) : '—'}</span>
-              </div>
-              <hr className="my-2 border-white/10" />
-              <div className="flex justify-between text-lg font-semibold">
-                <span
+          {/* Resumo */}
+          <div className="rounded-lg border border-white/10 p-4 grid gap-2">
+            <h3 className="text-lg font-medium mb-1">Resumo</h3>
+            <div className="flex justify-between text-sm text-white/80">
+              <span>Subtotal</span>
+              <span>{formatBRL(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-white/80">
+              <span>Desconto ({discountPct}%)</span>
+              <span>-{formatBRL(discountValue)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-white/80">
+              <span>
+                Frete • {selectedShipping.label} ({selectedShipping.eta})
+              </span>
+              <span>{formatBRL(selectedShipping.price)}</span>
+            </div>
+            <hr className="my-2 border-white/10" />
+            <div className="flex justify-between text-lg font-semibold">
+              <span>Total</span>
+              <span>{formatBRL(total)}</span>
+            </div>
+
+            <button
+              type="submit"
+              className="mt-3 w-full rounded-lg px-4 py-3 bg-emerald-600 hover:bg-emerald-500 transition font-medium"
+            >
+              Finalizar pedido
+            </button>
+          </div>
+        </section>
+      </form>
+    </div>
+  );
+}
