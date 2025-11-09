@@ -1,146 +1,106 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useCart } from '@/components/providers/CartProvider';
 import Link from 'next/link';
 
 type Address = {
   name: string;
   phone: string;
-  cep: string;
-  street: string;
-  number: string;
-  city: string;
-  state: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  city?: string;
+  state?: string;
   complement?: string;
 };
 
 const formatBRL = (v: number) =>
-  (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const WHATS_NUMBER = '5544988606483'; // +55 44 98860-6483
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CheckoutClient() {
-  const { items, removeItem, clear, getTotal } = useCart();
-
-  const [addr, setAddr] = useState<Address>({
-    name: '',
-    phone: '',
-    cep: '',
-    street: '',
-    number: '',
-    city: '',
-    state: '',
-    complement: '',
-  });
-
-  const [lookingUpCep, setLookingUpCep] = useState(false);
+  const { items, removeItem, updateQty, clear, subtotal } = useCart();
+  const [addr, setAddr] = useState<Address>({ name: '', phone: '' });
   const [coupon, setCoupon] = useState('');
-  const [couponPct, setCouponPct] = useState(0);
-  const [shipping, setShipping] = useState(0);
 
-  const subtotal = useMemo(() => getTotal(), [getTotal, items]);
-  const discount = subtotal * couponPct;
-  const total = Math.max(0, subtotal - discount) + shipping;
+  const discountPct = useMemo(() => (coupon.trim().toUpperCase() === 'JANE10' ? 0.1 : 0), [coupon]);
+  const discount = useMemo(() => subtotal * discountPct, [subtotal, discountPct]);
+  const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
 
-  useEffect(() => {
-    const cep = (addr.cep || '').replace(/\D/g, '');
-    if (cep.length !== 8) {
-      setShipping(0);
-      return;
-    }
-    let abort = false;
-    setLookingUpCep(true);
+  const finish = () => {
+    // Envia pro WhatsApp com o resumo do pedido
+    const lines = [
+      '*Novo pedido*',
+      '',
+      '*Itens:*',
+      ...items.map((it) => `• ${it.quantity} × ${it.name} — ${formatBRL(it.price * it.quantity)}`),
+      '',
+      `Subtotal: ${formatBRL(subtotal)}`,
+      `Desconto: -${formatBRL(discount)}`,
+      `*Total:* ${formatBRL(total)}`,
+      '',
+      '*Endereço:*',
+      `${addr.name} — ${addr.phone}`,
+      `${addr.street ?? ''}, ${addr.number ?? ''}`,
+      `${addr.city ?? ''} - ${addr.state ?? ''}`,
+      `${addr.cep ?? ''}`,
+      addr.complement ? `Comp.: ${addr.complement}` : '',
+    ].filter(Boolean);
 
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (abort) return;
-        if (!data?.erro) {
-          setAddr((a) => ({
-            ...a,
-            street: data.logradouro || a.street,
-            city: data.localidade || a.city,
-            state: data.uf || a.state,
-          }));
-          setShipping(24.4); // PAC 5–8 dias
-        } else {
-          setShipping(0);
-        }
-      })
-      .catch(() => setShipping(0))
-      .finally(() => !abort && setLookingUpCep(false));
-
-    return () => {
-      abort = true;
-    };
-  }, [addr.cep]);
-
-  const applyCoupon = () => {
-    const code = coupon.trim().toUpperCase();
-    setCouponPct(code === 'JANE10' ? 0.1 : 0);
-  };
-
-  const finalize = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!items.length) {
-      alert('Seu carrinho está vazio.');
-      return;
-    }
-
-    const linhasItens = items
-      .map(
-        (it) =>
-          `• ${it.quantity} × ${it.name} — ${formatBRL(it.price * it.quantity)}`
-      )
-      .join('%0A');
-
-    const msg =
-      `*Novo pedido — Loja da Jane*%0A%0A` +
-      `*Itens:*%0A${linhasItens}%0A%0A` +
-      `*Subtotal:* ${formatBRL(subtotal)}%0A` +
-      (couponPct > 0 ? `*Desconto:* -${formatBRL(discount)}%0A` : '') +
-      `*Frete:* ${formatBRL(shipping)}%0A` +
-      `*Total:* ${formatBRL(total)}%0A%0A` +
-      `*Cliente:* ${addr.name}%0A` +
-      `*Telefone:* ${addr.phone}%0A` +
-      `*Endereço:* ${addr.street}, ${addr.number} — ${addr.city}/${addr.state}%0A` +
-      (addr.complement ? `*Compl.:* ${addr.complement}%0A` : '') +
-      `*CEP:* ${addr.cep}`;
-
-    const url = `https://wa.me/${WHATS_NUMBER}?text=${msg}`;
+    const text = encodeURIComponent(lines.join('\n'));
+    // seu número com DDI/DDD
+    const phone = '5544988606483';
+    const url = `https://wa.me/${phone}?text=${text}`;
     window.open(url, '_blank');
-
-    // limpa carrinho após abrir o WhatsApp
-    clear();
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-10 space-y-10">
       <h1 className="text-3xl font-semibold">Checkout</h1>
 
       {/* CARRINHO */}
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-4">
-        <h2 className="text-xl font-semibold mb-4">Carrinho</h2>
+      <section className="rounded-2xl border border-white/10 p-5">
+        <h2 className="mb-4 text-xl font-semibold">Carrinho</h2>
 
-        {!items.length ? (
-          <div className="text-neutral-300">Seu carrinho está vazio.</div>
+        {items.length === 0 ? (
+          <p className="text-white/70">
+            Seu carrinho está vazio.{' '}
+            <Link href="/" className="text-emerald-400 underline">
+              Voltar para a loja
+            </Link>
+          </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {items.map((it) => (
-              <li
-                key={String(it.id)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 p-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{it.name}</p>
-                  <p className="text-sm text-neutral-400">
-                    {it.quantity} × {formatBRL(it.price)}
-                  </p>
+              <li key={String(it.id)} className="flex items-center gap-4">
+                {it.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={it.image} alt={it.name} className="h-16 w-16 rounded-xl object-cover" />
+                ) : (
+                  <div className="h-16 w-16 rounded-xl bg-neutral-800" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{it.name}</p>
+                  <p className="text-sm text-white/70">{formatBRL(it.price)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateQty(it.id, it.quantity - 1)}
+                    className="h-8 w-8 rounded-xl bg-neutral-800 text-lg hover:bg-neutral-700"
+                  >
+                    –
+                  </button>
+                  <div className="w-10 text-center">{it.quantity}</div>
+                  <button
+                    onClick={() => updateQty(it.id, it.quantity + 1)}
+                    className="h-8 w-8 rounded-xl bg-neutral-800 text-lg hover:bg-neutral-700"
+                  >
+                    +
+                  </button>
                 </div>
                 <button
                   onClick={() => removeItem(it.id)}
-                  className="rounded-md bg-red-700 px-3 py-1 text-sm hover:bg-red-600"
+                  className="rounded-xl bg-rose-600/20 px-3 py-2 text-rose-300 hover:bg-rose-600/30"
                 >
                   Remover
                 </button>
@@ -149,169 +109,121 @@ export default function CheckoutClient() {
           </ul>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-lg">
-            <span className="text-neutral-300 mr-2">Total:</span>
-            <strong>{formatBRL(subtotal)}</strong>
-          </div>
-
-          {items.length > 0 && (
-            <button
-              onClick={clear}
-              className="rounded-md bg-neutral-700 px-3 py-2 text-sm hover:bg-neutral-600"
-            >
+        {items.length > 0 ? (
+          <div className="mt-4">
+            <button onClick={clear} className="rounded-xl bg-neutral-800 px-4 py-2 hover:bg-neutral-700">
               Limpar carrinho
             </button>
-          )}
+          </div>
+        ) : null}
+      </section>
+
+      {/* ENDEREÇO */}
+      <section className="rounded-2xl border border-white/10 p-5">
+        <h2 className="mb-4 text-xl font-semibold">Endereço</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Nome *"
+            value={addr.name}
+            onChange={(e) => setAddr({ ...addr, name: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Telefone *"
+            value={addr.phone}
+            onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="CEP"
+            value={addr.cep ?? ''}
+            onChange={(e) => setAddr({ ...addr, cep: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Rua *"
+            value={addr.street ?? ''}
+            onChange={(e) => setAddr({ ...addr, street: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Número *"
+            value={addr.number ?? ''}
+            onChange={(e) => setAddr({ ...addr, number: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Cidade *"
+            value={addr.city ?? ''}
+            onChange={(e) => setAddr({ ...addr, city: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Estado *"
+            value={addr.state ?? ''}
+            onChange={(e) => setAddr({ ...addr, state: e.target.value })}
+          />
+          <input
+            className="rounded-xl bg-neutral-900 px-4 py-3 outline-none sm:col-span-2"
+            placeholder="Complemento"
+            value={addr.complement ?? ''}
+            onChange={(e) => setAddr({ ...addr, complement: e.target.value })}
+          />
         </div>
       </section>
 
-      {/* ENDEREÇO + PAGAMENTO */}
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-4">
-        <h2 className="text-xl font-semibold mb-4">Endereço</h2>
+      {/* CUPOM + RESUMO (sem frete) */}
+      <section className="rounded-2xl border border-white/10 p-5">
+        <h2 className="mb-4 text-xl font-semibold">Resumo</h2>
 
-        <form onSubmit={finalize} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Nome *</span>
-              <input
-                required
-                value={addr.name}
-                onChange={(e) => setAddr({ ...addr, name: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
+        <div className="mb-5 flex gap-3">
+          <input
+            className="flex-1 rounded-xl bg-neutral-900 px-4 py-3 outline-none"
+            placeholder="Cupom de desconto"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value)}
+          />
+          <button
+            onClick={() => void 0}
+            className="rounded-xl bg-emerald-600 px-5 py-3 font-medium hover:bg-emerald-500"
+          >
+            Aplicar
+          </button>
+        </div>
 
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Telefone *</span>
-              <input
-                required
-                value={addr.phone}
-                onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">CEP *</span>
-              <input
-                required
-                inputMode="numeric"
-                value={addr.cep}
-                onChange={(e) => setAddr({ ...addr, cep: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-              {lookingUpCep && (
-                <span className="text-xs text-neutral-400">Buscando endereço…</span>
-              )}
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Rua *</span>
-              <input
-                required
-                value={addr.street}
-                onChange={(e) => setAddr({ ...addr, street: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Número *</span>
-              <input
-                required
-                value={addr.number}
-                onChange={(e) => setAddr({ ...addr, number: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Cidade *</span>
-              <input
-                required
-                value={addr.city}
-                onChange={(e) => setAddr({ ...addr, city: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-sm text-neutral-300">Estado *</span>
-              <input
-                required
-                value={addr.state}
-                onChange={(e) => setAddr({ ...addr, state: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
-
-            <label className="space-y-1 md:col-span-2">
-              <span className="text-sm text-neutral-300">Complemento</span>
-              <input
-                value={addr.complement}
-                onChange={(e) => setAddr({ ...addr, complement: e.target.value })}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-            </label>
+        <div className="space-y-2 text-white/90">
+          <div className="flex items-center justify-between">
+            <span>Subtotal</span>
+            <span>{formatBRL(subtotal)}</span>
           </div>
-
-          {/* CUPOM */}
-          <div className="rounded-xl border border-neutral-800 p-4 space-y-3">
-            <h3 className="font-medium">Cupom de desconto</h3>
-            <div className="flex gap-3">
-              <input
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value)}
-                placeholder="JANE10"
-                className="flex-1 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 outline-none"
-              />
-              <button
-                type="button"
-                onClick={applyCoupon}
-                className="rounded-lg bg-emerald-600 px-4 py-2 hover:bg-emerald-500"
-              >
-                Aplicar
-              </button>
+          <div className="flex items-center justify-between">
+            <span>Desconto ({Math.round(discountPct * 100)}%)</span>
+            <span>-{formatBRL(discount)}</span>
+          </div>
+          <div className="mt-3 border-t border-white/10 pt-3 text-lg font-semibold">
+            <div className="flex items-center justify-between">
+              <span>Total:</span>
+              <span>{formatBRL(total)}</span>
             </div>
           </div>
+        </div>
 
-          {/* RESUMO */}
-          <div className="rounded-xl border border-neutral-800 p-4 space-y-2">
-            <h3 className="font-medium">Resumo</h3>
-            <div className="flex justify-between text-sm text-neutral-300">
-              <span>Subtotal</span>
-              <span>{formatBRL(subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-300">
-              <span>Desconto ({Math.round(couponPct * 100)}%)</span>
-              <span>-{formatBRL(discount)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-300">
-              <span>Frete • PAC (5–8 dias)</span>
-              <span>{formatBRL(shipping)}</span>
-            </div>
-            <div className="mt-2 flex justify-between text-lg">
-              <strong>Total:</strong>
-              <strong>{formatBRL(total)}</strong>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              className="rounded-xl bg-emerald-600 px-5 py-3 font-medium hover:bg-emerald-500"
-            >
-              Finalizar pedido
-            </button>
-            <Link
-              href="/"
-              className="rounded-xl border border-neutral-700 px-5 py-3 hover:bg-neutral-800/60"
-            >
-              Voltar para a loja
-            </Link>
-          </div>
-        </form>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            disabled={items.length === 0}
+            onClick={finish}
+            className="rounded-2xl bg-emerald-600 px-6 py-4 font-medium hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Finalizar pedido
+          </button>
+          <Link
+            href="/"
+            className="rounded-2xl border border-emerald-700/40 px-6 py-4 hover:bg-emerald-600/10"
+          >
+            Voltar para a loja
+          </Link>
+        </div>
       </section>
     </div>
   );
