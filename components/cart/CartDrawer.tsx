@@ -1,76 +1,51 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/components/providers/CartProvider';
 
-type CartItem = {
-  id: string | number;
-  name: string;
-  price: number;
-  image?: string;
-  qty?: number;        // alguns lugares podem usar qty
-  quantity?: number;   // outros podem usar quantity
-};
+const formatBRL = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function CartDrawer() {
-  const { items, removeItem, clear } = useCart();
+  const { items, removeItem, clear, getTotal } = useCart();
+  const subtotal = getTotal();
 
-  // normaliza quantidade vinda do item (qty ou quantity)
-  const getQty = (it: Partial<CartItem>) =>
-    typeof it.qty === 'number'
-      ? it.qty
-      : typeof it.quantity === 'number'
-      ? it.quantity
-      : 1;
-
-  const subtotal = (items as CartItem[]).reduce(
-    (sum, it) => sum + (Number(it.price) || 0) * getQty(it),
-    0
-  );
-
-  const totalItems = (items as CartItem[]).reduce(
-    (sum, it) => sum + getQty(it),
-    0
-  );
-
-  if (!items || items.length === 0) {
-    return (
-      <div className="p-4 text-sm text-neutral-300">
-        Seu carrinho está vazio.
-      </div>
-    );
+  if (!items.length) {
+    return <div className="p-4 text-neutral-300">Seu carrinho está vazio.</div>;
   }
 
   return (
     <div className="p-4 space-y-4">
-      <h2 className="text-lg font-semibold">Carrinho ({totalItems})</h2>
+      <h2 className="text-lg font-semibold">Carrinho</h2>
 
       <ul className="space-y-3">
-        {(items as CartItem[]).map((it) => (
+        {items.map((it) => (
           <li
             key={String(it.id)}
-            className="flex items-center gap-3 border border-neutral-800 rounded-lg p-3"
+            className="flex items-center gap-3 rounded-xl border border-neutral-800 p-3"
           >
-            {/* Imagem simples (evita erro de tipagem com next/image) */}
-            <img
-              src={it.image || '/placeholder.png'}
-              alt={it.name}
-              width={56}
-              height={56}
-              className="rounded-md bg-neutral-800 object-cover"
-            />
+            <div className="relative h-14 w-14 overflow-hidden rounded-md bg-neutral-900">
+              <Image
+                src={it.image || '/placeholder.png'}
+                alt={it.name}
+                fill
+                className="object-cover"
+                sizes="56px"
+              />
+            </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{it.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{it.name}</p>
               <p className="text-sm text-neutral-400">
-                {getQty(it)} × R$ {(Number(it.price) || 0).toFixed(2)}
+                {it.quantity} × {formatBRL(it.price)}
               </p>
             </div>
 
             <button
               onClick={() => removeItem(it.id)}
-              className="text-sm px-3 py-1 rounded-md bg-red-700 hover:bg-red-600"
+              className="rounded-md bg-red-700 px-3 py-1 text-sm hover:bg-red-600"
             >
               Remover
             </button>
@@ -79,21 +54,20 @@ export default function CartDrawer() {
       </ul>
 
       <div className="flex items-center justify-between border-t border-neutral-800 pt-3">
-        <span className="text-neutral-300">Subtotal</span>
-        <strong>R$ {subtotal.toFixed(2)}</strong>
+        <span className="text-neutral-300">Total</span>
+        <strong>{formatBRL(subtotal)}</strong>
       </div>
 
       <div className="flex gap-2">
         <button
           onClick={clear}
-          className="w-1/2 py-2 rounded-md bg-neutral-700 hover:bg-neutral-600"
+          className="w-1/2 rounded-md bg-neutral-700 py-2 hover:bg-neutral-600"
         >
-          Limpar
+          Limpar carrinho
         </button>
-
         <Link
           href="/checkout"
-          className="w-1/2 py-2 text-center rounded-md bg-emerald-600 hover:bg-emerald-500"
+          className="w-1/2 rounded-md bg-emerald-600 py-2 text-center hover:bg-emerald-500"
         >
           Ir para o checkout
         </Link>
