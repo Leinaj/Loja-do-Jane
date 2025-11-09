@@ -18,11 +18,11 @@ type Address = {
 const formatBRL = (v: number) =>
   (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+const WHATS_NUMBER = '5544988606483'; // +55 44 98860-6483
+
 export default function CheckoutClient() {
-  // do contexto do carrinho
   const { items, removeItem, clear, getTotal } = useCart();
 
-  // formulário do endereço
   const [addr, setAddr] = useState<Address>({
     name: '',
     phone: '',
@@ -35,27 +35,20 @@ export default function CheckoutClient() {
   });
 
   const [lookingUpCep, setLookingUpCep] = useState(false);
-
-  // cupom e frete
   const [coupon, setCoupon] = useState('');
-  const [couponPct, setCouponPct] = useState(0); // ex.: 0.1 = 10%
-  const [shipping, setShipping] = useState(0);   // valor em reais
+  const [couponPct, setCouponPct] = useState(0);
+  const [shipping, setShipping] = useState(0);
 
-  // subtotal calculado a partir do contexto
   const subtotal = useMemo(() => getTotal(), [getTotal, items]);
-
-  // total final
   const discount = subtotal * couponPct;
   const total = Math.max(0, subtotal - discount) + shipping;
 
-  // busca CEP via ViaCEP (client-side)
   useEffect(() => {
     const cep = (addr.cep || '').replace(/\D/g, '');
     if (cep.length !== 8) {
       setShipping(0);
       return;
     }
-
     let abort = false;
     setLookingUpCep(true);
 
@@ -70,8 +63,7 @@ export default function CheckoutClient() {
             city: data.localidade || a.city,
             state: data.uf || a.state,
           }));
-          // frete fixo padrão (ex.: PAC 5–8 dias)
-          setShipping(24.4);
+          setShipping(24.4); // PAC 5–8 dias
         } else {
           setShipping(0);
         }
@@ -84,24 +76,42 @@ export default function CheckoutClient() {
     };
   }, [addr.cep]);
 
-  // aplicar cupom
   const applyCoupon = () => {
     const code = coupon.trim().toUpperCase();
-    if (code === 'JANE10') {
-      setCouponPct(0.1);
-    } else {
-      setCouponPct(0);
-    }
+    setCouponPct(code === 'JANE10' ? 0.1 : 0);
   };
 
-  // finalização fake (apenas demonstração)
   const finalize = (e: React.FormEvent) => {
     e.preventDefault();
     if (!items.length) {
       alert('Seu carrinho está vazio.');
       return;
     }
-    alert('Pedido finalizado! (exemplo)');
+
+    const linhasItens = items
+      .map(
+        (it) =>
+          `• ${it.quantity} × ${it.name} — ${formatBRL(it.price * it.quantity)}`
+      )
+      .join('%0A');
+
+    const msg =
+      `*Novo pedido — Loja da Jane*%0A%0A` +
+      `*Itens:*%0A${linhasItens}%0A%0A` +
+      `*Subtotal:* ${formatBRL(subtotal)}%0A` +
+      (couponPct > 0 ? `*Desconto:* -${formatBRL(discount)}%0A` : '') +
+      `*Frete:* ${formatBRL(shipping)}%0A` +
+      `*Total:* ${formatBRL(total)}%0A%0A` +
+      `*Cliente:* ${addr.name}%0A` +
+      `*Telefone:* ${addr.phone}%0A` +
+      `*Endereço:* ${addr.street}, ${addr.number} — ${addr.city}/${addr.state}%0A` +
+      (addr.complement ? `*Compl.:* ${addr.complement}%0A` : '') +
+      `*CEP:* ${addr.cep}`;
+
+    const url = `https://wa.me/${WHATS_NUMBER}?text=${msg}`;
+    window.open(url, '_blank');
+
+    // limpa carrinho após abrir o WhatsApp
     clear();
   };
 
@@ -128,7 +138,6 @@ export default function CheckoutClient() {
                     {it.quantity} × {formatBRL(it.price)}
                   </p>
                 </div>
-
                 <button
                   onClick={() => removeItem(it.id)}
                   className="rounded-md bg-red-700 px-3 py-1 text-sm hover:bg-red-600"
@@ -157,7 +166,7 @@ export default function CheckoutClient() {
         </div>
       </section>
 
-      {/* ENDEREÇO */}
+      {/* ENDEREÇO + PAGAMENTO */}
       <section className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-4">
         <h2 className="text-xl font-semibold mb-4">Endereço</h2>
 
