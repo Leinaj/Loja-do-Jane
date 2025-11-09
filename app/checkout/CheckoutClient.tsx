@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-
-// ✅ caminho relativo (CheckoutClient.tsx está em /app/checkout)
 import { useCart } from '../providers/CartProvider';
 
-// (opcional) se você já tiver um formatador no projeto, use-o no lugar
 const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
     Number.isFinite(value) ? value : 0,
@@ -22,12 +19,7 @@ type Address = {
   complement?: string;
 };
 
-type ShippingOption = {
-  id: 'PAC' | 'SEDEX';
-  label: string;
-  eta: string; // prazo
-  price: number;
-};
+type ShippingOption = { id: 'PAC' | 'SEDEX'; label: string; eta: string; price: number };
 
 const SHIPPING_OPTIONS: ShippingOption[] = [
   { id: 'PAC', label: 'PAC', eta: '5-8 dias', price: 24.4 },
@@ -35,25 +27,23 @@ const SHIPPING_OPTIONS: ShippingOption[] = [
 ];
 
 export default function CheckoutClient() {
-  // Para evitar que diferenças de tipo do seu provider quebrem o build,
-  // usamos 'any' ao extrair. Ajuste se seu provider já exporta os tipos.
-  const { items = [], removeItem, clearCart } = (useCart() as any) ?? {};
+  const { items, removeItem, clearCart } = useCart();
 
-  const subtotal = useMemo(() => {
-    return Array.isArray(items)
-      ? items.reduce(
-          (acc: number, it: any) => acc + (Number(it?.price) || 0) * (Number(it?.quantity) || 0),
-          0,
-        )
-      : 0;
-  }, [items]);
+  const subtotal = useMemo(
+    () =>
+      items.reduce(
+        (acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || 0),
+        0,
+      ),
+    [items],
+  );
 
   const [coupon, setCoupon] = useState('');
   const [discountPct, setDiscountPct] = useState(0);
   const [shippingId, setShippingId] = useState<ShippingOption['id']>('PAC');
 
   const selectedShipping =
-    SHIPPING_OPTIONS.find((opt) => opt.id === shippingId) ?? SHIPPING_OPTIONS[0];
+    SHIPPING_OPTIONS.find((o) => o.id === shippingId) ?? SHIPPING_OPTIONS[0];
 
   const [addr, setAddr] = useState<Address>({
     name: '',
@@ -69,46 +59,40 @@ export default function CheckoutClient() {
   const [fetchingCEP, setFetchingCEP] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
-  // Preenche endereço pelo CEP (ViaCEP)
   useEffect(() => {
     const digits = addr.cep.replace(/\D/g, '');
     if (digits.length !== 8) return;
 
-    let cancelled = false;
+    let cancel = false;
     setFetchingCEP(true);
     setCepError(null);
 
     fetch(`https://viacep.com.br/ws/${digits}/json/`)
       .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (data?.erro) {
+      .then((d) => {
+        if (cancel) return;
+        if (d?.erro) {
           setCepError('CEP não encontrado.');
           return;
         }
-        setAddr((prev) => ({
-          ...prev,
-          street: data.logradouro ?? prev.street,
-          city: data.localidade ?? prev.city,
-          state: data.uf ?? prev.state,
+        setAddr((p) => ({
+          ...p,
+          street: d.logradouro ?? p.street,
+          city: d.localidade ?? p.city,
+          state: d.uf ?? p.state,
         }));
       })
-      .catch(() => !cancelled && setCepError('Falha ao buscar CEP.'))
-      .finally(() => !cancelled && setFetchingCEP(false));
+      .catch(() => !cancel && setCepError('Falha ao buscar CEP.'))
+      .finally(() => !cancel && setFetchingCEP(false));
 
     return () => {
-      cancelled = true;
+      cancel = true;
     };
   }, [addr.cep]);
 
   function applyCoupon() {
     const code = coupon.trim().toUpperCase();
-    // Exemplo simples: JANE10 = 10% off
-    if (code === 'JANE10') {
-      setDiscountPct(10);
-    } else {
-      setDiscountPct(0);
-    }
+    setDiscountPct(code === 'JANE10' ? 10 : 0);
   }
 
   const discountValue = (subtotal * discountPct) / 100;
@@ -120,27 +104,15 @@ export default function CheckoutClient() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    // Validação mínima
     if (!addr.name || !addr.phone || !addr.cep || !addr.street || !addr.number || !addr.city || !addr.state) {
       alert('Preencha todos os campos obrigatórios.');
       return;
     }
-    if (!items?.length) {
+    if (!items.length) {
       alert('Seu carrinho está vazio.');
       return;
     }
-
-    // Aqui você enviaria os dados para sua API /pagamento
-    console.log('Pedido:', {
-      items,
-      address: addr,
-      coupon: coupon.trim().toUpperCase(),
-      discountPct,
-      shipping: selectedShipping,
-      totals: { subtotal, discountValue, total },
-    });
-
+    console.log('Pedido:', { items, address: addr, coupon, discountPct, shipping: selectedShipping, subtotal, discountValue, total });
     alert('Pedido realizado! (simulação)');
   }
 
@@ -148,38 +120,36 @@ export default function CheckoutClient() {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-semibold mb-6">Checkout</h1>
 
-      {/* CARRINHO */}
+      {/* Carrinho */}
       <section className="mb-8 rounded-xl border border-white/10 bg-black/20 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-medium">Carrinho</h2>
           <button
             type="button"
-            onClick={() => clearCart?.()}
+            onClick={() => clearCart()}
             className="rounded-lg px-3 py-2 border border-white/15 hover:bg-white/5 transition"
           >
             Limpar carrinho
           </button>
         </div>
 
-        {(!items || items.length === 0) && (
-          <p className="text-white/70">Seu carrinho está vazio.</p>
-        )}
+        {!items.length && <p className="text-white/70">Seu carrinho está vazio.</p>}
 
         <ul className="space-y-3">
-          {items?.map((it: any) => (
+          {items.map((it) => (
             <li
-              key={String(it?.id)}
+              key={String(it.id)}
               className="flex items-center justify-between rounded-lg border border-white/10 bg-black/10 p-3"
             >
               <div className="min-w-0">
-                <p className="font-medium truncate">{it?.name ?? 'Produto'}</p>
+                <p className="font-medium truncate">{it.name}</p>
                 <p className="text-sm text-white/70">
-                  {Number(it?.quantity) || 0} × {formatBRL(Number(it?.price) || 0)}
+                  {it.quantity} × {formatBRL(it.price)}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => removeItem?.(it?.id)}
+                onClick={() => removeItem(it.id)}
                 className="rounded-lg px-3 py-2 bg-rose-700/70 hover:bg-rose-700 transition"
               >
                 Remover
@@ -194,7 +164,7 @@ export default function CheckoutClient() {
         </div>
       </section>
 
-      {/* FORMULÁRIO */}
+      {/* Formulário */}
       <form onSubmit={handleSubmit} className="grid gap-8 md:grid-cols-2" autoComplete="on">
         {/* Endereço */}
         <section className="rounded-xl border border-white/10 bg-black/20 p-5">
