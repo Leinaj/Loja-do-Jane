@@ -4,8 +4,8 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-// ⚠️ ajuste o caminho relativo conforme sua estrutura.
-// Este caminho funciona se o arquivo estiver em components/cart/CartDrawer.tsx
+// ⚠️ Ajuste este caminho se seu CartProvider estiver em outro lugar.
+// Ex.: '../../app/providers/CartProvider' funciona quando ESTE arquivo está em components/cart/CartDrawer.tsx
 import { useCart } from '../../app/providers/CartProvider';
 
 const formatBRL = (v: number) =>
@@ -13,15 +13,30 @@ const formatBRL = (v: number) =>
     Number.isFinite(v) ? v : 0
   );
 
-// Imagem inline (1x1) para fallback caso não exista it.image
+// Fallback simples (SVG inline) caso não exista imagem
 const FALLBACK_DATA_URL =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" fill="%23aaaaaa">sem imagem</text></svg>';
+
+// Tenta descobrir o src e o alt a partir de diferentes chaves
+function getImageSrc(it: any): string {
+  return (
+    it?.image ??
+    it?.imageUrl ??
+    it?.thumbnail ??
+    it?.photo ??
+    it?.picture ??
+    FALLBACK_DATA_URL
+  );
+}
+function getAltText(it: any): string {
+  return it?.name ?? it?.title ?? 'Produto';
+}
 
 export default function CartDrawer() {
   const { items, removeItem, clearCart } = useCart();
 
-  const subtotal = items.reduce(
-    (acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || 0),
+  const subtotal = (items as any[]).reduce(
+    (acc, it: any) => acc + (Number(it?.price) || 0) * (Number(it?.quantity) || 0),
     0
   );
 
@@ -38,16 +53,18 @@ export default function CartDrawer() {
         </button>
       </header>
 
-      {!items.length && <p className="text-white/70">Carrinho vazio.</p>}
+      {(!items || (items as any[]).length === 0) && (
+        <p className="text-white/70">Carrinho vazio.</p>
+      )}
 
       <ul className="space-y-3">
-        {items.map((it) => {
-          const imgSrc = it.image ?? FALLBACK_DATA_URL; // ← garante string
-          const altTxt = it.name ?? 'Produto'; // ← garante string
+        {(items as any[]).map((it: any) => {
+          const imgSrc = getImageSrc(it);
+          const altTxt = getAltText(it);
 
           return (
             <li
-              key={String(it.id)}
+              key={String(it?.id ?? `${altTxt}-${imgSrc}`)}
               className="flex gap-3 rounded-lg border border-white/10 p-3 bg-black/20"
             >
               <div className="relative h-16 w-16 overflow-hidden rounded-md shrink-0">
@@ -57,20 +74,19 @@ export default function CartDrawer() {
                   fill
                   sizes="64px"
                   className="object-cover"
-                  priority={false}
                 />
               </div>
 
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">{altTxt}</p>
                 <p className="text-sm text-white/70">
-                  {it.quantity} × {formatBRL(Number(it.price) || 0)}
+                  {(Number(it?.quantity) || 0)} × {formatBRL(Number(it?.price) || 0)}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => removeItem(it.id)}
+                onClick={() => removeItem(it?.id)}
                 className="self-start px-3 py-1.5 rounded-md bg-rose-700/70 hover:bg-rose-700 transition"
               >
                 Remover
