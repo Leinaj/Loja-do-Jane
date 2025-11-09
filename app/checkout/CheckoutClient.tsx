@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
-// ✅ Import RELATIVO para não depender de alias '@/'
-import { useCart } from '../../components/providers/CartProvider';
+// ✅ Importa do app/providers/CartProvider.tsx
+import { useCart } from '../providers/CartProvider';
 
 type Address = {
   name: string;
@@ -19,7 +19,7 @@ type Address = {
 type CartItem = {
   id: string;
   name: string;
-  price: number; // em R$
+  price: number; // R$
   qty: number;
   image?: string;
 };
@@ -27,13 +27,12 @@ type CartItem = {
 function formatMoney(n: number) {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
-
 function onlyDigits(s: string) {
   return s.replace(/\D/g, '');
 }
 
 export default function CheckoutClient() {
-  const { items, removeItem, clear, totalQty } = useCart();
+  const { items, removeItem, clear } = useCart();
 
   const [address, setAddress] = useState<Address>({
     name: '',
@@ -47,51 +46,52 @@ export default function CheckoutClient() {
 
   const [coupon, setCoupon] = useState('');
   const [discountPct, setDiscountPct] = useState(0);
-  const [shippingName, setShippingName] = useState('PAC (5-8 dias)');
-  const [shippingValue, setShippingValue] = useState(24.4); // valor simbólico
+  const [shippingName] = useState('PAC (5-8 dias)');
+  const [shippingValue, setShippingValue] = useState(24.4);
 
-  const subtotal = useMemo(() => {
-    return (items as CartItem[]).reduce((acc, it) => acc + it.price * it.qty, 0);
-  }, [items]);
+  const subtotal = useMemo(
+    () => (items as CartItem[]).reduce((acc, it) => acc + it.price * it.qty, 0),
+    [items]
+  );
+  const discountValue = useMemo(
+    () => (subtotal * discountPct) / 100,
+    [subtotal, discountPct]
+  );
+  const total = useMemo(
+    () => Math.max(subtotal - discountValue, 0) + (items.length ? shippingValue : 0),
+    [subtotal, discountValue, shippingValue, items.length]
+  );
 
-  const discountValue = useMemo(() => (subtotal * discountPct) / 100, [subtotal, discountPct]);
-
-  const total = useMemo(() => {
-    return Math.max(subtotal - discountValue, 0) + (items.length ? shippingValue : 0);
-  }, [subtotal, discountValue, shippingValue, items.length]);
-
-  // CEP → ViaCEP auto-preencher
+  // CEP → ViaCEP
   useEffect(() => {
     const digits = onlyDigits(address.cep);
     if (digits.length !== 8) return;
 
     let abort = false;
-
-    async function fetchCep() {
+    (async () => {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
         const data = await res.json();
-        if (abort) return;
-        if (data?.erro) return;
+        if (abort || data?.erro) return;
 
         setAddress((a) => ({
           ...a,
           street: data.logradouro ?? a.street,
           city: data.localidade ?? a.city,
-          state: data.uf ?? a.state,
+          state: (data.uf ?? a.state)?.toUpperCase(),
         }));
 
-        // frete simbólico variável por UF só para ficar “real”
-        const uf = String(data.uf || '').toUpperCase();
-        const base = 22; // base
-        const extra = ['AM', 'RR', 'AP', 'PA', 'RO', 'AC'].includes(uf) ? 18 : ['RS', 'PE', 'CE', 'RN', 'PB', 'AL', 'SE', 'BA', 'MA', 'PI'].includes(uf) ? 10 : 6;
-        setShippingValue((base + extra) * 1.0);
-      } catch {
-        // silencioso
-      }
-    }
-
-    fetchCep();
+        // frete simbólico por região
+        const uf: string = String(data.uf || '').toUpperCase();
+        const base = 22;
+        const extra = ['AM', 'RR', 'AP', 'PA', 'RO', 'AC'].includes(uf)
+          ? 18
+          : ['RS', 'PE', 'CE', 'RN', 'PB', 'AL', 'SE', 'BA', 'MA', 'PI'].includes(uf)
+          ? 10
+          : 6;
+        setShippingValue(base + extra);
+      } catch {}
+    })();
     return () => {
       abort = true;
     };
@@ -99,18 +99,10 @@ export default function CheckoutClient() {
 
   function applyCoupon() {
     const c = coupon.trim().toUpperCase();
-    if (!c) {
-      setDiscountPct(0);
-      return;
-    }
-    // Regras simples de exemplo
-    if (c === 'JANE10') {
-      setDiscountPct(10);
-    } else if (c === 'JANE15' && subtotal >= 300) {
-      setDiscountPct(15);
-    } else {
-      setDiscountPct(0);
-    }
+    if (!c) return setDiscountPct(0);
+    if (c === 'JANE10') setDiscountPct(10);
+    else if (c === 'JANE15' && subtotal >= 300) setDiscountPct(15);
+    else setDiscountPct(0);
   }
 
   function onChange<K extends keyof Address>(key: K, value: Address[K]) {
@@ -134,11 +126,7 @@ export default function CheckoutClient() {
               <div className="flex min-w-0 items-center gap-3">
                 {item.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-14 w-14 rounded-lg object-cover"
-                  />
+                  <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover" />
                 ) : (
                   <div className="h-14 w-14 rounded-lg bg-white/10" />
                 )}
@@ -149,7 +137,6 @@ export default function CheckoutClient() {
                   </p>
                 </div>
               </div>
-
               <button
                 onClick={() => removeItem(item.id)}
                 className="rounded-xl bg-rose-900/60 px-3 py-2 text-sm font-medium text-rose-50 hover:bg-rose-900"
@@ -159,9 +146,7 @@ export default function CheckoutClient() {
             </div>
           ))}
 
-          {items.length === 0 && (
-            <p className="text-white/70">Seu carrinho está vazio.</p>
-          )}
+          {items.length === 0 && <p className="text-white/70">Seu carrinho está vazio.</p>}
         </div>
 
         <div className="mt-4 flex items-center justify-between">
@@ -275,9 +260,7 @@ export default function CheckoutClient() {
             </button>
           </div>
           {discountPct > 0 && (
-            <p className="mt-2 text-sm text-emerald-300">
-              Cupom aplicado: {discountPct}% de desconto.
-            </p>
+            <p className="mt-2 text-sm text-emerald-300">Cupom aplicado: {discountPct}% de desconto.</p>
           )}
         </div>
 
@@ -313,7 +296,15 @@ export default function CheckoutClient() {
           </div>
 
           <button
-            disabled={!items.length || !address.name || !address.cep || !address.street || !address.number || !address.city || !address.state}
+            disabled={
+              !items.length ||
+              !address.name ||
+              !address.cep ||
+              !address.street ||
+              !address.number ||
+              !address.city ||
+              !address.state
+            }
             className="mt-4 w-full rounded-xl bg-emerald-600 px-4 py-3 text-center text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Finalizar pedido
