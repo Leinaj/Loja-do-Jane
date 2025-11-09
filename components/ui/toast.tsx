@@ -2,13 +2,14 @@
 
 import React from 'react';
 
-// Ponte de toast simples (sem libs externas). Use: `toast('Mensagem')`
-let listeners: ((msg: string) => void)[] = [];
+// API simples de toast
+let listeners: Array<(msg: string) => void> = [];
 
 export function toast(message: string) {
   listeners.forEach(fn => fn(message));
 }
 
+// Componente visual do toast (fica montado globalmente)
 export function ToastBridge() {
   const [msg, setMsg] = React.useState<string | null>(null);
 
@@ -30,5 +31,15 @@ export function ToastBridge() {
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg px-4 py-2 bg-emerald-600 text-white shadow-lg">
       {msg}
     </div>
+  );
+}
+
+// ✅ Provider compatível com o import usado no seu projeto
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <ToastBridge />
+    </>
   );
 }
