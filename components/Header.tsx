@@ -1,35 +1,28 @@
 'use client';
-
 import Link from 'next/link';
 import { useCart } from '@/lib/cart';
+import { ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function Header() {
-  const { itemsCount } = useCart();
+  const { items } = useCart();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-gradient-to-b from-black/60 to-transparent backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          Loja da Jane
-        </Link>
+    <header className="flex items-center justify-between px-6 py-4 bg-neutral-900 border-b border-neutral-800">
+      <Link href="/" className="text-xl font-semibold">
+        Loja da Jane
+      </Link>
 
-        <nav className="flex items-center gap-2">
-          <Link
-            href="/checkout"
-            className="relative rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 transition"
-          >
-            Carrinho
-            {mounted && itemsCount > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-xs font-bold text-black shadow">
-                {itemsCount}
-              </span>
-            )}
-          </Link>
-        </nav>
-      </div>
+      <Link href="/checkout" className="relative flex items-center gap-2">
+        <ShoppingCart size={22} />
+        {mounted && (
+          <span className="text-sm bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+            {items.length}
+          </span>
+        )}
+      </Link>
     </header>
   );
 }
