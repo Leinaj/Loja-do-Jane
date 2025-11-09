@@ -18,7 +18,7 @@ type Address = {
 const OWNER_WHATS = '5544988606483';
 
 export default function CheckoutClient() {
-  // ⬇️ sem "total" aqui
+  // somente o que já existe no contexto
   const { items, removeItem, clear } = useCart();
 
   const [addr, setAddr] = useState<Address>({
@@ -33,14 +33,32 @@ export default function CheckoutClient() {
   });
   const [coupon, setCoupon] = useState('');
 
-  // ⬇️ calcula o subtotal em centavos a partir dos itens
+  // total/subtotal local a partir dos itens
   const subtotal = useMemo(
     () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
     [items]
   );
 
-  const message = useMemo(() => {
-    const lines = [
+  // CEP automático (ViaCEP) – só melhora o que já existe
+  const fetchCep = async () => {
+    const cep = (addr.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setAddr(a => ({
+          ...a,
+          street: data.logradouro || a.street,
+          city: data.localidade || a.city,
+          state: data.uf || a.state,
+        }));
+      }
+    } catch {}
+  };
+
+  const message = encodeURIComponent(
+    [
       '*Novo pedido — Loja da Jane*',
       '',
       '*Itens:*',
@@ -58,10 +76,10 @@ export default function CheckoutClient() {
       `Rua: ${addr.street || '-'}  Nº: ${addr.number || '-'}`,
       `Cidade: ${addr.city || '-'}  UF: ${addr.state || '-'}`,
       `Complemento: ${addr.complement || '-'}`,
-    ].filter(Boolean);
-
-    return encodeURIComponent(lines.join('\n'));
-  }, [items, subtotal, addr, coupon]);
+    ]
+      .filter(Boolean)
+      .join('\n')
+  );
 
   const waLink = `https://wa.me/${OWNER_WHATS}?text=${message}`;
 
@@ -87,41 +105,24 @@ export default function CheckoutClient() {
       {/* Itens */}
       <div className="rounded-2xl bg-white/5 border border-white/10 p-4 mb-8">
         {items.map((it) => (
-          <div
-            key={it.id}
-            className="flex items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0"
-          >
+          <div key={it.id} className="flex items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0">
             <div className="flex items-center gap-3">
-              {it.image && (
-                <img src={it.image} alt={it.name} className="w-12 h-12 rounded-lg object-cover" />
-              )}
+              {it.image && <img src={it.image} alt={it.name} className="w-12 h-12 rounded-lg object-cover" />}
               <div>
                 <div className="font-medium">{it.name}</div>
-                <div className="text-sm opacity-80">
-                  {it.quantity} × R$ {(it.price / 100).toFixed(2)}
-                </div>
+                <div className="text-sm opacity-80">{it.quantity} × R$ {(it.price / 100).toFixed(2)}</div>
               </div>
             </div>
-            <button
-              onClick={() => removeItem(it.id)}
-              className="h-10 px-4 rounded-xl bg-rose-900/40 text-rose-200 hover:bg-rose-900/60"
-            >
+            <button onClick={() => removeItem(it.id)} className="h-10 px-4 rounded-xl bg-rose-900/40 text-rose-200 hover:bg-rose-900/60">
               Remover
             </button>
           </div>
         ))}
-
         <div className="flex items-center justify-between mt-4">
           <div className="text-lg">
-            Total:{' '}
-            <span className="font-semibold text-emerald-400">
-              R$ {(subtotal / 100).toFixed(2)}
-            </span>
+            Total: <span className="font-semibold text-emerald-400">R$ {(subtotal / 100).toFixed(2)}</span>
           </div>
-          <button
-            onClick={clear}
-            className="h-10 px-4 rounded-xl border border-white/10 hover:bg-white/5"
-          >
+          <button onClick={clear} className="h-10 px-4 rounded-xl border border-white/10 hover:bg-white/5">
             Limpar carrinho
           </button>
         </div>
@@ -134,30 +135,31 @@ export default function CheckoutClient() {
 
           <label className="block text-sm opacity-80 mb-1">Nome *</label>
           <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-            value={addr.name} onChange={(e) => setAddr({ ...addr, name: e.target.value })} />
+                 value={addr.name} onChange={e => setAddr({ ...addr, name: e.target.value })} />
 
           <label className="block text-sm opacity-80 mb-1">Telefone *</label>
           <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-            value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} />
+                 value={addr.phone} onChange={e => setAddr({ ...addr, phone: e.target.value })} />
 
           <label className="block text-sm opacity-80 mb-1">CEP</label>
           <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-            value={addr.cep} onChange={(e) => setAddr({ ...addr, cep: e.target.value })} />
+                 value={addr.cep} onChange={e => setAddr({ ...addr, cep: e.target.value })}
+                 onBlur={fetchCep} />
 
           <label className="block text-sm opacity-80 mb-1">Rua</label>
           <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-            value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} />
+                 value={addr.street} onChange={e => setAddr({ ...addr, street: e.target.value })} />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm opacity-80 mb-1">Número</label>
               <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-                value={addr.number} onChange={(e) => setAddr({ ...addr, number: e.target.value })} />
+                     value={addr.number} onChange={e => setAddr({ ...addr, number: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm opacity-80 mb-1">Complemento</label>
               <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-                value={addr.complement} onChange={(e) => setAddr({ ...addr, complement: e.target.value })} />
+                     value={addr.complement} onChange={e => setAddr({ ...addr, complement: e.target.value })} />
             </div>
           </div>
 
@@ -165,12 +167,12 @@ export default function CheckoutClient() {
             <div>
               <label className="block text-sm opacity-80 mb-1">Cidade</label>
               <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-                value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} />
+                     value={addr.city} onChange={e => setAddr({ ...addr, city: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm opacity-80 mb-1">Estado</label>
               <input className="w-full mb-3 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-                value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} />
+                     value={addr.state} onChange={e => setAddr({ ...addr, state: e.target.value })} />
             </div>
           </div>
         </div>
@@ -180,15 +182,9 @@ export default function CheckoutClient() {
 
           <label className="block text-sm opacity-80 mb-1">Cupom de desconto</label>
           <div className="flex gap-2 mb-4">
-            <input
-              className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-              placeholder="JANE10"
-            />
-            <button className="h-11 px-4 rounded-xl bg-emerald-600/80 hover:bg-emerald-600">
-              Aplicar
-            </button>
+            <input className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 h-11"
+                   value={coupon} onChange={e => setCoupon(e.target.value)} placeholder="JANE10" />
+            <button className="h-11 px-4 rounded-xl bg-emerald-600/80 hover:bg-emerald-600">Aplicar</button>
           </div>
 
           <div className="space-y-2 text-sm opacity-90 mb-4">
@@ -202,19 +198,12 @@ export default function CheckoutClient() {
             <span className="text-emerald-400">R$ {(subtotal / 100).toFixed(2)}</span>
           </div>
 
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
-          >
+          <a href={waLink} target="_blank" rel="noopener noreferrer"
+             className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
             Finalizar pedido
           </a>
 
-          <Link
-            href="/"
-            className="mt-3 w-full inline-flex items-center justify-center h-12 rounded-xl border border-white/10 text-white/90 hover:bg-white/5"
-          >
+          <Link href="/" className="mt-3 w-full inline-flex items-center justify-center h-12 rounded-xl border border-white/10 text-white/90 hover:bg-white/5">
             Voltar para a loja
           </Link>
         </div>
