@@ -1,33 +1,22 @@
 'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { products } from "@/lib/products";
+import Image from 'next/image';
+import Link from 'next/link';
+import { products } from '@/components/products/data';
+import { useCart } from '@/components/cart/context';
 
-// ajuste esse import para o caminho REAL do seu contexto:
-import { useCart } from "@/components/cart/context"; 
-
-type Props = {
+type PageProps = {
   params: { slug: string };
 };
 
-export default function ProductPage({ params }: Props) {
-  const product = products.find(p => p.slug === params.slug);
-  const { addItem } = useCart(); // usa seu provider existente
-
-  if (!product) {
-    return (
-      <div className="p-6 min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <h1 className="text-3xl font-semibold">Produto não encontrado</h1>
-        <Link href="/" className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white">
-          Voltar para a loja
-        </Link>
-      </div>
-    );
-  }
+export default function ProductPage({ params }: PageProps) {
+  const { addItem } = useCart();
+  const product = products.find((p) => p.slug === params.slug);
 
   function handleAdd() {
-    // estrutura mínima esperada pelo seu carrinho
+    // Garantia para o TypeScript e para runtime
+    if (!product) return;
+
     addItem({
       id: product.slug,
       name: product.name,
@@ -37,56 +26,76 @@ export default function ProductPage({ params }: Props) {
     });
   }
 
-  return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="mb-6">
-        <Link href="/" className="text-emerald-500 hover:underline">&larr; Voltar para a loja</Link>
-      </div>
+  if (!product) {
+    return (
+      <main className="mx-auto max-w-4xl p-6">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
+          <h1 className="mb-3 text-3xl font-bold">Produto não encontrado</h1>
+          <p className="mb-6 text-zinc-400">
+            Parece que este item não existe mais.
+          </p>
+          <Link
+            href="/"
+            className="inline-block rounded-xl bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700"
+          >
+            Voltar para a loja
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900">
-          {/* Se sua imagem não estiver na pasta public, troque o src pelo caminho correto */}
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-          />
+  return (
+    <main className="mx-auto max-w-5xl p-6">
+      <div className="grid gap-8 md:grid-cols-2">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-black/40">
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+              priority
+            />
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
           <h1 className="text-4xl font-bold">{product.name}</h1>
-          <p className="text-zinc-400">{product.description}</p>
+          <p className="mt-2 text-zinc-400">{product.description}</p>
 
-          <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-semibold text-emerald-400">
-              {product.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </span>
-            {product.oldPrice && (
-              <span className="text-zinc-500 line-through">
-                {product.oldPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </span>
-            )}
+          <div className="mt-6 text-3xl font-semibold text-emerald-400">
+            {product.price.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+              minimumFractionDigits: 2,
+            })}
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               onClick={handleAdd}
-              className="px-5 py-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-700"
             >
               Adicionar ao carrinho
             </button>
 
             <Link
-              href="/checkout"
-              className="px-5 py-3 rounded-md border border-zinc-700 hover:bg-zinc-800 font-medium"
+              href="/"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-700 px-6 py-3 font-medium text-zinc-200 hover:bg-zinc-800"
             >
-              Ir para o checkout
+              Voltar para a loja
             </Link>
+          </div>
+
+          <div className="mt-8 border-t border-zinc-800 pt-6 text-sm text-zinc-400">
+            <p>• Algodão 100% macio</p>
+            <p>• Envio em 5–8 dias</p>
+            <p>• Troca fácil em até 7 dias</p>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
