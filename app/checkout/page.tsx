@@ -2,13 +2,66 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useCart } from '@/components/cart/context';
+
+type CheckoutInfo = {
+  name: string;
+  phone: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string;
+  district: string;
+  city: string;
+  state: string;
+};
+
+const DEFAULT_INFO: CheckoutInfo = {
+  name: 'JANIEL BATISTA DOS SANTOS',
+  phone: '44988606483',
+  cep: '87020550',
+  street: 'Pioneiro Simão Romero',
+  number: '69',
+  complement: '',
+  district: '',
+  city: 'Maringá',
+  state: 'PR'
+};
+
+const STORAGE_KEY = 'checkoutInfo';
 
 export default function CheckoutPage() {
   const { items, total, removeItem, clearCart } = useCart();
 
+  // carrega do localStorage senão usa defaults
+  const initial = useMemo<CheckoutInfo>(() => {
+    if (typeof window === 'undefined') return DEFAULT_INFO;
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      return saved ? { ...DEFAULT_INFO, ...JSON.parse(saved) } : DEFAULT_INFO;
+    } catch {
+      return DEFAULT_INFO;
+    }
+  }, []);
+
+  const [info, setInfo] = useState<CheckoutInfo>(initial);
+
+  // salva toda vez que mudar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+    }
+  }, [info]);
+
+  const onChange =
+    (field: keyof CheckoutInfo) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setInfo((s) => ({ ...s, [field]: e.target.value }));
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      {/* Carrinho */}
       <section className="rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-lg">
         <h1 className="text-2xl font-semibold mb-4">Carrinho</h1>
 
@@ -22,19 +75,9 @@ export default function CheckoutPage() {
         ) : (
           <div className="space-y-4">
             {items.map((it) => (
-              <div
-                key={it.id}
-                className="flex items-center gap-4 rounded-xl border border-white/10 bg-neutral-800 p-4"
-              >
-                {/* Miniatura */}
+              <div key={it.id} className="flex items-center gap-4 rounded-xl border border-white/10 bg-neutral-800 p-4">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-neutral-700">
-                  <Image
-                    src={it.image}
-                    alt={it.name}
-                    fill
-                    className="object-cover"
-                    sizes="56px"
-                  />
+                  <Image src={it.image} alt={it.name} fill className="object-cover" sizes="56px" />
                 </div>
 
                 <div className="flex-1">
@@ -63,10 +106,7 @@ export default function CheckoutPage() {
                 <span className="opacity-80">Total: </span>
                 <strong>R$ {total.toFixed(2).replace('.', ',')}</strong>
               </div>
-              <button
-                onClick={clearCart}
-                className="rounded-full border border-white/15 px-4 py-2"
-              >
+              <button onClick={clearCart} className="rounded-full border border-white/15 px-4 py-2">
                 Limpar carrinho
               </button>
             </div>
@@ -74,7 +114,93 @@ export default function CheckoutPage() {
         )}
       </section>
 
-      {/* Continue aqui com as seções de Endereço / Resumo que você já tem */}
+      {/* Endereço / Dados */}
+      <section className="rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-lg space-y-4">
+        <h2 className="text-xl font-semibold">Endereço</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-sm opacity-80">Nome *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.name}
+              onChange={onChange('name')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Telefone *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.phone}
+              onChange={onChange('phone')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">CEP *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.cep}
+              onChange={onChange('cep')}
+            />
+          </label>
+
+          <label className="block md:col-span-2">
+            <span className="text-sm opacity-80">Rua *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.street}
+              onChange={onChange('street')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Número *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.number}
+              onChange={onChange('number')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Complemento</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.complement}
+              onChange={onChange('complement')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Bairro *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.district}
+              onChange={onChange('district')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Cidade *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.city}
+              onChange={onChange('city')}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm opacity-80">Estado *</span>
+            <input
+              className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
+              value={info.state}
+              onChange={onChange('state')}
+            />
+          </label>
+        </div>
+      </section>
     </main>
   );
 }
