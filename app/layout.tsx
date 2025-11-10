@@ -1,16 +1,18 @@
+// app/layout.tsx
 import './globals.css';
-import CartProviderClient from './cart-provider';
+import type { Metadata } from 'next';
+import Providers from '@/components/Providers';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Loja da Jane — Ofertas e Moda',
-  description: 'Moda e estilo com os melhores preços!',
+  description: 'Sua loja demo com carrinho e checkout.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>
-        <CartProviderClient>{children}</CartProviderClient>
+      <body className="bg-neutral-950 text-white">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
