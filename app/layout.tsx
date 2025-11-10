@@ -2,7 +2,7 @@ import './globals.css';
 import CartProviderClient from './cart-provider';
 
 export const metadata = {
-  title: 'Loja do Jane — Ofertas e Moda',
+  title: 'Loja da Jane — Ofertas e Moda',
   description: 'Moda e estilo com os melhores preços!',
 };
 
