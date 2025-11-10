@@ -1,34 +1,50 @@
 export type Product = {
+  id: string;
   slug: string;
   name: string;
-  description: string;
   price: number;
-  image: string;
+  image: string;        // caminho relativo ao /public
+  compareAtPrice?: number;
+  description: string;
+  badge?: string;
 };
 
 export const products: Product[] = [
   {
+    id: 'moletom-cinza',
     slug: 'moletom-cinza',
     name: 'Moletom Cinza',
-    description: 'Moletom confortável e estiloso.',
     price: 159.9,
-    image:
-      'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1200&auto=format&fit=crop',
+    compareAtPrice: 189.9,
+    image: '/moletom.jpg',                 // << aqui usa o arquivo do /public
+    description: 'Moletom confortável e estiloso.',
+    badge: 'Promo'
   },
   {
-    slug: 'camiseta-preta',
-    name: 'Camiseta Preta',
-    description: 'Camiseta básica preta 100% algodão.',
-    price: 49.9,
-    image:
-      'https://images.unsplash.com/photo-1520975922119-5a1615471d74?q=80&w=1200&auto=format&fit=crop',
-  },
-  {
+    id: 'camiseta-branca',
     slug: 'camiseta-branca',
     name: 'Camiseta Branca',
-    description: 'Camiseta básica branca 100% algodão.',
     price: 49.9,
-    image:
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=1200&auto=format&fit=crop',
+    compareAtPrice: 59.9,
+    image: '/camiseta-branca.jpg',
+    description: 'Camiseta básica branca 100% algodão.'
   },
+  {
+    id: 'camiseta-preta',
+    slug: 'camiseta-preta',
+    name: 'Camiseta Preta',
+    price: 49.9,
+    compareAtPrice: 59.9,
+    image: '/camiseta-preta.jpg',
+    description: 'Camiseta básica preta 100% algodão.'
+  },
+  {
+    id: 'bone',
+    slug: 'bone',
+    name: 'Boné',
+    price: 79.9,
+    compareAtPrice: 99.9,
+    image: '/bone.jpg',
+    description: 'Boné casual, ajuste confortável.'
+  }
 ];
