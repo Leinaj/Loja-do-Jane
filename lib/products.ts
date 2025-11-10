@@ -1,49 +1,35 @@
-// lib/products.ts
 export type Product = {
-  id: string | number;
   slug: string;
   name: string;
+  description: string;
   price: number;
   oldPrice?: number;
-  image: string;       // caminho do /public
-  description?: string;
-  badge?: string;
+  image: string;
 };
 
 export const products: Product[] = [
   {
-    id: 1,
-    slug: 'moletom-cinza',
-    name: 'Moletom Cinza',
+    slug: "moletom-cinza",
+    name: "Moletom Cinza",
+    description: "Moletom confortável e estiloso.",
     price: 159.9,
     oldPrice: 189.9,
-    image: '/moletom.jpg',
-    description: 'Moletom confortável em algodão, ideal para dias frios.',
-    badge: 'Promoção ⚡',
+    image: "/brands/moletom-cinza.jpg",
   },
   {
-    id: 2,
-    slug: 'bone-street',
-    name: 'Boné Street',
-    price: 79.9,
-    image: '/bone.jpg',
-    description: 'Boné estiloso para completar o look.',
-    badge: 'Oferta 🔥',
-  },
-  {
-    id: 3,
-    slug: 'camiseta-branca',
-    name: 'Camiseta Branca',
+    slug: "camiseta-branca",
+    name: "Camiseta Branca",
+    description: "Camiseta leve e de alta qualidade.",
     price: 49.9,
-    image: '/camiseta-branca.jpg',
-    description: 'Camiseta básica branca 100% algodão.',
+    oldPrice: 59.9,
+    image: "/brands/camiseta-branca.jpg",
   },
   {
-    id: 4,
-    slug: 'camiseta-preta',
-    name: 'Camiseta Preta',
+    slug: "camiseta-preta",
+    name: "Camiseta Preta",
+    description: "Camiseta básica preta, ideal para o dia a dia.",
     price: 49.9,
-    image: '/camiseta-preta.jpg',
-    description: 'Camiseta básica preta 100% algodão.',
+    oldPrice: 59.9,
+    image: "/brands/camiseta-preta.jpg",
   },
 ];
