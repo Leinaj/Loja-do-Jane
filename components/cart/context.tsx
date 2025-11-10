@@ -1,82 +1,146 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  ReactNode,
+} from 'react';
 
-type CartItem = {
+export type CartItem = {
   id: string;
   name: string;
-  price: number;
+  price: number;     // preço unitário (em reais)
   image?: string;
   qty: number;
 };
 
 type Ctx = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'qty'> & { qty?: number }) => void;
-  setQty: (id: string, qty: number) => void;
+
+  addItem: (item: CartItem, qty?: number) => void;
+  updateQty: (id: string, qty: number) => void;
   removeItem: (id: string) => void;
   clear: () => void;
-  subtotal: number;
-  lastAdded?: CartItem | null;
+
+  // cupom, frete e totais
+  coupon: string | null;
+  applyCoupon: (code: string) => void;
+  shipping: number;
+  setShipping: (value: number) => void;
+
+  subtotal: number;  // soma dos itens
+  discount: number;  // valor de desconto aplicado
+  total: number;     // subtotal - desconto + frete
 };
 
-const CartCtx = createContext<Ctx | undefined>(undefined);
+const CartContext = createContext<Ctx | null>(null);
+const LS_KEY = 'jane.cart.v1';
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [lastAdded, setLastAdded] = useState<CartItem | null>(null);
+  const [coupon, setCoupon] = useState<string | null>(null);
+  const [shipping, setShipping] = useState<number>(0);
 
-  const addItem: Ctx['addItem'] = (item) => {
-    setItems((prev) => {
-      const idx = prev.findIndex((i) => i.id === item.id);
+  // hidrata do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        setItems(Array.isArray(data.items) ? data.items : []);
+        setCoupon(data.coupon ?? null);
+        setShipping(typeof data.shipping === 'number' ? data.shipping : 0);
+      }
+    } catch {}
+  }, []);
+
+  // persiste no localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        LS_KEY,
+        JSON.stringify({ items, coupon, shipping })
+      );
+    } catch {}
+  }, [items, coupon, shipping]);
+
+  const addItem: Ctx['addItem'] = (item, qty = 1) => {
+    setItems(prev => {
+      const idx = prev.findIndex(p => p.id === item.id);
       if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = { ...copy[idx], qty: copy[idx].qty + (item.qty ?? 1) };
-        setLastAdded(copy[idx]);
-        return copy;
-        }
-      const newItem: CartItem = {
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        qty: item.qty ?? 1,
-      };
-      setLastAdded(newItem);
-      return [...prev, newItem];
+        const clone = [...prev];
+        clone[idx] = { ...clone[idx], qty: clone[idx].qty + qty };
+        return clone;
+      }
+      return [...prev, { ...item, qty }];
     });
   };
 
-  const setQty: Ctx['setQty'] = (id, qty) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty } : i)));
+  const updateQty: Ctx['updateQty'] = (id, qty) => {
+    setItems(prev =>
+      prev
+        .map(p => (p.id === id ? { ...p, qty } : p))
+        .filter(p => p.qty > 0)
+    );
   };
 
-  const removeItem: Ctx['removeItem'] = (id) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem: Ctx['removeItem'] = id => {
+    setItems(prev => prev.filter(p => p.id !== id));
   };
 
-  const clear = () => setItems([]);
+  const clear: Ctx['clear'] = () => {
+    setItems([]);
+    // mantém cupom/frete; se quiser limpar tudo:
+    // setCoupon(null); setShipping(0);
+  };
+
+  const applyCoupon: Ctx['applyCoupon'] = code => {
+    // Exemplo simples: JANE10 = 10% OFF
+    setCoupon(code.trim().toUpperCase() || null);
+  };
 
   const subtotal = useMemo(
-    () => items.reduce((sum, i) => sum + i.price * i.qty, 0),
+    () => items.reduce((acc, i) => acc + i.price * i.qty, 0),
     [items]
   );
+
+  const discount = useMemo(() => {
+    if (!coupon) return 0;
+    if (coupon === 'JANE10') return subtotal * 0.1;
+    return 0;
+  }, [coupon, subtotal]);
+
+  const total = useMemo(() => {
+    return Math.max(0, subtotal - discount) + (shipping || 0);
+  }, [subtotal, discount, shipping]);
 
   const value: Ctx = {
     items,
     addItem,
-    setQty,
+    updateQty,
     removeItem,
     clear,
+
+    coupon,
+    applyCoupon,
+    shipping,
+    setShipping,
+
     subtotal,
-    lastAdded,
+    discount,
+    total,
   };
 
-  return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export function useCart(): Ctx {
-  const ctx = useContext(CartCtx);
-  if (!ctx) throw new Error('useCart must be used inside <CartProvider>');
+export function useCart() {
+  const ctx = useContext(CartContext);
+  if (!ctx) {
+    throw new Error('useCart precisa estar dentro de <CartProvider>');
+  }
   return ctx;
 }
