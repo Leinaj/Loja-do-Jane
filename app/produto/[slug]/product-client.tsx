@@ -1,9 +1,10 @@
-'use client';
-import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Product } from '@/components/products/data';
-import { useCart } from '@/components/cart/context';
+"use client";
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Product } from "@/components/products/data";
+import { useCart } from "@/components/cart/context";
+import AddedToast from "@/components/ui/added-toast";
 
 export default function ProductClient({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -11,8 +12,7 @@ export default function ProductClient({ product }: { product: Product }) {
   const [showToast, setShowToast] = useState(false);
 
   function addToCart() {
-    // O tipo AddItemInput não possui "quantity".
-    // Adiciona a mesma linha 'qty' vezes.
+    // addItem não aceita "quantity", então adicionamos N vezes
     for (let i = 0; i < qty; i++) {
       addItem({
         id: product.slug,
@@ -21,14 +21,14 @@ export default function ProductClient({ product }: { product: Product }) {
         image: product.image,
       });
     }
-
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
+    // fecha sozinho depois de 2.5s (igual ao seu print)
+    const t = setTimeout(() => setShowToast(false), 2500);
+    return () => clearTimeout(t);
   }
 
   return (
     <div className="space-y-6">
-      {/* imagem grande */}
       <div className="relative w-full h-80 overflow-hidden rounded-3xl bg-neutral-800">
         <Image src={product.image} alt={product.name} fill className="object-cover" />
       </div>
@@ -37,10 +37,10 @@ export default function ProductClient({ product }: { product: Product }) {
         <h1 className="text-4xl font-bold">{product.name}</h1>
         <p className="opacity-80">{product.description}</p>
         <div className="text-3xl text-emerald-400 font-extrabold">
-          R$ {product.price.toFixed(2).replace('.', ',')}
+          R$ {product.price.toFixed(2).replace(".", ",")}
         </div>
 
-        {/* quantidade */}
+        {/* Quantidade */}
         <div className="mt-3">
           <span className="block text-sm opacity-80 mb-2">Quantidade:</span>
           <div className="inline-flex items-center gap-3">
@@ -75,23 +75,13 @@ export default function ProductClient({ product }: { product: Product }) {
         </Link>
       </section>
 
-      {/* TOAST */}
-      {showToast && (
-        <div className="fixed left-4 right-4 bottom-6 z-50">
-          <div className="mx-auto max-w-xl rounded-2xl bg-neutral-900 border border-emerald-600/40 p-4 shadow-xl">
-            <div className="text-emerald-400 font-semibold">Produto adicionado!</div>
-            <div className="text-sm opacity-80">
-              {qty} × {product.name} foi adicionado ao carrinho.
-            </div>
-            <Link
-              href="/checkout"
-              className="mt-2 inline-block rounded-full border border-white/15 px-3 py-1 text-sm"
-            >
-              Ver carrinho
-            </Link>
-          </div>
-        </div>
-      )}
+      {/* Toast igual ao print */}
+      <AddedToast
+        open={showToast}
+        title="Produto adicionado!"
+        message={`${qty} × ${product.name} foi adicionado ao carrinho.`}
+        onClose={() => setShowToast(false)}
+      />
     </div>
   );
 }
