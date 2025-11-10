@@ -2,27 +2,24 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { products } from '@/components/products/data';
+// IMPORT RELATIVO para o data.ts
+import { products } from '../../../components/products/data';
 import { useCart } from '@/components/cart/context';
 
-type PageProps = {
-  params: { slug: string };
-};
+type PageProps = { params: { slug: string } };
 
 export default function ProductPage({ params }: PageProps) {
   const { addItem } = useCart();
   const product = products.find((p) => p.slug === params.slug);
 
   function handleAdd() {
-    // Garantia para o TypeScript e para runtime
     if (!product) return;
-
+    // ⬇️ NADA de quantity aqui (o provider controla isso)
     addItem({
       id: product.slug,
       name: product.name,
       price: product.price,
       image: product.image,
-      quantity: 1,
     });
   }
 
@@ -31,9 +28,7 @@ export default function ProductPage({ params }: PageProps) {
       <main className="mx-auto max-w-4xl p-6">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
           <h1 className="mb-3 text-3xl font-bold">Produto não encontrado</h1>
-          <p className="mb-6 text-zinc-400">
-            Parece que este item não existe mais.
-          </p>
+          <p className="mb-6 text-zinc-400">Este item não existe mais.</p>
           <Link
             href="/"
             className="inline-block rounded-xl bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700"
