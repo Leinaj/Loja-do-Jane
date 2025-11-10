@@ -11,13 +11,17 @@ export default function ProductClient({ product }: { product: Product }) {
   const [showToast, setShowToast] = useState(false);
 
   function addToCart() {
-    addItem({
-      id: product.slug,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: qty,
-    });
+    // O tipo AddItemInput não possui "quantity".
+    // Adiciona a mesma linha 'qty' vezes.
+    for (let i = 0; i < qty; i++) {
+      addItem({
+        id: product.slug,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+      });
+    }
+
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
   }
@@ -40,11 +44,19 @@ export default function ProductClient({ product }: { product: Product }) {
         <div className="mt-3">
           <span className="block text-sm opacity-80 mb-2">Quantidade:</span>
           <div className="inline-flex items-center gap-3">
-            <button onClick={() => setQty((q) => Math.max(1, q - 1))}
-              className="w-10 h-10 rounded-xl border border-white/10">−</button>
+            <button
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              className="w-10 h-10 rounded-xl border border-white/10"
+            >
+              −
+            </button>
             <span className="w-10 text-center">{qty}</span>
-            <button onClick={() => setQty((q) => q + 1)}
-              className="w-10 h-10 rounded-xl border border-white/10">+</button>
+            <button
+              onClick={() => setQty((q) => q + 1)}
+              className="w-10 h-10 rounded-xl border border-white/10"
+            >
+              +
+            </button>
           </div>
         </div>
 
