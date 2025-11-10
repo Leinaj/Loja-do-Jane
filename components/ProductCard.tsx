@@ -1,39 +1,40 @@
-import Link from "next/link";
 import Image from "next/image";
-import { Product } from "@/components/products/data";
+import Link from "next/link";
+import type { Product } from "./products/data";
+
+function brl(n: number) {
+  return n.toFixed(2).replace(".", ",");
+}
 
 export default function ProductCard({ p }: { p: Product }) {
   return (
-    <div className="rounded-3xl bg-neutral-900 border border-white/10 p-4 space-y-4">
-      {/* container da imagem com altura/aspect ratio */}
-      <div className="relative w-full aspect-[16/9] overflow-hidden rounded-2xl bg-neutral-800">
+    <div className="rounded-2xl bg-neutral-900 p-4 shadow-lg">
+      <div className="mb-4 overflow-hidden rounded-xl">
+        {/* width/height garantem render no Next/Image em produção */}
         <Image
           src={p.image}
           alt={p.name}
-          fill
-          sizes="(max-width: 640px) 100vw, 50vw"
-          className="object-cover"
-          priority
+          width={800}
+          height={520}
+          className="h-52 w-full object-cover"
+          priority={false}
         />
       </div>
 
-      <div className="space-y-1">
-        <h3 className="text-xl font-semibold">{p.name}</h3>
-        <div className="flex items-center gap-3">
-          <span className="text-emerald-400 text-2xl font-extrabold">
-            R$ {p.price.toFixed(2).replace(".", ",")}
+      <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
+
+      <div className="mb-4 flex items-baseline gap-3">
+        <span className="text-2xl text-emerald-400">R$ {brl(p.price)}</span>
+        {p.oldPrice && (
+          <span className="text-neutral-400 line-through opacity-60">
+            R$ {brl(p.oldPrice)}
           </span>
-          {p.oldPrice && (
-            <span className="line-through opacity-60">
-              R$ {p.oldPrice.toFixed(2).replace(".", ",")}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
       <Link
         href={`/produto/${p.slug}`}
-        className="w-full text-center rounded-full bg-emerald-600 text-white py-3"
+        className="block rounded-xl bg-emerald-600 py-3 text-center font-medium text-white hover:bg-emerald-500"
       >
         Ver produto
       </Link>
