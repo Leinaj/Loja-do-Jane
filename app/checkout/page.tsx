@@ -1,16 +1,10 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/components/cart/context';
 
-export const dynamic = 'force-dynamic'; // garante render no client side
-
 export default function CheckoutPage() {
-  // este componente precisa ser client para usar o contexto
-  return <CheckoutClient />;
-}
-
-'use client';
-function CheckoutClient() {
   const { items, total, removeItem, clearCart } = useCart();
 
   return (
@@ -32,7 +26,7 @@ function CheckoutClient() {
                 key={it.id}
                 className="flex items-center gap-4 rounded-xl border border-white/10 bg-neutral-800 p-4"
               >
-                {/* MINIATURA */}
+                {/* Miniatura */}
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-neutral-700">
                   <Image
                     src={it.image}
@@ -80,7 +74,7 @@ function CheckoutClient() {
         )}
       </section>
 
-      {/* … sua seção de endereço / resumo permanece igual … */}
+      {/* Continue aqui com as seções de Endereço / Resumo que você já tem */}
     </main>
   );
 }
