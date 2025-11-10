@@ -1,213 +1,150 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useCart } from '@/components/cart/context';
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCart } from "@/components/cart/CartProviderClient";
 
-type CheckoutInfo = {
-  name: string; phone: string; cep: string;
-  street: string; number: string; complement: string;
-  district: string; city: string; state: string;
-};
-
-const DEFAULT_INFO: CheckoutInfo = {
-  name: 'JANIEL BATISTA DOS SANTOS',
-  phone: '44988606483',
-  cep: '',
-  street: '', number: '69', complement: '',
-  district: '', city: 'Maringá', state: 'PR',
-};
-const STORAGE_KEY = 'checkoutInfo';
+function brl(n: number) {
+  return n.toFixed(2).replace(".", ",");
+}
 
 export default function CheckoutPage() {
   const { items, total, removeItem, clearCart } = useCart();
 
-  const initial = useMemo<CheckoutInfo>(() => {
-    if (typeof window === 'undefined') return DEFAULT_INFO;
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      return saved ? { ...DEFAULT_INFO, ...JSON.parse(saved) } : DEFAULT_INFO;
-    } catch { return DEFAULT_INFO; }
-  }, []);
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("44988606483");
+  const [cep, setCep] = useState("");
+  const [rua, setRua] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [buscando, setBuscando] = useState(false);
 
-  const [info, setInfo] = useState<CheckoutInfo>(initial);
-  const onChange = (k: keyof CheckoutInfo) => (e: any) =>
-    setInfo((s) => ({ ...s, [k]: e.target.value }));
-
+  // Preencher endereço automaticamente (ViaCEP)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
-    }
-  }, [info]);
+    const c = cep.replace(/\D/g, "");
+    if (c.length !== 8) return;
+    setBuscando(true);
+    fetch(`https://viacep.com.br/ws/${c}/json/`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.erro) {
+          setRua(d.logradouro || "");
+          setBairro(d.bairro || "");
+          setCidade(d.localidade || "");
+          setEstado(d.uf || "");
+        }
+      })
+      .finally(() => setBuscando(false));
+  }, [cep]);
 
-  /* === CEP -> ViaCEP === */
-  useEffect(() => {
-    const cep = info.cep?.replace(/\D/g, '');
-    if (cep && cep.length === 8) {
-      fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (!data.erro) {
-            setInfo((s) => ({
-              ...s,
-              street: data.logradouro || s.street,
-              district: data.bairro || s.district,
-              city: data.localidade || s.city,
-              state: data.uf || s.state,
-            }));
-          }
-        })
-        .catch(() => {});
-    }
-  }, [info.cep]);
-
-  /* === WhatsApp === */
-  const waHref = useMemo(() => {
-    const lines = [
-      '*Novo pedido*',
+  const msgWhats = useMemo(() => {
+    const linhas = [
+      "*Novo pedido*",
+      "",
+      "*Itens:*",
       ...items.map(
-        (it) => `- ${it.quantity} × ${it.name} — R$ ${(it.price * it.quantity).toFixed(2).replace('.', ',')}`
+        (it) => `• ${it.name} — R$ ${brl(it.price)}`
       ),
-      `*Total:* R$ ${total.toFixed(2).replace('.', ',')}`,
-      '',
-      '*Dados do cliente*',
-      `Nome: ${info.name}`,
-      `Telefone: ${info.phone}`,
-      `CEP: ${info.cep}`,
-      `Endereço: ${info.street}, ${info.number} ${info.complement ? ' - ' + info.complement : ''}`,
-      `Bairro: ${info.district}`,
-      `Cidade/UF: ${info.city}/${info.state}`,
-    ].join('\n');
+      "",
+      `*Total:* R$ ${brl(total)}`,
+      "",
+      "*Dados do cliente:*",
+      `Nome: ${nome}`,
+      `Telefone: ${telefone}`,
+      `Endereço: ${rua}, ${numero} ${complemento ? "- " + complemento : ""}`,
+      `Bairro: ${bairro}`,
+      `Cidade/UF: ${cidade}/${estado}`,
+      `CEP: ${cep}`,
+    ];
+    return linhas.join("\n");
+  }, [items, total, nome, telefone, rua, numero, complemento, bairro, cidade, estado, cep]);
 
-    const number = '5544988606483';
-    return `https://wa.me/${number}?text=${encodeURIComponent(lines)}`;
-  }, [items, total, info]);
+  const linkWhats = `https://wa.me/5544988606483?text=${encodeURIComponent(msgWhats)}`;
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* Carrinho */}
-      <section className="rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-lg">
-        <h1 className="text-2xl font-semibold mb-4">Carrinho</h1>
+    <div className="mx-auto max-w-3xl p-4 md:p-8">
+      <h1 className="mb-6 text-3xl font-bold">Carrinho</h1>
 
-        {items.length === 0 ? (
-          <div className="rounded-xl border border-white/10 p-6 text-center">
-            <p className="mb-4 opacity-80">Seu carrinho está vazio.</p>
-            <Link href="/" className="inline-block rounded-full bg-emerald-600 text-white px-5 py-2">
-              Voltar para a loja
-            </Link>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {items.map((it) => (
-                <div key={it.id} className="flex items-center gap-4 rounded-xl border border-white/10 bg-neutral-800 p-4">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-neutral-700">
-                    <Image src={it.image} alt={it.name} fill className="object-cover" sizes="56px" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{it.name}</div>
-                    <div className="text-sm opacity-80">
-                      {it.quantity} × R$ {it.price.toFixed(2).replace('.', ',')}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">
-                      R$ {(it.price * it.quantity).toFixed(2).replace('.', ',')}
-                    </div>
-                    <button
-                      onClick={() => removeItem(it.id)}
-                      className="mt-2 rounded-full bg-rose-700/70 px-3 py-1 text-sm text-white"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-lg">
-                <span className="opacity-80">Total: </span>
-                <strong>R$ {total.toFixed(2).replace('.', ',')}</strong>
+      {/* Lista do carrinho com miniaturas */}
+      <div className="mb-8 space-y-4">
+        {items.map((it) => (
+          <div key={it.id} className="flex items-center justify-between rounded-2xl bg-neutral-900 p-4">
+            <div className="flex items-center gap-4">
+              <div className="overflow-hidden rounded-xl">
+                <Image
+                  src={it.image}
+                  alt={it.name}
+                  width={72}
+                  height={72}
+                  className="h-[72px] w-[72px] object-cover"
+                />
               </div>
-              <button onClick={clearCart} className="rounded-full border border-white/15 px-4 py-2">
-                Limpar carrinho
-              </button>
+              <div>
+                <div className="font-medium">{it.name}</div>
+                <div className="text-sm text-neutral-400">R$ {brl(it.price)}</div>
+              </div>
             </div>
-          </>
-        )}
-      </section>
+            <button
+              className="rounded-xl bg-rose-700 px-4 py-2 text-white"
+              onClick={() => removeItem(it.id)}
+            >
+              Remover
+            </button>
+          </div>
+        ))}
 
-      {/* Endereço / Dados */}
-      <section className="rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-lg space-y-4">
-        <h2 className="text-xl font-semibold">Endereço</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block">
-            <span className="text-sm opacity-80">Nome *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.name} onChange={onChange('name')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Telefone *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.phone} onChange={onChange('phone')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">CEP *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.cep} onChange={onChange('cep')} placeholder="Somente números" />
-          </label>
-
-          <label className="block md:col-span-2">
-            <span className="text-sm opacity-80">Rua *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.street} onChange={onChange('street')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Número *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.number} onChange={onChange('number')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Complemento</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.complement} onChange={onChange('complement')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Bairro *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.district} onChange={onChange('district')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Cidade *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.city} onChange={onChange('city')} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm opacity-80">Estado *</span>
-            <input className="mt-1 w-full rounded-xl bg-neutral-800 border border-white/10 px-4 py-3"
-              value={info.state} onChange={onChange('state')} />
-          </label>
+        <div className="flex items-center justify-between rounded-2xl bg-neutral-900 p-4">
+          <div className="text-xl">
+            Total: <span className="font-semibold text-emerald-400">R$ {brl(total)}</span>
+          </div>
+          <button
+            className="rounded-xl border border-white/20 px-4 py-2"
+            onClick={() => clearCart()}
+          >
+            Limpar carrinho
+          </button>
         </div>
+      </div>
 
-        {/* Finalizar compra (WhatsApp) */}
+      {/* Endereço */}
+      <h2 className="mb-4 text-2xl font-semibold">Endereço</h2>
+      <div className="space-y-4">
+        <input className="w-full rounded-xl bg-neutral-900 p-3" placeholder="Nome *" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <input className="w-full rounded-xl bg-neutral-900 p-3" placeholder="Telefone *" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+        <input className="w-full rounded-xl bg-neutral-900 p-3" placeholder="CEP *" value={cep} onChange={(e) => setCep(e.target.value)} />
+        {buscando && <div className="text-sm text-neutral-400">Buscando endereço…</div>}
+        <input className="w-full rounded-xl bg-neutral-900 p-3" placeholder="Rua *" value={rua} onChange={(e) => setRua(e.target.value)} />
+        <div className="grid grid-cols-2 gap-4">
+          <input className="rounded-xl bg-neutral-900 p-3" placeholder="Número *" value={numero} onChange={(e) => setNumero(e.target.value)} />
+          <input className="rounded-xl bg-neutral-900 p-3" placeholder="Complemento" value={complemento} onChange={(e) => setComplemento(e.target.value)} />
+        </div>
+        <input className="w-full rounded-xl bg-neutral-900 p-3" placeholder="Bairro *" value={bairro} onChange={(e) => setBairro(e.target.value)} />
+        <div className="grid grid-cols-2 gap-4">
+          <input className="rounded-xl bg-neutral-900 p-3" placeholder="Cidade *" value={cidade} onChange={(e) => setCidade(e.target.value)} />
+          <input className="rounded-xl bg-neutral-900 p-3" placeholder="Estado *" value={estado} onChange={(e) => setEstado(e.target.value)} />
+        </div>
+      </div>
+
+      {/* Finalizar compra (WhatsApp) */}
+      <div className="mt-8 flex gap-4">
         <a
-          href={waHref}
+          href={linkWhats}
           target="_blank"
-          className="mt-4 inline-block rounded-full bg-emerald-600 text-white px-6 py-3 text-lg"
+          className="flex-1 rounded-2xl bg-emerald-600 py-4 text-center text-lg font-semibold text-white hover:bg-emerald-500"
         >
           Finalizar compra no WhatsApp
         </a>
-      </section>
-    </main>
+        <Link
+          href="/"
+          className="flex-1 rounded-2xl border border-white/20 py-4 text-center text-lg"
+        >
+          Voltar para a loja
+        </Link>
+      </div>
+    </div>
   );
 }
