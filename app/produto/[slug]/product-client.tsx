@@ -1,53 +1,83 @@
 'use client';
-
 import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Product } from '@/components/products/data';
 import { useCart } from '@/components/cart/context';
 
-type ProductClientProps = {
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    description?: string;
-  };
-};
-
-export default function ProductClient({ product }: ProductClientProps) {
+export default function ProductClient({ product }: { product: Product }) {
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
   const [showToast, setShowToast] = useState(false);
 
-  const onAdd = () => {
-    // envia image para o carrinho
-    addItem(
-      { id: product.id, name: product.name, price: product.price, image: product.image },
-      qty
-    );
+  function addToCart() {
+    addItem({
+      id: product.slug,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: qty,
+    });
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
-  };
+  }
 
   return (
-    <div className="space-y-4">
-      {/* ... seu layout ... */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 rounded-lg border">-</button>
-        <span className="w-10 text-center">{qty}</span>
-        <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 rounded-lg border">+</button>
+    <div className="space-y-6">
+      {/* imagem grande */}
+      <div className="relative w-full h-80 overflow-hidden rounded-3xl bg-neutral-800">
+        <Image src={product.image} alt={product.name} fill className="object-cover" />
       </div>
 
-      <button onClick={onAdd} className="w-full rounded-full bg-emerald-600 text-white py-3">
-        Adicionar ao carrinho
-      </button>
+      <section className="rounded-3xl bg-neutral-900 border border-white/10 p-6 shadow-lg space-y-2">
+        <h1 className="text-4xl font-bold">{product.name}</h1>
+        <p className="opacity-80">{product.description}</p>
+        <div className="text-3xl text-emerald-400 font-extrabold">
+          R$ {product.price.toFixed(2).replace('.', ',')}
+        </div>
 
-      {showToast && (
-        <div className="fixed left-4 right-4 bottom-6 md:left-auto md:w-[420px] md:right-6 rounded-xl bg-emerald-700/90 text-white p-4 shadow-lg">
-          <div className="font-semibold">Produto adicionado!</div>
-          <div className="opacity-90 text-sm mt-1">
-            {qty} × {product.name} foi adicionado ao carrinho
+        {/* quantidade */}
+        <div className="mt-3">
+          <span className="block text-sm opacity-80 mb-2">Quantidade:</span>
+          <div className="inline-flex items-center gap-3">
+            <button onClick={() => setQty((q) => Math.max(1, q - 1))}
+              className="w-10 h-10 rounded-xl border border-white/10">−</button>
+            <span className="w-10 text-center">{qty}</span>
+            <button onClick={() => setQty((q) => q + 1)}
+              className="w-10 h-10 rounded-xl border border-white/10">+</button>
           </div>
-          <a href="/checkout" className="inline-block mt-3 px-3 py-1 rounded-full bg-white/15">Ver carrinho</a>
+        </div>
+
+        <button
+          onClick={addToCart}
+          className="mt-4 w-full rounded-full bg-emerald-600 text-white py-3 text-lg"
+        >
+          Adicionar ao carrinho
+        </button>
+
+        <Link
+          href="/"
+          className="mt-3 block w-full rounded-full border border-white/15 py-3 text-center"
+        >
+          Voltar para a loja
+        </Link>
+      </section>
+
+      {/* TOAST */}
+      {showToast && (
+        <div className="fixed left-4 right-4 bottom-6 z-50">
+          <div className="mx-auto max-w-xl rounded-2xl bg-neutral-900 border border-emerald-600/40 p-4 shadow-xl">
+            <div className="text-emerald-400 font-semibold">Produto adicionado!</div>
+            <div className="text-sm opacity-80">
+              {qty} × {product.name} foi adicionado ao carrinho.
+            </div>
+            <Link
+              href="/checkout"
+              className="mt-2 inline-block rounded-full border border-white/15 px-3 py-1 text-sm"
+            >
+              Ver carrinho
+            </Link>
+          </div>
         </div>
       )}
     </div>
