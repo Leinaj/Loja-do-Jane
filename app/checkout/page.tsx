@@ -5,10 +5,10 @@ import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-// Acesse seu contexto como "any" para não dar erro de tipo em propriedades opcionais
-import { useCart } from '@/components/cart/context' as any;
+// importa o hook do carrinho normalmente e faz o cast depois
+import { useCart as useCartBase } from '@/components/cart/context';
 
-// Componentes de UI (ajuste os caminhos se os seus forem diferentes)
+// Componentes de UI (ajuste os caminhos se precisar)
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,8 @@ type Endereco = {
 };
 
 export default function CheckoutPage() {
-  const cart = (useCart() as any) || {};
+  // cast para any aqui, não no import
+  const cart = (useCartBase() as any) || {};
   const items = cart.items ?? [];
 
   // formulário de endereço
@@ -51,10 +52,10 @@ export default function CheckoutPage() {
   const [cupom, setCupom] = useState<string>('');
   const [cupomValido, setCupomValido] = useState<boolean>(false);
 
-  // frete (valor simples só para exemplo; ajuste se tiver cálculo real)
+  // frete (simples)
   const [frete, setFrete] = useState<number>(24.4);
 
-  // Subtotal calculado localmente com base nos itens do carrinho
+  // Subtotal a partir dos itens
   const subtotal = useMemo(() => {
     return (items as any[]).reduce((acc, it) => {
       const price = Number(it?.price ?? it?.preco ?? 0);
@@ -66,7 +67,7 @@ export default function CheckoutPage() {
   const desconto = cupomValido ? subtotal * 0.1 : 0; // JANE10 = 10%
   const total = Math.max(0, subtotal - desconto) + (items.length ? frete : 0);
 
-  // Consulta simples de CEP (ViaCEP). Opcional: remova se não quiser.
+  // Autopreenche via CEP (opcional)
   useEffect(() => {
     const cep = end.cep.replace(/\D/g, '');
     if (cep.length !== 8) return;
@@ -96,7 +97,6 @@ export default function CheckoutPage() {
   const aplicarCupom = () => {
     if (cupom.trim().toUpperCase() === 'JANE10') {
       setCupomValido(true);
-      // se seu contexto tiver applyCoupon, ainda chama:
       cart.applyCoupon?.(cupom.trim());
     } else {
       setCupomValido(false);
@@ -104,13 +104,10 @@ export default function CheckoutPage() {
   };
 
   const limparCarrinho = () => cart.clear?.();
-
   const removerItem = (id: string | number) => cart.removeItem?.(id);
 
   const alterarQtd = (id: string | number, nextQty: number) => {
     if (nextQty < 1) return;
-    // tente a API do seu contexto; como não sabemos o nome exato,
-    // chamamos opções comuns de maneira opcional:
     cart.updateItemQuantity?.(id, nextQty);
     cart.setQuantity?.(id, nextQty);
     cart.updateItem?.(id, { quantity: nextQty });
@@ -209,7 +206,7 @@ export default function CheckoutPage() {
         </CardContent>
       </Card>
 
-      {/* Endereço + Cupom + Resumo */}
+      {/* Endereço + Resumo */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Endereço */}
         <Card className="lg:col-span-2">
