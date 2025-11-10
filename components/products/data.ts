@@ -1,50 +1,51 @@
+// components/products/data.ts
+
 export type Product = {
-  id: string;
   slug: string;
   name: string;
-  price: number;
-  image: string;        // caminho relativo ao /public
-  compareAtPrice?: number;
   description: string;
-  badge?: string;
+  price: number;
+  image: string;
+  /** preço antigo (opcional) para aparecer riscado */
+  oldPrice?: number;
 };
 
 export const products: Product[] = [
   {
-    id: 'moletom-cinza',
-    slug: 'moletom-cinza',
-    name: 'Moletom Cinza',
+    slug: "moletom-cinza",
+    name: "Moletom Cinza",
+    description: "Moletom confortável e estiloso.",
     price: 159.9,
-    compareAtPrice: 189.9,
-    image: '/moletom.jpg',                 // << aqui usa o arquivo do /public
-    description: 'Moletom confortável e estiloso.',
-    badge: 'Promo'
+    oldPrice: 189.9,
+    image: "/moletom.jpg",
   },
   {
-    id: 'camiseta-branca',
-    slug: 'camiseta-branca',
-    name: 'Camiseta Branca',
+    slug: "camiseta-branca",
+    name: "Camiseta Branca",
+    description: "Camiseta básica branca 100% algodão.",
     price: 49.9,
-    compareAtPrice: 59.9,
-    image: '/camiseta-branca.jpg',
-    description: 'Camiseta básica branca 100% algodão.'
+    oldPrice: 59.9,
+    image: "/camiseta-branca.jpg",
   },
   {
-    id: 'camiseta-preta',
-    slug: 'camiseta-preta',
-    name: 'Camiseta Preta',
+    slug: "camiseta-preta",
+    name: "Camiseta Preta",
+    description: "Camiseta básica preta 100% algodão.",
     price: 49.9,
-    compareAtPrice: 59.9,
-    image: '/camiseta-preta.jpg',
-    description: 'Camiseta básica preta 100% algodão.'
+    oldPrice: 59.9,
+    image: "/camiseta-preta.jpg",
   },
   {
-    id: 'bone',
-    slug: 'bone',
-    name: 'Boné',
-    price: 79.9,
-    compareAtPrice: 99.9,
-    image: '/bone.jpg',
-    description: 'Boné casual, ajuste confortável.'
-  }
+    slug: "bone",
+    name: "Boné",
+    description: "Boné clássico ajustável.",
+    price: 39.9,
+    // sem oldPrice, não mostra riscado
+    image: "/bone.jpg",
+  },
 ];
+
+// helper (se você usa em alguma página)
+export function getProductBySlug(slug: string) {
+  return products.find((p) => p.slug === slug);
+}
