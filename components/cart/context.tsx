@@ -1,82 +1,78 @@
-// components/cart/context.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type CartItem = {
   id: string;
   name: string;
   price: number;
-  image?: string;
+  image: string;      // << miniatura
   quantity: number;
 };
 
+type AddItemInput = Omit<CartItem, 'quantity'>;
+
 type CartCtx = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
+  total: number;
+  addItem: (item: AddItemInput, qty?: number) => void;
   removeItem: (id: string) => void;
-  updateItemQuantity: (id: string, qty: number) => void;
-  clear: () => void;
-  applyCoupon: (code: string) => void;
-  coupon?: string | null;
+  clearCart: () => void;
 };
 
-const Ctx = createContext<CartCtx | null>(null);
+const CartContext = createContext<CartCtx | null>(null);
+
+const STORAGE_KEY = 'cart:v1';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [coupon, setCoupon] = useState<string | null>(null);
 
-  // carrega do localStorage
+  // carregar do localStorage no client
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('cart:v1');
+      const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) setItems(JSON.parse(raw));
-      const c = localStorage.getItem('cart:coupon');
-      if (c) setCoupon(c);
     } catch {}
   }, []);
 
-  // salva
+  // persistir no localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('cart:v1', JSON.stringify(items));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {}
   }, [items]);
 
-  const addItem: CartCtx['addItem'] = (item, qty = 1) => {
+  const addItem = (item: AddItemInput, qty: number = 1) => {
     setItems((prev) => {
-      const idx = prev.findIndex((i) => i.id === item.id);
-      if (idx >= 0) {
-        const clone = [...prev];
-        clone[idx] = { ...clone[idx], quantity: clone[idx].quantity + qty };
-        return clone;
+      const i = prev.findIndex((p) => p.id === item.id);
+      if (i >= 0) {
+        const copy = [...prev];
+        copy[i] = { ...copy[i], quantity: copy[i].quantity + qty };
+        return copy;
+        } else {
+        return [...prev, { ...item, quantity: qty }];
       }
-      return [...prev, { ...item, quantity: qty }];
     });
   };
 
-  const removeItem = (id: string) => setItems((p) => p.filter((i) => i.id !== id));
-  const updateItemQuantity = (id: string, qty: number) =>
-    setItems((p) => p.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, qty) } : i)));
-  const clear = () => setItems([]);
-  const applyCoupon = (code: string) => {
-    setCoupon(code);
-    try {
-      localStorage.setItem('cart:coupon', code);
-    } catch {}
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const value = useMemo(
-    () => ({ items, addItem, removeItem, updateItemQuantity, clear, applyCoupon, coupon }),
-    [items, coupon]
+  const clearCart = () => setItems([]);
+
+  const total = useMemo(
+    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
+    [items]
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  const value: CartCtx = { items, total, addItem, removeItem, clearCart };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error('useCart precisa estar dentro de <CartProvider>');
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error('useCart must be used within CartProvider');
   return ctx;
 }
