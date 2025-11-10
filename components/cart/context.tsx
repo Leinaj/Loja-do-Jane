@@ -1,140 +1,82 @@
+// components/cart/context.tsx
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useMemo,
-  ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 export type CartItem = {
   id: string;
   name: string;
   price: number;
   image?: string;
-  qty: number;
+  quantity: number;
 };
 
-type Ctx = {
+type CartCtx = {
   items: CartItem[];
-  addItem: (item: CartItem, qty?: number) => void;
-  updateQty: (id: string, qty: number) => void;
+  addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
   removeItem: (id: string) => void;
+  updateItemQuantity: (id: string, qty: number) => void;
   clear: () => void;
   applyCoupon: (code: string) => void;
-  setShipping: (v: number) => void;
-
-  coupon: string | null;
-  shipping: number;
-  subtotal: number;
-  discount: number;
-  total: number;
-
-  // 🔥 novo campo para o toast
-  lastAdded: CartItem | null;
+  coupon?: string | null;
 };
 
-const CartContext = createContext<Ctx | null>(null);
-const LS_KEY = 'jane.cart.v1';
+const Ctx = createContext<CartCtx | null>(null);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [coupon, setCoupon] = useState<string | null>(null);
-  const [shipping, setShipping] = useState<number>(0);
-  const [lastAdded, setLastAdded] = useState<CartItem | null>(null);
 
-  // carregar localStorage
+  // carrega do localStorage
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        if (Array.isArray(data.items)) setItems(data.items);
-        if (data.coupon) setCoupon(data.coupon);
-        if (typeof data.shipping === 'number') setShipping(data.shipping);
-      }
+      const raw = localStorage.getItem('cart:v1');
+      if (raw) setItems(JSON.parse(raw));
+      const c = localStorage.getItem('cart:coupon');
+      if (c) setCoupon(c);
     } catch {}
   }, []);
 
-  // salvar localStorage
+  // salva
   useEffect(() => {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ items, coupon, shipping }));
+      localStorage.setItem('cart:v1', JSON.stringify(items));
     } catch {}
-  }, [items, coupon, shipping]);
+  }, [items]);
 
-  const addItem: Ctx['addItem'] = (item, qty = 1) => {
+  const addItem: CartCtx['addItem'] = (item, qty = 1) => {
     setItems((prev) => {
-      const existing = prev.find((p) => p.id === item.id);
-      let updated;
-      if (existing) {
-        updated = prev.map((p) =>
-          p.id === item.id ? { ...p, qty: p.qty + qty } : p
-        );
-      } else {
-        updated = [...prev, { ...item, qty }];
+      const idx = prev.findIndex((i) => i.id === item.id);
+      if (idx >= 0) {
+        const clone = [...prev];
+        clone[idx] = { ...clone[idx], quantity: clone[idx].quantity + qty };
+        return clone;
       }
-      setLastAdded({ ...item, qty }); // 🔥 salva o último adicionado
-      return updated;
+      return [...prev, { ...item, quantity: qty }];
     });
   };
 
-  const updateQty: Ctx['updateQty'] = (id, qty) =>
-    setItems((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, qty } : p)).filter((p) => p.qty > 0)
-    );
-
-  const removeItem: Ctx['removeItem'] = (id) =>
-    setItems((prev) => prev.filter((p) => p.id !== id));
-
-  const clear: Ctx['clear'] = () => {
-    setItems([]);
-    setCoupon(null);
-    setShipping(0);
+  const removeItem = (id: string) => setItems((p) => p.filter((i) => i.id !== id));
+  const updateItemQuantity = (id: string, qty: number) =>
+    setItems((p) => p.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, qty) } : i)));
+  const clear = () => setItems([]);
+  const applyCoupon = (code: string) => {
+    setCoupon(code);
+    try {
+      localStorage.setItem('cart:coupon', code);
+    } catch {}
   };
 
-  const applyCoupon: Ctx['applyCoupon'] = (code) => {
-    setCoupon(code.trim().toUpperCase() || null);
-  };
-
-  const subtotal = useMemo(
-    () => items.reduce((acc, i) => acc + i.price * i.qty, 0),
-    [items]
+  const value = useMemo(
+    () => ({ items, addItem, removeItem, updateItemQuantity, clear, applyCoupon, coupon }),
+    [items, coupon]
   );
 
-  const discount = useMemo(() => {
-    if (coupon === 'JANE10') return subtotal * 0.1;
-    return 0;
-  }, [coupon, subtotal]);
-
-  const total = useMemo(
-    () => Math.max(0, subtotal - discount) + (shipping || 0),
-    [subtotal, discount, shipping]
-  );
-
-  const value: Ctx = {
-    items,
-    addItem,
-    updateQty,
-    removeItem,
-    clear,
-    applyCoupon,
-    setShipping,
-    coupon,
-    shipping,
-    subtotal,
-    discount,
-    total,
-    lastAdded, // ✅ agora existe!
-  };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
+  const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useCart precisa estar dentro de <CartProvider>');
   return ctx;
 }
