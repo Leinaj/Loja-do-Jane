@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useCart } from "@/components/cart/CartProviderClient";
+import { useCart } from "@/components/cart/CartProvider";
 import type { Product } from "@/components/products/data";
 
 function brl(n: number) {
