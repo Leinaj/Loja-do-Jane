@@ -23,13 +23,15 @@ export default function ProductClient({ product }: ProductClientProps) {
   const [showToast, setShowToast] = useState(false);
 
   function handleAdd() {
-    addItem({
-      id: product.slug,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: qty, // 👈 agora atende o tipo do carrinho
-    });
+    // chama addItem N vezes, de acordo com a quantidade
+    for (let i = 0; i < qty; i++) {
+      addItem({
+        id: product.slug,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+      });
+    }
 
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
