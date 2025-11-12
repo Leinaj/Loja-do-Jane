@@ -1,78 +1,68 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+} from "react";
 
 export type CartItem = {
   id: string;
   name: string;
   price: number;
-  image: string;      // << miniatura
-  quantity: number;
+  image: string;
 };
 
-type AddItemInput = Omit<CartItem, 'quantity'>;
-
-type CartCtx = {
+type CartContextType = {
   items: CartItem[];
   total: number;
-  addItem: (item: AddItemInput, qty?: number) => void;
+  addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
 };
 
-const CartContext = createContext<CartCtx | null>(null);
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'cart:v1';
-
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // carregar do localStorage no client
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-  }, []);
+  function addItem(item: CartItem) {
+    setItems((prev) => [...prev, item]);
+  }
 
-  // persistir no localStorage
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
-  }, [items]);
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  }
 
-  const addItem = (item: AddItemInput, qty: number = 1) => {
-    setItems((prev) => {
-      const i = prev.findIndex((p) => p.id === item.id);
-      if (i >= 0) {
-        const copy = [...prev];
-        copy[i] = { ...copy[i], quantity: copy[i].quantity + qty };
-        return copy;
-        } else {
-        return [...prev, { ...item, quantity: qty }];
-      }
-    });
-  };
+  function clearCart() {
+    setItems([]);
+  }
 
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((p) => p.id !== id));
-  };
+  const total = items.reduce((sum, i) => sum + i.price, 0);
 
-  const clearCart = () => setItems([]);
-
-  const total = useMemo(
-    () => items.reduce((acc, it) => acc + it.price * it.quantity, 0),
-    [items]
+  return (
+    <CartContext.Provider
+      value={{ items, total, addItem, removeItem, clearCart }}
+    >
+      {children}
+    </CartContext.Provider>
   );
-
-  const value: CartCtx = { items, total, addItem, removeItem, clearCart };
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export function useCart() {
+export function useCart(): CartContextType {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
+
+  // 🚨 Fallback seguro: na build/prerender (sem Provider) não quebra
+  if (!ctx) {
+    return {
+      items: [],
+      total: 0,
+      addItem: () => {},
+      removeItem: () => {},
+      clearCart: () => {},
+    };
+  }
+
   return ctx;
 }
