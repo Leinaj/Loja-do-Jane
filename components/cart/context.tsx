@@ -53,7 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 export function useCart(): CartContextType {
   const ctx = useContext(CartContext);
 
-  // 🚨 Fallback seguro: na build/prerender (sem Provider) não quebra
+  // ⚠️ Fallback seguro na build/prerender (sem Provider)
   if (!ctx) {
     return {
       items: [],
