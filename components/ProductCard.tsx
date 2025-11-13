@@ -1,7 +1,6 @@
 // components/ProductCard.tsx
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "./products/data";
 
@@ -16,13 +15,12 @@ function brl(n: number) {
 export function ProductCard({ product: p }: Props) {
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4 md:p-6 flex flex-col gap-4">
-      <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-zinc-800 relative">
-        <Image
-          src={`/${p.image}`} // 👈 agora busca direto da pasta /public
+      <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-zinc-800">
+        <img
+          src={`/${p.image}`} // 👈 direto da pasta /public
           alt={p.name}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 400px"
+          className="w-full h-full object-cover"
+          loading="lazy"
         />
       </div>
 
@@ -43,7 +41,7 @@ export function ProductCard({ product: p }: Props) {
       </div>
 
       <Link
-        href={`/produto/${p.slug}`} // 👈 slug bate com o data.ts
+        href={`/produto/${p.slug}`}
         className="mt-auto inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black hover:bg-emerald-400 transition"
       >
         Ver produto
