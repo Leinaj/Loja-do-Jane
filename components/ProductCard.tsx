@@ -14,15 +14,17 @@ type Props = {
 export function ProductCard({ product: p }: Props) {
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 flex flex-col gap-4">
-      {/* IMAGEM */}
+      {/* IMAGEM (CLICÁVEL) */}
       <div className="relative w-full overflow-hidden rounded-3xl bg-zinc-950 border border-zinc-800 aspect-[16/9]">
-        <Image
-          src={p.image}
-          alt={p.name}
-          fill
-          className="object-cover"
-          sizes="(min-width: 768px) 400px, 100vw"
-        />
+        <Link href={`/produto/${p.slug}`} className="block w-full h-full">
+          <Image
+            src={p.image}
+            alt={p.name}
+            fill
+            className="object-cover"
+            sizes="(min-width: 768px) 400px, 100vw"
+          />
+        </Link>
       </div>
 
       {/* INFO */}
