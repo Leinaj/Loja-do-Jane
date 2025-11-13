@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/components/cart/CartProvider";
+import { useCart } from "@/components/cart/context";
 
 function brl(n: number) {
   return n.toFixed(2).replace(".", ",");
