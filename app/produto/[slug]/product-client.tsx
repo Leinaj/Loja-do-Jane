@@ -1,7 +1,6 @@
 // app/produto/[slug]/product-client.tsx
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import type { Product } from "@/components/products/data";
 import { useCart } from "@/components/cart/context";
@@ -25,7 +24,7 @@ export function ProductClient({ product }: Props) {
       name: product.name,
       price: product.price,
       image: product.image,
-      quantity: qty, // 👈 agora bate com o tipo CartItem
+      quantity: qty,
     });
 
     setShowToast(true);
@@ -37,13 +36,11 @@ export function ProductClient({ product }: Props) {
       <div className="min-h-[70vh] px-4 py-6 md:py-10 flex justify-center">
         <div className="w-full max-w-4xl grid gap-8 md:grid-cols-[1.2fr_1fr]">
           {/* Imagem */}
-          <div className="relative w-full aspect-square rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900">
-            <Image
+          <div className="w-full aspect-square rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900">
+            <img
               src={`/${product.image}`}
               alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 500px"
+              className="w-full h-full object-cover"
             />
           </div>
 
