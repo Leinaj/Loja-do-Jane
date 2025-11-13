@@ -12,7 +12,7 @@ type CartItem = {
   name: string;
   price: number;
   image: string;
-  quantity: number; // 👈 adiciona essa linha
+  quantity: number; // 👈 importante
 };
 
 type CartContextType = {
