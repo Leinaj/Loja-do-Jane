@@ -1,14 +1,9 @@
-// app/checkout/page.tsx
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
-import Link from "next/link";
 import Image from "next/image";
-import { useCart } from "@/components/cart/CartProvider";
-
-function brl(n: number) {
-  return n.toFixed(2).replace(".", ",");
-}
+import Link from "next/link";
+import { useState } from "react";
+import { useCart } from "@/contexts/CartContext";
 
 type Address = {
   name: string;
@@ -17,197 +12,190 @@ type Address = {
   street: string;
   number: string;
   complement: string;
-  district: string;
+  neighborhood: string;
   city: string;
-  state: string;
+  uf: string;
 };
+
+function brl(n: number) {
+  return n.toFixed(2).replace(".", ",");
+}
 
 export default function CheckoutPage() {
   const { items, total, removeItem, clearCart } = useCart();
+  const hasItems = items.length > 0;
 
   const [address, setAddress] = useState<Address>({
     name: "",
-    phone: "44988606483", // seu número já vem preenchido
+    phone: "44988606483",
     cep: "",
     street: "",
     number: "",
     complement: "",
-    district: "",
+    neighborhood: "",
     city: "",
-    state: ""
+    uf: "",
   });
 
-  const hasItems = items.length > 0;
-
-  // Atualiza campos do endereço
-  function handleChange(field: keyof Address) {
-    return (e: ChangeEvent<HTMLInputElement>) => {
+  function handleChange<K extends keyof Address>(field: K) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
       setAddress((prev) => ({ ...prev, [field]: e.target.value }));
     };
   }
 
-  // Buscar endereço pelo CEP (via ViaCEP)
-  useEffect(() => {
-    const cepNumbers = address.cep.replace(/\D/g, "");
+  async function handleCepBlur() {
+    const cep = address.cep.replace(/\D/g, "");
+    if (cep.length !== 8) return;
 
-    if (cepNumbers.length === 8) {
-      (async () => {
-        try {
-          const res = await fetch(
-            `https://viacep.com.br/ws/${cepNumbers}/json/`
-          );
-          const data = await res.json();
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
 
-          if (!data.erro) {
-            setAddress((prev) => ({
-              ...prev,
-              street: data.logradouro ?? prev.street,
-              district: data.bairro ?? prev.district,
-              city: data.localidade ?? prev.city,
-              state: data.uf ?? prev.state
-            }));
-          }
-        } catch (err) {
-          console.error("Erro ao buscar CEP", err);
-        }
-      })();
+      if (!data.erro) {
+        setAddress((prev) => ({
+          ...prev,
+          street: data.logradouro || "",
+          neighborhood: data.bairro || "",
+          city: data.localidade || "",
+          uf: data.uf || "",
+        }));
+      }
+    } catch (err) {
+      console.error("Erro ao buscar CEP", err);
     }
-  }, [address.cep]);
-
-  // Mensagem pra mandar no WhatsApp
-  const whatsappMessage = (() => {
-    const itemsText = items
-      .map(
-        (i) =>
-          `• ${i.name} (Qtd: ${i.quantity}) - R$ ${brl(i.price)}`
-      )
-      .join("\n");
-
-    const addressText = `
-Dados para entrega:
-Nome: ${address.name || "-"}
-Telefone: ${address.phone || "-"}
-CEP: ${address.cep || "-"}
-Endereço: ${address.street || "-"}, ${address.number || "-"} ${
-      address.complement || ""
-    }
-Bairro: ${address.district || "-"}
-Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
-
-    return (
-      `Olá, gostaria de finalizar a compra na Loja da Jane.\n\n` +
-      `Itens:\n${itemsText}\n\n` +
-      `Total: R$ ${brl(total)}\n\n` +
-      addressText
-    );
-  })();
-
-  const whatsappLink = `https://wa.me/5544988606483?text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
-
-  // CARRINHO VAZIO
-  if (!hasItems) {
-    return (
-      <main className="min-h-screen bg-black text-white px-4 py-10">
-        <h1 className="text-3xl font-bold mb-6">Carrinho</h1>
-
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center max-w-xl mx-auto">
-          <p className="mb-6 text-lg text-zinc-300">
-            Seu carrinho está vazio.
-          </p>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-3 font-medium text-white"
-          >
-            Voltar para a loja
-          </Link>
-        </div>
-      </main>
-    );
   }
 
-  // CARRINHO COM ITENS + FORM
+  function handleSendWhatsApp() {
+    if (!hasItems) return;
+
+    const storePhone = "5544988606483"; // número que vai receber o pedido
+
+    const lines: string[] = [
+      "🛒 *Novo pedido - Loja da Jane*",
+      "",
+      "*Itens:*",
+      ...items.map(
+        (item) =>
+          `• ${item.quantity ?? 1}x ${item.name} - R$ ${brl(item.price)}`
+      ),
+      "",
+      `*Total:* R$ ${brl(total)}`,
+      "",
+      "*Dados do cliente:*",
+      `Nome: ${address.name || "-"} `,
+      `WhatsApp: ${address.phone || "-"} `,
+      `CEP: ${address.cep || "-"} `,
+      `Rua: ${address.street || "-"}, nº ${address.number || "-"}`,
+      `Bairro: ${address.neighborhood || "-"}`,
+      `Cidade/UF: ${address.city || "-"} - ${address.uf || "-"}`,
+    ];
+
+    if (address.complement) {
+      lines.push(`Complemento: ${address.complement}`);
+    }
+
+    const text = encodeURIComponent(lines.join("\n"));
+    const url = `https://wa.me/${storePhone}?text=${text}`;
+
+    window.open(url, "_blank");
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-10">
-      <h1 className="text-3xl font-bold mb-6">Carrinho</h1>
+    <main className="min-h-screen bg-black text-white">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 pb-24">
+        <h1 className="text-3xl font-bold mb-2">Carrinho</h1>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)]">
-        {/* LISTA DE ITENS */}
-        <section className="space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.slug}
-              className="flex items-center gap-4 rounded-3xl bg-zinc-900 border border-zinc-800 p-4"
-            >
-              <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-zinc-950 border border-zinc-800">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  className="object-cover"
-                  sizes="80px"
-                />
-              </div>
-
-              <div className="flex-1">
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-sm text-zinc-400">
-                  Qtd: {item.quantity} • R$ {brl(item.price)}
-                </p>
-              </div>
-
-              <button
-                onClick={() => removeItem(item.slug)}
-                className="rounded-full bg-pink-600 px-4 py-2 text-sm font-medium"
-              >
-                Remover
-              </button>
-            </div>
-          ))}
-        </section>
-
-        {/* RESUMO + FORM + AÇÕES */}
-        <section className="space-y-4">
-          {/* RESUMO */}
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg">Total:</span>
-              <span className="text-2xl font-semibold text-emerald-400">
-                R$ {brl(total)}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={clearCart}
-              className="w-full mb-3 rounded-full border border-zinc-700 px-4 py-3 text-sm font-medium text-zinc-200"
-            >
-              Limpar carrinho
-            </button>
-
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full rounded-full bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white mb-3"
-            >
-              Finalizar compra no WhatsApp
-            </a>
-
+        {/* CARRINHO VAZIO */}
+        {!hasItems && (
+          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
+            <p className="mb-6 text-lg text-zinc-200">
+              Seu carrinho está vazio.
+            </p>
             <Link
               href="/"
-              className="block w-full rounded-full border border-emerald-500 px-4 py-3 text-center text-sm font-medium text-emerald-400"
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white"
             >
               Voltar para a loja
             </Link>
           </div>
+        )}
 
-          {/* FORMULÁRIO DE ENDEREÇO */}
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 space-y-4">
-            <h2 className="text-lg font-semibold mb-2">Endereço</h2>
+        {/* CARRINHO COM PRODUTOS */}
+        {hasItems && (
+          <>
+            <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
+                {items.map((item) => (
+                  <div
+                    key={item.slug}
+                    className="flex items-center gap-4 rounded-3xl bg-black/40 p-3"
+                  >
+                    <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-zinc-800">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
 
-            <div className="space-y-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm sm:text-base">
+                        {item.name}
+                      </p>
+                      <p className="text-xs sm:text-sm text-zinc-400">
+                        Qtd: {item.quantity ?? 1} • R$ {brl(item.price)}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.slug)}
+                      className="rounded-2xl bg-pink-500 px-4 py-2 text-xs sm:text-sm font-medium text-white"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-lg font-semibold">Total:</span>
+                <span className="text-2xl font-bold text-emerald-400">
+                  R$ {brl(total)}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="w-full rounded-2xl border border-zinc-700 bg-black px-4 py-3 text-sm font-medium text-zinc-200"
+                >
+                  Limpar carrinho
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendWhatsApp}
+                  className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white"
+                >
+                  Finalizar compra no WhatsApp
+                </button>
+
+                <Link
+                  href="/"
+                  className="w-full rounded-2xl border border-emerald-500/60 bg-black px-4 py-3 text-center text-sm font-medium text-emerald-400"
+                >
+                  Voltar para a loja
+                </Link>
+              </div>
+            </div>
+
+            {/* FORMULÁRIO DE ENDEREÇO */}
+            <section className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-6 flex flex-col gap-4">
+              <h2 className="text-xl font-semibold mb-2">Endereço</h2>
+
               <input
                 className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
                 placeholder="Nome *"
@@ -227,6 +215,7 @@ Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
                 placeholder="CEP *"
                 value={address.cep}
                 onChange={handleChange("cep")}
+                onBlur={handleCepBlur}
               />
 
               <input
@@ -238,13 +227,13 @@ Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
 
               <div className="flex gap-3">
                 <input
-                  className="w-1/3 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  className="w-1/2 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
                   placeholder="Número *"
                   value={address.number}
                   onChange={handleChange("number")}
                 />
                 <input
-                  className="flex-1 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  className="w-1/2 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
                   placeholder="Complemento"
                   value={address.complement}
                   onChange={handleChange("complement")}
@@ -254,8 +243,8 @@ Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
               <input
                 className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
                 placeholder="Bairro *"
-                value={address.district}
-                onChange={handleChange("district")}
+                value={address.neighborhood}
+                onChange={handleChange("neighborhood")}
               />
 
               <div className="flex gap-3">
@@ -266,15 +255,15 @@ Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
                   onChange={handleChange("city")}
                 />
                 <input
-                  className="w-24 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  className="w-20 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
                   placeholder="UF *"
-                  value={address.state}
-                  onChange={handleChange("state")}
+                  value={address.uf}
+                  onChange={handleChange("uf")}
                 />
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
+          </>
+        )}
       </div>
     </main>
   );
