@@ -1,30 +1,38 @@
-export const products = [
-  {
-    slug: "bone",
-    name: "Boné Estiloso",
-    price: 59.9,
-    image: "/bone.jpg",
-    description: "Boné estiloso de alta qualidade, perfeito para qualquer visual."
-  },
+export type Product = {
+  slug: string;
+  name: string;
+  price: number;
+  image: string;
+  description?: string;
+};
+
+export const products: Product[] = [
   {
     slug: "camiseta-preta",
     name: "Camiseta Preta Premium",
-    price: 79.9,
+    price: 59.9,
     image: "/camiseta-preta.jpg",
-    description: "Camiseta preta premium com tecido confortável e resistente."
+    description: "Camiseta preta de alta qualidade, perfeita para o dia a dia."
   },
   {
     slug: "camiseta-branca",
-    name: "Camiseta Branca Premium",
-    price: 79.9,
+    name: "Camiseta Branca Clássica",
+    price: 49.9,
     image: "/camiseta-branca.jpg",
-    description: "Camiseta branca premium, ideal para qualquer ocasião."
+    description: "Estilo clean e confortável para qualquer ocasião."
   },
   {
     slug: "moletom",
-    name: "Moletom Confortável",
+    name: "Moletom Unissex",
     price: 129.9,
     image: "/moletom.jpg",
-    description: "Moletom quente e confortável para dias mais frios."
+    description: "Moletom macio, quente e estiloso."
+  },
+  {
+    slug: "bone",
+    name: "Boné Aba Reta",
+    price: 39.9,
+    image: "/bone.jpg",
+    description: "Boné ajustável com visual moderno."
   }
 ];
