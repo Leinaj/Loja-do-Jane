@@ -1,6 +1,7 @@
 // app/checkout/page.tsx
 "use client";
 
+import { useState, useEffect, ChangeEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/components/cart/CartProvider";
@@ -9,11 +10,103 @@ function brl(n: number) {
   return n.toFixed(2).replace(".", ",");
 }
 
+type Address = {
+  name: string;
+  phone: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string;
+  district: string;
+  city: string;
+  state: string;
+};
+
 export default function CheckoutPage() {
   const { items, total, removeItem, clearCart } = useCart();
 
+  const [address, setAddress] = useState<Address>({
+    name: "",
+    phone: "44988606483", // seu número já vem preenchido
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    district: "",
+    city: "",
+    state: ""
+  });
+
   const hasItems = items.length > 0;
 
+  // Atualiza campos do endereço
+  function handleChange(field: keyof Address) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      setAddress((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+  }
+
+  // Buscar endereço pelo CEP (via ViaCEP)
+  useEffect(() => {
+    const cepNumbers = address.cep.replace(/\D/g, "");
+
+    if (cepNumbers.length === 8) {
+      (async () => {
+        try {
+          const res = await fetch(
+            `https://viacep.com.br/ws/${cepNumbers}/json/`
+          );
+          const data = await res.json();
+
+          if (!data.erro) {
+            setAddress((prev) => ({
+              ...prev,
+              street: data.logradouro ?? prev.street,
+              district: data.bairro ?? prev.district,
+              city: data.localidade ?? prev.city,
+              state: data.uf ?? prev.state
+            }));
+          }
+        } catch (err) {
+          console.error("Erro ao buscar CEP", err);
+        }
+      })();
+    }
+  }, [address.cep]);
+
+  // Mensagem pra mandar no WhatsApp
+  const whatsappMessage = (() => {
+    const itemsText = items
+      .map(
+        (i) =>
+          `• ${i.name} (Qtd: ${i.quantity}) - R$ ${brl(i.price)}`
+      )
+      .join("\n");
+
+    const addressText = `
+Dados para entrega:
+Nome: ${address.name || "-"}
+Telefone: ${address.phone || "-"}
+CEP: ${address.cep || "-"}
+Endereço: ${address.street || "-"}, ${address.number || "-"} ${
+      address.complement || ""
+    }
+Bairro: ${address.district || "-"}
+Cidade/UF: ${address.city || "-"} - ${address.state || "-"}`.trim();
+
+    return (
+      `Olá, gostaria de finalizar a compra na Loja da Jane.\n\n` +
+      `Itens:\n${itemsText}\n\n` +
+      `Total: R$ ${brl(total)}\n\n` +
+      addressText
+    );
+  })();
+
+  const whatsappLink = `https://wa.me/5544988606483?text=${encodeURIComponent(
+    whatsappMessage
+  )}`;
+
+  // CARRINHO VAZIO
   if (!hasItems) {
     return (
       <main className="min-h-screen bg-black text-white px-4 py-10">
@@ -34,6 +127,7 @@ export default function CheckoutPage() {
     );
   }
 
+  // CARRINHO COM ITENS + FORM
   return (
     <main className="min-h-screen bg-black text-white px-4 py-10">
       <h1 className="text-3xl font-bold mb-6">Carrinho</h1>
@@ -59,7 +153,7 @@ export default function CheckoutPage() {
               <div className="flex-1">
                 <p className="font-semibold">{item.name}</p>
                 <p className="text-sm text-zinc-400">
-                  Qtd: {item.quantity} &nbsp;•&nbsp; R$ {brl(item.price)}
+                  Qtd: {item.quantity} • R$ {brl(item.price)}
                 </p>
               </div>
 
@@ -73,8 +167,9 @@ export default function CheckoutPage() {
           ))}
         </section>
 
-        {/* RESUMO E AÇÕES */}
+        {/* RESUMO + FORM + AÇÕES */}
         <section className="space-y-4">
+          {/* RESUMO */}
           <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-lg">Total:</span>
@@ -92,14 +187,7 @@ export default function CheckoutPage() {
             </button>
 
             <a
-              href={`https://wa.me/5544988606483?text=${encodeURIComponent(
-                `Olá, gostaria de finalizar a compra na Loja da Jane.\n\nItens:\n${items
-                  .map(
-                    (i) =>
-                      `• ${i.name} (Qtd: ${i.quantity}) - R$ ${brl(i.price)}`
-                  )
-                  .join("\n")}\n\nTotal: R$ ${brl(total)}`
-              )}`}
+              href={whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full rounded-full bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white mb-3"
@@ -113,6 +201,78 @@ export default function CheckoutPage() {
             >
               Voltar para a loja
             </Link>
+          </div>
+
+          {/* FORMULÁRIO DE ENDEREÇO */}
+          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 space-y-4">
+            <h2 className="text-lg font-semibold mb-2">Endereço</h2>
+
+            <div className="space-y-3">
+              <input
+                className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                placeholder="Nome *"
+                value={address.name}
+                onChange={handleChange("name")}
+              />
+
+              <input
+                className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                placeholder="WhatsApp *"
+                value={address.phone}
+                onChange={handleChange("phone")}
+              />
+
+              <input
+                className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                placeholder="CEP *"
+                value={address.cep}
+                onChange={handleChange("cep")}
+              />
+
+              <input
+                className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                placeholder="Rua *"
+                value={address.street}
+                onChange={handleChange("street")}
+              />
+
+              <div className="flex gap-3">
+                <input
+                  className="w-1/3 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  placeholder="Número *"
+                  value={address.number}
+                  onChange={handleChange("number")}
+                />
+                <input
+                  className="flex-1 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  placeholder="Complemento"
+                  value={address.complement}
+                  onChange={handleChange("complement")}
+                />
+              </div>
+
+              <input
+                className="w-full rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                placeholder="Bairro *"
+                value={address.district}
+                onChange={handleChange("district")}
+              />
+
+              <div className="flex gap-3">
+                <input
+                  className="flex-1 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  placeholder="Cidade *"
+                  value={address.city}
+                  onChange={handleChange("city")}
+                />
+                <input
+                  className="w-24 rounded-2xl bg-black border border-zinc-700 px-4 py-3 text-sm"
+                  placeholder="UF *"
+                  value={address.state}
+                  onChange={handleChange("state")}
+                />
+              </div>
+            </div>
           </div>
         </section>
       </div>
