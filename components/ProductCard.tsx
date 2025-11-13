@@ -1,3 +1,4 @@
+// components/ProductCard.tsx
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "./products/data";
@@ -8,36 +9,31 @@ function brl(n: number) {
 
 export default function ProductCard({ p }: { p: Product }) {
   return (
-    <div className="rounded-2xl bg-neutral-900 p-4 shadow-lg">
-      <div className="mb-4 overflow-hidden rounded-xl">
-        {/* width/height garantem render no Next/Image em produção */}
+    <Link
+      href={`/produto/${p.slug}`}
+      className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 hover:border-emerald-500/40 transition-all"
+    >
+      <div className="aspect-square w-full overflow-hidden rounded-2xl bg-zinc-800 relative">
         <Image
           src={p.image}
           alt={p.name}
-          width={800}
-          height={520}
-          className="h-52 w-full object-cover"
-          priority={false}
+          fill
+          className="object-cover"
         />
       </div>
 
-      <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
+      <h2 className="mt-4 text-xl font-semibold">{p.name}</h2>
 
-      <div className="mb-4 flex items-baseline gap-3">
-        <span className="text-2xl text-emerald-400">R$ {brl(p.price)}</span>
+      <div className="mt-2 flex items-baseline gap-3">
+        <span className="text-emerald-400 text-2xl font-bold">
+          R$ {brl(p.price)}
+        </span>
         {p.oldPrice && (
           <span className="text-neutral-400 line-through opacity-60">
             R$ {brl(p.oldPrice)}
           </span>
         )}
       </div>
-
-      <Link
-        href={`/produto/${p.slug}`}
-        className="block rounded-xl bg-emerald-600 py-3 text-center font-medium text-white hover:bg-emerald-500"
-      >
-        Ver produto
-      </Link>
-    </div>
+    </Link>
   );
 }
