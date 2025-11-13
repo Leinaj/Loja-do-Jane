@@ -5,7 +5,7 @@ export type Product = {
   name: string;
   price: number;
   oldPrice?: number;
-  image: string;       // nome do arquivo que está em /public
+  image: string;       // nome do arquivo em /public
   description: string;
 };
 
@@ -15,7 +15,7 @@ export const products: Product[] = [
     name: "Moletom Cinza",
     price: 159.9,
     oldPrice: 189.9,
-    image: "moletom.jpg", // 👈 exatamente como está na pasta /public
+    image: "moletom.jpg",
     description:
       "Moletom cinza confortável, ideal para dias frios e estilo casual.",
   },
