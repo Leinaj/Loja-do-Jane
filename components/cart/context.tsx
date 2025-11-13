@@ -7,11 +7,12 @@ import {
   ReactNode,
 } from "react";
 
-export type CartItem = {
+type CartItem = {
   id: string;
   name: string;
   price: number;
   image: string;
+  quantity: number; // 👈 adiciona essa linha
 };
 
 type CartContextType = {
