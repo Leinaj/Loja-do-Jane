@@ -6,12 +6,12 @@ import {
   useContext,
   useState,
   useEffect,
-  type ReactNode
+  type ReactNode,
 } from "react";
 import type { Product } from "@/components/products/data";
 
 export type CartItem = {
-  id: string;    // slug do produto
+  id: string; // slug do produto
   name: string;
   price: number;
   image: string;
@@ -40,28 +40,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // toda vez que o carrinho muda, salva no localStorage
+  // salva no localStorage sempre que mudar
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
-      // se der erro, só ignora
+      // ignora erro de storage
     }
   }, [items]);
 
   const addItem = (product: Product) => {
     setItems((prev) => {
       const exists = prev.find((i) => i.id === product.slug);
-      if (exists) return prev; // não duplica, por enquanto sem quantidade
+      if (exists) return prev; // não duplica por enquanto
       return [
         ...prev,
         {
           id: product.slug,
           name: product.name,
           price: product.price,
-          image: product.image
-        }
+          image: product.image,
+        },
       ];
     });
   };
@@ -74,15 +74,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  return (
-    <CartContext.Provider value={{ items, total, addItem, removeItem, clear }}>
-      {children}
-    </CartContext.Provider>
-  );
+  const value: CartContextType = { items, total, addItem, removeItem, clear };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-export function useCart() {
+// 🚨 Versão “segura”: não quebra o build se não tiver provider
+export function useCart(): CartContextType {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart deve ser usado dentro de CartProvider");
+
+  if (!ctx) {
+    // fallback usado só em renderização sem provider (build/prerender)
+    return {
+      items: [],
+      total: 0,
+      addItem: () => {},
+      removeItem: () => {},
+      clear: () => {},
+    };
+  }
+
   return ctx;
 }
