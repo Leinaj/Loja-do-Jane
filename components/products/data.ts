@@ -5,45 +5,45 @@ export type Product = {
   name: string;
   price: number;
   oldPrice?: number;
-  image: string;       // nome do arquivo em /public
+  image: string;
   description: string;
 };
 
 export const products: Product[] = [
   {
-    slug: "moletom-cinza",
-    name: "Moletom Cinza",
-    price: 159.9,
-    oldPrice: 189.9,
-    image: "moletom.jpg",
-    description:
-      "Moletom cinza confortável, ideal para dias frios e estilo casual.",
-  },
-  {
     slug: "camiseta-branca",
     name: "Camiseta Branca",
     price: 49.9,
     oldPrice: 59.9,
-    image: "camiseta-branca.jpg",
+    image: "/camiseta-branca.jpg", // está em /public
     description:
-      "Camiseta branca clássica, combina com tudo e tem ótimo caimento.",
+      "Camiseta branca clássica, 100% algodão, perfeita para o dia a dia."
   },
   {
     slug: "camiseta-preta",
     name: "Camiseta Preta",
     price: 49.9,
     oldPrice: 59.9,
-    image: "camiseta-preta.jpg",
+    image: "/camiseta-preta.jpg",
     description:
-      "Camiseta preta básica, perfeita para um visual moderno e discreto.",
+      "Camiseta preta básica com caimento confortável, combina com tudo."
   },
   {
-    slug: "bone",
-    name: "Boné Estiloso",
+    slug: "bone-street",
+    name: "Boné Street",
     price: 39.9,
     oldPrice: 49.9,
-    image: "bone.jpg",
+    image: "/bone.jpg",
     description:
-      "Boné moderno para completar seu look com estilo e personalidade.",
+      "Boné estiloso para completar o visual street, ajustável e confortável."
   },
+  {
+    slug: "moletom-cinza",
+    name: "Moletom Cinza",
+    price: 159.9,
+    oldPrice: 189.9,
+    image: "/moletom.jpg",
+    description:
+      "Moletom cinza macio por dentro, ideal para os dias mais frios."
+  }
 ];
