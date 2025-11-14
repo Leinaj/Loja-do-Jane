@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useCart } from "@/contexts/CartContext";
+// IMPORT RELATIVO PRO CONTEXTO DO CARRINHO
+import { useCart } from "../../contexts/CartContext";
 
 type Address = {
   name: string;
@@ -27,7 +28,7 @@ export default function CheckoutPage() {
 
   const [address, setAddress] = useState<Address>({
     name: "",
-    phone: "44988606483",
+    phone: "",          // <-- SEM SEU NÚMERO AQUI
     cep: "",
     street: "",
     number: "",
@@ -68,7 +69,8 @@ export default function CheckoutPage() {
   function handleSendWhatsApp() {
     if (!hasItems) return;
 
-    const storePhone = "5544988606483"; // número que vai receber o pedido
+    // NÚMERO QUE VAI RECEBER O PEDIDO (pode trocar aqui se quiser)
+    const storePhone = "5544988606483";
 
     const lines: string[] = [
       "🛒 *Novo pedido - Loja da Jane*",
