@@ -20,7 +20,7 @@ export default function ProductClient({ product }: Props) {
   const [showToast, setShowToast] = useState(false);
 
   function handleAddToCart() {
-    // usa a função do contexto NOVA (addItem)
+    // adiciona ao carrinho
     addItem(
       {
         slug: product.slug,
@@ -31,8 +31,9 @@ export default function ProductClient({ product }: Props) {
       qty
     );
 
+    // mostra mensagem "produto adicionado"
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
+    setTimeout(() => setShowToast(false), 2300);
   }
 
   const decrease = () => setQty((q) => (q > 1 ? q - 1 : 1));
@@ -118,21 +119,18 @@ export default function ProductClient({ product }: Props) {
             Voltar para a loja
           </Link>
         </div>
-
-        {/* TOAST DE CONFIRMAÇÃO */}
-        {showToast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md px-4">
-            <div className="rounded-2xl bg-zinc-900 border border-zinc-700 px-4 py-3 shadow-lg">
-              <p className="text-sm font-semibold text-emerald-400">
-                Produto adicionado
-              </p>
-              <p className="text-xs text-zinc-300 mt-1">
-                {product.name} foi colocado no seu carrinho.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* TOAST "PRODUTO ADICIONADO" MEIO TRANSPARENTE */}
+      {showToast && (
+        <div className="fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
+          <div className="pointer-events-none rounded-3xl bg-black/70 border border-emerald-500/40 px-4 py-3 shadow-xl backdrop-blur-sm">
+            <p className="text-sm font-semibold text-emerald-400 text-center">
+              Produto adicionado ao carrinho
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
