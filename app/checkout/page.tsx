@@ -1,395 +1,234 @@
-// app/checkout/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useCart } from "../contexts/CartContext";
-
-type Address = {
-  name: string;
-  phone: string;
-  cep: string;
-  street: string;
-  number: string;
-  complement: string;
-  district: string;
-  city: string;
-  uf: string;
-};
-
-const INITIAL_ADDRESS: Address = {
-  name: "",
-  phone: "",
-  cep: "",
-  street: "",
-  number: "",
-  complement: "",
-  district: "",
-  city: "",
-  uf: "",
-};
-
-function brl(n: number) {
-  return n.toFixed(2).replace(".", ",");
-}
-
-// número do WhatsApp da loja (não aparece nos campos do cliente)
-const WHATSAPP_NUMBER = "44988606483";
+import { useCart } from "../../contexts/CartContext";
 
 export default function CheckoutPage() {
-  const { items, total, removeItem, clearCart } = useCart();
-  const hasItems = items.length > 0;
+  const { items, total, removeItem, clear } = useCart();
 
-  const [address, setAddress] = useState<Address>(INITIAL_ADDRESS);
-  const [isSending, setIsSending] = useState(false);
+  // Campos do formulário
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [cep, setCep] = useState("");
+  const [rua, setRua] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [uf, setUf] = useState("");
 
-  const [showClearToast, setShowClearToast] = useState(false);
-
-  // INPUTS DO FORM
-  function handleChange(e: any) {
-    const { name, value } = e.target;
-    setAddress((prev) => ({ ...prev, [name]: value }));
-  }
-
-  // BUSCA ENDEREÇO PELO CEP (ViaCEP)
-  async function handleCepBlur() {
-    const cepOnly = address.cep.replace(/\D/g, "");
-    if (cepOnly.length !== 8) return;
-
-    try {
-      const res = await fetch(
-        `https://viacep.com.br/ws/${cepOnly}/json/`
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.erro) return;
-
-      setAddress((prev) => ({
-        ...prev,
-        street: data.logradouro || prev.street,
-        district: data.bairro || prev.district,
-        city: data.localidade || prev.city,
-        uf: data.uf || prev.uf,
-      }));
-    } catch {
-      // se der erro, só ignora
-    }
-  }
-
-  // LIMPAR CARRINHO + TOAST
-  function handleClearCart() {
-    if (!hasItems) return;
-    clearCart();
-    setShowClearToast(true);
-  }
-
+  // Buscar endereço automático ao digitar CEP
   useEffect(() => {
-    if (!showClearToast) return;
-    const timer = setTimeout(
-      () => setShowClearToast(false),
-      3000
+    const fetchCep = async () => {
+      if (cep.length === 9) {
+        const clean = cep.replace("-", "");
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        const data = await res.json();
+
+        if (!data.erro) {
+          setRua(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "");
+          setUf(data.uf || "");
+        }
+      }
+    };
+    fetchCep();
+  }, [cep]);
+
+  // Enviar pedido pelo WhatsApp
+  const enviarWhats = () => {
+    const pedido = items
+      .map((i) => `${i.product.name} — Qtd: ${i.quantity}`)
+      .join("%0A");
+
+    const mensagem = `
+*Pedido Loja do Jane*%0A%0A
+*Nome:* ${nome}%0A
+*Telefone:* ${telefone}%0A
+*CEP:* ${cep}%0A
+*Rua:* ${rua}, Nº ${numero}%0A
+*Compl:* ${complemento}%0A
+*Bairro:* ${bairro}%0A
+*Cidade:* ${cidade} - ${uf}%0A%0A
+*Itens:*%0A${pedido}%0A%0A
+*Total:* R$ ${total.toFixed(2).replace(".", ",")}
+`;
+
+    window.open(
+      `https://wa.me/5544988606483?text=${encodeURIComponent(mensagem)}`,
+      "_blank"
     );
-    return () => clearTimeout(timer);
-  }, [showClearToast]);
+  };
 
-  // ENVIAR PEDIDO PRO WHATSAPP
-  function handleSubmit(e: any) {
-    e.preventDefault();
-    if (!hasItems || isSending) return;
+  // CLASSE DO GLOW PARA INPUTS
+  const inputClass =
+    "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-white outline-none transition-all shadow-[0_0_12px_rgba(0,255,100,0.15)] focus:shadow-[0_0_18px_rgba(0,255,150,0.45)]";
 
-    setIsSending(true);
-
-    const lines = items.map(
-      (item) =>
-        `• ${item.name} (Qtd: ${item.quantity}) - R$ ${brl(
-          item.price
-        )}`
-    );
-
-    const addressText = `
-Nome: ${address.name}
-Telefone: ${address.phone}
-CEP: ${address.cep}
-Rua: ${address.street}, Nº ${address.number}
-Complemento: ${address.complement || "-"}
-Bairro: ${address.district}
-Cidade: ${address.city} - ${address.uf}
-`.trim();
-
-    const message = encodeURIComponent(
-      `🛒 *Novo pedido da Loja do Jane*\n\n` +
-        `*Itens:*\n${lines.join("\n")}\n\n` +
-        `*Total:* R$ ${brl(total)}\n\n` +
-        `*Endereço de entrega:*\n${addressText}`
-    );
-
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
-    window.open(url, "_blank");
-    setIsSending(false);
-  }
-
-  // SE ESTIVER VAZIO
-  if (!hasItems) {
-    return (
-      <main className="min-h-screen bg-black text-white px-4 py-8">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="text-3xl font-semibold mb-6">
-            Carrinho
-          </h1>
-
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
-            <p className="mb-6 text-zinc-300">
-              Seu carrinho está vazio.
-            </p>
-
-            <Link
-              href="/"
-              className="inline-flex w-full items-center justify-center rounded-3xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white"
-            >
-              Voltar para a loja
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const rowClass = "flex flex-col gap-2 mb-4";
 
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-8">
-      <div className="mx-auto max-w-3xl space-y-8">
-        <h1 className="text-3xl font-semibold">Carrinho</h1>
+    <div className="max-w-2xl mx-auto p-4 text-white">
+      <h1 className="text-3xl font-bold mb-6">Carrinho</h1>
 
-        {/* LISTA DE ITENS */}
-        <section className="space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.slug}
-              className="flex items-center gap-4 rounded-3xl bg-zinc-900 border border-zinc-800 p-4"
+      {/* LISTA DE PRODUTOS */}
+      <div className="flex flex-col gap-4 mb-10">
+        {items.map((item) => (
+          <div
+            key={item.product.slug}
+            className="flex items-center justify-between bg-zinc-900 p-4 rounded-3xl border border-zinc-800"
+          >
+            <div className="flex items-center gap-4">
+              <img
+                src={item.product.image}
+                alt={item.product.name}
+                className="w-16 h-16 rounded-xl object-cover"
+              />
+              <div>
+                <p className="font-semibold">{item.product.name}</p>
+                <p className="text-sm opacity-70">
+                  Qtd: {item.quantity} — R$ {item.product.price}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => removeItem(item.product.slug)}
+              className="bg-pink-600 px-4 py-2 rounded-2xl"
             >
-              <div className="h-16 w-16 overflow-hidden rounded-2xl bg-zinc-800">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-
-              <div className="flex-1">
-                <p className="font-semibold">
-                  {item.name}
-                </p>
-                <p className="text-xs text-zinc-400">
-                  Qtd: {item.quantity} • R$ {brl(item.price)}
-                </p>
-              </div>
-
-              <button
-                onClick={() => removeItem(item.slug)}
-                className="rounded-2xl bg-pink-500 px-4 py-2 text-xs font-semibold text-white"
-              >
-                Remover
-              </button>
-            </div>
-          ))}
-        </section>
-
-        {/* TOTAL + AÇÕES */}
-        <section className="space-y-4 rounded-3xl bg-zinc-900 border border-zinc-800 p-5">
-          <div className="flex items-center justify-between text-lg font-semibold">
-            <span>Total:</span>
-            <span className="text-emerald-400">
-              R$ {brl(total)}
-            </span>
+              Remover
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={handleClearCart}
-            className="w-full rounded-3xl border border-zinc-700 px-4 py-3 text-sm font-medium text-zinc-200"
-          >
-            Limpar carrinho
-          </button>
-
-          <button
-            type="submit"
-            form="checkout-form"
-            disabled={isSending}
-            className="w-full rounded-3xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {isSending
-              ? "Abrindo WhatsApp..."
-              : "Finalizar compra no WhatsApp"}
-          </button>
-
-          <Link
-            href="/"
-            className="inline-flex w-full items-center justify-center rounded-3xl border border-emerald-500/40 px-4 py-3 text-sm font-medium text-emerald-400"
-          >
-            Voltar para a loja
-          </Link>
-        </section>
-
-        {/* FORM DE ENDEREÇO */}
-        <section className="rounded-3xl bg-zinc-900 border border-zinc-800 p-5 space-y-4">
-          <h2 className="text-xl font-semibold mb-2">
-            Endereço
-          </h2>
-
-          <form
-            id="checkout-form"
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
-            <div>
-              <label className="mb-1 block text-sm text-zinc-300">
-                Nome *
-              </label>
-              <input
-                name="name"
-                value={address.name}
-                onChange={handleChange}
-                className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                placeholder="Nome completo"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-zinc-300">
-                Telefone / WhatsApp *
-              </label>
-              <input
-                name="phone"
-                value={address.phone}
-                onChange={handleChange}
-                className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                placeholder="(44) 9 9999-9999"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-zinc-300">
-                CEP *
-              </label>
-              <input
-                name="cep"
-                value={address.cep}
-                onChange={handleChange}
-                onBlur={handleCepBlur}
-                className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                placeholder="87000-000"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-zinc-300">
-                Rua *
-              </label>
-              <input
-                name="street"
-                value={address.street}
-                onChange={handleChange}
-                className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm text-zinc-300">
-                  Número *
-                </label>
-                <input
-                  name="number"
-                  value={address.number}
-                  onChange={handleChange}
-                  className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-zinc-300">
-                  Complemento
-                </label>
-                <input
-                  name="complement"
-                  value={address.complement}
-                  onChange={handleChange}
-                  className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                  placeholder="Apto, bloco, referência..."
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-zinc-300">
-                Bairro *
-              </label>
-              <input
-                name="district"
-                value={address.district}
-                onChange={handleChange}
-                className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-[2fr,1fr] gap-3">
-              <div>
-                <label className="mb-1 block text-sm text-zinc-300">
-                  Cidade *
-                </label>
-                <input
-                  name="city"
-                  value={address.city}
-                  onChange={handleChange}
-                  className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-zinc-300">
-                  UF *
-                </label>
-                <input
-                  name="uf"
-                  value={address.uf}
-                  onChange={handleChange}
-                  className="w-full rounded-3xl bg-black px-4 py-3 text-sm outline-none border border-zinc-700"
-                  placeholder="PR"
-                  maxLength={2}
-                  required
-                />
-              </div>
-            </div>
-          </form>
-        </section>
+        ))}
       </div>
 
-      {/* TOAST - CARRINHO LIMPO */}
-      {showClearToast && (
-        <div className="fixed bottom-6 left-1/2 z-[9999] w-[92%] max-w-md -translate-x-1/2 pointer-events-none">
-          <div className="pointer-events-auto flex gap-3 rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3 shadow-xl shadow-emerald-900/40">
-            <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900/30">
-              <span className="text-lg font-semibold text-emerald-50">
-                ✓
-              </span>
-            </div>
+      {/* TOTAL */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 mb-10">
+        <div className="flex justify-between text-xl font-semibold mb-6">
+          <span>Total:</span>
+          <span className="text-emerald-400">
+            R$ {total.toFixed(2).replace(".", ",")}
+          </span>
+        </div>
 
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-emerald-50">
-                Carrinho limpo
-              </p>
-              <p className="text-xs text-emerald-50/80">
-                Todos os itens foram removidos do seu carrinho.
-              </p>
-            </div>
+        <button
+          onClick={clear}
+          className="w-full mb-3 py-3 rounded-2xl bg-zinc-800"
+        >
+          Limpar carrinho
+        </button>
+
+        <button
+          onClick={enviarWhats}
+          className="w-full py-3 rounded-2xl bg-emerald-500 text-white font-semibold"
+        >
+          Finalizar compra no WhatsApp
+        </button>
+
+        <Link
+          href="/"
+          className="block w-full mt-3 py-3 rounded-2xl border border-emerald-500 text-center text-emerald-400"
+        >
+          Voltar para a loja
+        </Link>
+      </div>
+
+      {/* FORMULÁRIO DE ENDEREÇO */}
+      <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl">
+        <h2 className="text-2xl font-bold mb-6">Endereço</h2>
+
+        <div className={rowClass}>
+          <label>Nome *</label>
+          <input
+            placeholder="Nome completo"
+            className={inputClass}
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
+        </div>
+
+        <div className={rowClass}>
+          <label>Telefone / WhatsApp *</label>
+          <input
+            placeholder="(44) 9 9999-9999"
+            className={inputClass}
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+          />
+        </div>
+
+        <div className={rowClass}>
+          <label>CEP *</label>
+          <input
+            placeholder="87000-000"
+            className={inputClass}
+            value={cep}
+            onChange={(e) => setCep(e.target.value)}
+            maxLength={9}
+          />
+        </div>
+
+        <div className={rowClass}>
+          <label>Rua *</label>
+          <input
+            className={inputClass}
+            value={rua}
+            onChange={(e) => setRua(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1 flex flex-col gap-2">
+            <label>Número *</label>
+            <input
+              className={inputClass}
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col gap-2">
+            <label>Complemento</label>
+            <input
+              placeholder="Apto, bloco, referência"
+              className={inputClass}
+              value={complemento}
+              onChange={(e) => setComplemento(e.target.value)}
+            />
           </div>
         </div>
-      )}
-    </main>
+
+        <div className={rowClass}>
+          <label>Bairro *</label>
+          <input
+            className={inputClass}
+            value={bairro}
+            onChange={(e) => setBairro(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex-1 flex flex-col gap-2 mb-4">
+            <label>Cidade *</label>
+            <input
+              className={inputClass}
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+            />
+          </div>
+
+          <div className="w-24 flex flex-col gap-2 mb-4">
+            <label>UF *</label>
+            <input
+              className={inputClass}
+              value={uf}
+              onChange={(e) => setUf(e.target.value)}
+              maxLength={2}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
