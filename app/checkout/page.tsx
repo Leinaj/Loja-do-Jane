@@ -1,10 +1,10 @@
+// app/checkout/page.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-// IMPORT RELATIVO PRO CONTEXTO DO CARRINHO
-import { useCart } from "../../contexts/CartContext";
+import { useCart } from "../contexts/CartContext"; // <- CAMINHO CERTO
 
 type Address = {
   name: string;
@@ -28,7 +28,7 @@ export default function CheckoutPage() {
 
   const [address, setAddress] = useState<Address>({
     name: "",
-    phone: "",          // <-- SEM SEU NÚMERO AQUI
+    phone: "",          // <- sem seu número
     cep: "",
     street: "",
     number: "",
@@ -69,7 +69,7 @@ export default function CheckoutPage() {
   function handleSendWhatsApp() {
     if (!hasItems) return;
 
-    // NÚMERO QUE VAI RECEBER O PEDIDO (pode trocar aqui se quiser)
+    // número que vai receber o pedido (pode trocar aqui depois)
     const storePhone = "5544988606483";
 
     const lines: string[] = [
@@ -107,7 +107,7 @@ export default function CheckoutPage() {
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 pb-24">
         <h1 className="text-3xl font-bold mb-2">Carrinho</h1>
 
-        {/* CARRINHO VAZIO */}
+        {/* Carrinho vazio */}
         {!hasItems && (
           <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
             <p className="mb-6 text-lg text-zinc-200">
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* CARRINHO COM PRODUTOS */}
+        {/* Carrinho com itens */}
         {hasItems && (
           <>
             <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-6 flex flex-col gap-4">
@@ -194,7 +194,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* FORMULÁRIO DE ENDEREÇO */}
+            {/* Formulário de endereço */}
             <section className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-6 flex flex-col gap-4">
               <h2 className="text-xl font-semibold mb-2">Endereço</h2>
 
