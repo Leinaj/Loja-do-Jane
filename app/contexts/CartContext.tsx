@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-type CartItem = {
+export type CartItem = {
   slug: string;
   name: string;
   price: number;
@@ -20,101 +13,63 @@ type CartItem = {
 type CartContextType = {
   items: CartItem[];
   total: number;
-  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  addToCart: (item: CartItem) => void;
   removeItem: (slug: string) => void;
-  clearCart: () => void;
+  clear: () => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const STORAGE_KEY = "lojadojane_cart";
-
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Carregar do localStorage quando abrir o site
+  // carregar do localStorage
   useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setItems(parsed);
-      }
-    } catch (err) {
-      console.error("Erro ao ler carrinho do localStorage", err);
-    }
+    const saved = localStorage.getItem("cart");
+    if (saved) setItems(JSON.parse(saved));
   }, []);
 
-  // Salvar no localStorage sempre que o carrinho mudar
+  // salvar sempre que atualizar
   useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch (err) {
-      console.error("Erro ao salvar carrinho no localStorage", err);
-    }
+    localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
 
-  function addItem(item: Omit<CartItem, "quantity">, quantity = 1) {
+  const addToCart = (item: CartItem) => {
     setItems((prev) => {
-      const index = prev.findIndex((i) => i.slug === item.slug);
+      const exist = prev.find((p) => p.slug === item.slug);
 
-      // se já existe, só soma a quantidade
-      if (index >= 0) {
-        const copy = [...prev];
-        copy[index] = {
-          ...copy[index],
-          quantity: copy[index].quantity + quantity,
-        };
-        return copy;
+      if (exist) {
+        return prev.map((p) =>
+          p.slug === item.slug
+            ? { ...p, quantity: p.quantity + item.quantity }
+            : p
+        );
       }
 
-      // senão, adiciona novo
-      return [...prev, { ...item, quantity }];
+      return [...prev, item];
     });
-  }
+  };
 
-  function removeItem(slug: string) {
-    setItems((prev) => prev.filter((item) => item.slug !== slug));
-  }
+  const removeItem = (slug: string) => {
+    setItems((prev) => prev.filter((p) => p.slug !== slug));
+  };
 
-  function clearCart() {
-    setItems([]);
-  }
+  const clear = () => setItems([]);
 
-  const total = useMemo(
-    () =>
-      items.reduce(
-        (sum, item) => sum + item.price * (item.quantity ?? 1),
-        0
-      ),
-    [items]
-  );
-
-  const value = useMemo(
-    () => ({
-      items,
-      total,
-      addItem,
-      removeItem,
-      clearCart,
-    }),
-    [items, total]
+  const total = items.reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0
   );
 
   return (
-    <CartContext.Provider value={value}>{children}</CartContext.Provider>
+    <CartContext.Provider value={{ items, total, addToCart, removeItem, clear }}>
+      {children}
+    </CartContext.Provider>
   );
 }
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error("useCart deve ser usado dentro de CartProvider");
-  }
+  if (!ctx) throw new Error("useCart deve ser usado dentro de CartProvider");
   return ctx;
 }
