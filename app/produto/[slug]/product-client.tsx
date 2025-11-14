@@ -20,7 +20,6 @@ export default function ProductClient({ product }: Props) {
   const [showToast, setShowToast] = useState(false);
 
   function handleAddToCart() {
-    // adiciona ao carrinho
     addItem(
       {
         slug: product.slug,
@@ -31,7 +30,6 @@ export default function ProductClient({ product }: Props) {
       qty
     );
 
-    // mostra mensagem "produto adicionado"
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2300);
   }
@@ -121,13 +119,21 @@ export default function ProductClient({ product }: Props) {
         </div>
       </div>
 
-      {/* TOAST "PRODUTO ADICIONADO" MEIO TRANSPARENTE */}
+      {/* TOAST BONITÃO */}
       {showToast && (
         <div className="fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
-          <div className="pointer-events-none rounded-3xl bg-black/70 border border-emerald-500/40 px-4 py-3 shadow-xl backdrop-blur-sm">
-            <p className="text-sm font-semibold text-emerald-400 text-center">
-              Produto adicionado ao carrinho
-            </p>
+          <div className="pointer-events-none flex max-w-md flex-row items-center gap-3 rounded-3xl bg-zinc-950/90 border border-emerald-500/60 px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.75)] backdrop-blur-md">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500">
+              <span className="text-black text-xl">✓</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-emerald-400">
+                Produto adicionado
+              </span>
+              <span className="text-xs text-zinc-300">
+                {product.name} foi colocado no seu carrinho.
+              </span>
+            </div>
           </div>
         </div>
       )}
