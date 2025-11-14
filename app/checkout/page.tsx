@@ -1,14 +1,9 @@
 // app/checkout/page.tsx
 "use client";
 
-import {
-  useState,
-  useEffect,
-  FormEvent,
-  ChangeEvent,
-} from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "../../contexts/CartContext";
 
 type Address = {
   name: string;
@@ -38,7 +33,7 @@ function brl(n: number) {
   return n.toFixed(2).replace(".", ",");
 }
 
-// seu número de WhatsApp DA LOJA (não aparece em nenhum campo)
+// número do WhatsApp da loja (não aparece nos campos do cliente)
 const WHATSAPP_NUMBER = "44988606483";
 
 export default function CheckoutPage() {
@@ -51,9 +46,7 @@ export default function CheckoutPage() {
   const [showClearToast, setShowClearToast] = useState(false);
 
   // INPUTS DO FORM
-  function handleChange(
-    e: ChangeEvent<HTMLInputElement>
-  ) {
+  function handleChange(e: any) {
     const { name, value } = e.target;
     setAddress((prev) => ({ ...prev, [name]: value }));
   }
@@ -79,7 +72,7 @@ export default function CheckoutPage() {
         uf: data.uf || prev.uf,
       }));
     } catch {
-      // se der erro, só segue sem travar nada
+      // se der erro, só ignora
     }
   }
 
@@ -100,7 +93,7 @@ export default function CheckoutPage() {
   }, [showClearToast]);
 
   // ENVIAR PEDIDO PRO WHATSAPP
-  function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: any) {
     e.preventDefault();
     if (!hasItems || isSending) return;
 
@@ -124,7 +117,7 @@ Cidade: ${address.city} - ${address.uf}
 `.trim();
 
     const message = encodeURIComponent(
-      `🛒 *Novo pedido da Loja da Jane*\n\n` +
+      `🛒 *Novo pedido da Loja do Jane*\n\n` +
         `*Itens:*\n${lines.join("\n")}\n\n` +
         `*Total:* R$ ${brl(total)}\n\n` +
         `*Endereço de entrega:*\n${addressText}`
