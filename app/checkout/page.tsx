@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useCart } from "../../contexts/CartContext";
+import { useCart } from "../contexts/CartContext";
 
 type Address = {
   name: string;
