@@ -1,6 +1,6 @@
 // app/layout.tsx
 import "./globals.css";
-import { CartProvider } from "@/components/cart/CartProvider";
+import { CartProvider } from "./contexts/CartContext";
 
 export const metadata = {
   title: "Loja da Jane — Ofertas e Moda",
