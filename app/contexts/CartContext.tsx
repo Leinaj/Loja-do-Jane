@@ -5,7 +5,8 @@ import {
   useContext,
   useState,
   useMemo,
-  type ReactNode,
+  useEffect,
+  ReactNode,
 } from "react";
 
 type CartItem = {
@@ -26,55 +27,91 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const STORAGE_KEY = "lojadojane_cart";
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  function addItem(
-    item: Omit<CartItem, "quantity">,
-    quantity: number = 1
-  ): void {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.slug === item.slug);
+  // Carregar do localStorage quando abrir o site
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
 
-      if (existing) {
-        return prev.map((i) =>
-          i.slug === item.slug
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        );
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setItems(parsed);
+      }
+    } catch (err) {
+      console.error("Erro ao ler carrinho do localStorage", err);
+    }
+  }, []);
+
+  // Salvar no localStorage sempre que o carrinho mudar
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch (err) {
+      console.error("Erro ao salvar carrinho no localStorage", err);
+    }
+  }, [items]);
+
+  function addItem(item: Omit<CartItem, "quantity">, quantity = 1) {
+    setItems((prev) => {
+      const index = prev.findIndex((i) => i.slug === item.slug);
+
+      // se já existe, só soma a quantidade
+      if (index >= 0) {
+        const copy = [...prev];
+        copy[index] = {
+          ...copy[index],
+          quantity: copy[index].quantity + quantity,
+        };
+        return copy;
       }
 
+      // senão, adiciona novo
       return [...prev, { ...item, quantity }];
     });
   }
 
-  function removeItem(slug: string): void {
-    setItems((prev) => prev.filter((i) => i.slug !== slug));
+  function removeItem(slug: string) {
+    setItems((prev) => prev.filter((item) => item.slug !== slug));
   }
 
-  function clearCart(): void {
+  function clearCart() {
     setItems([]);
   }
 
   const total = useMemo(
-    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      items.reduce(
+        (sum, item) => sum + item.price * (item.quantity ?? 1),
+        0
+      ),
     [items]
   );
 
-  const value: CartContextType = {
-    items,
-    total,
-    addItem,
-    removeItem,
-    clearCart,
-  };
+  const value = useMemo(
+    () => ({
+      items,
+      total,
+      addItem,
+      removeItem,
+      clearCart,
+    }),
+    [items, total]
+  );
 
   return (
     <CartContext.Provider value={value}>{children}</CartContext.Provider>
   );
 }
 
-export function useCart(): CartContextType {
+export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) {
     throw new Error("useCart deve ser usado dentro de CartProvider");
