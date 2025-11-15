@@ -2,7 +2,8 @@
 
 import { useState, FormEvent } from "react";
 import Image from "next/image";
-import { useCart } from "../cart-provider"; // <- AGORA VAI PRO ARQUIVO CERTO
+import Link from "next/link";
+import { useCart } from "../cart-provider";
 
 type CepResponse = {
   logradouro?: string;
@@ -12,101 +13,127 @@ type CepResponse = {
   erro?: boolean;
 };
 
-function brl(n: number) {
-  return n.toFixed(2).replace(".", ",");
-}
-
-// número do WhatsApp da loja (com DDI 55)
-const WHATSAPP_NUMBER = "5544988606483";
-
 export default function CheckoutPage() {
-  const { items, total, removeItem } = useCart();
+  const { items, total, removeItem, clear } = useCart();
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [nome, setNome] = useState("");
+  const [whats, setWhats] = useState("");
   const [cep, setCep] = useState("");
-  const [street, setStreet] = useState("");
-  const [number, setNumber] = useState("");
-  const [complement, setComplement] = useState("");
-  const [district, setDistrict] = useState("");
-  const [city, setCity] = useState("");
-  const [stateUf, setStateUf] = useState("");
+  const [rua, setRua] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [erroCep, setErroCep] = useState<string | null>(null);
 
   const hasItems = items.length > 0;
 
-  async function handleCepBlur() {
-    const cleanCep = cep.replace(/\D/g, "");
-    if (cleanCep.length !== 8) return;
+  async function handleBuscarCep() {
+    const cepLimpo = cep.replace(/\D/g, "");
+
+    if (cepLimpo.length !== 8) {
+      setErroCep("CEP inválido. Use 8 números.");
+      return;
+    }
 
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      setErroCep(null);
+      setBuscandoCep(true);
+
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       const data: CepResponse = await res.json();
 
-      if (data.erro) return;
+      if (data.erro) {
+        setErroCep("CEP não encontrado.");
+        return;
+      }
 
-      setStreet(data.logradouro ?? "");
-      setDistrict(data.bairro ?? "");
-      setCity(data.localidade ?? "");
-      setStateUf(data.uf ?? "");
-    } catch {
-      // se der erro na API, só não preenche nada
+      setRua(data.logradouro ?? "");
+      setBairro(data.bairro ?? "");
+      setCidade(data.localidade ?? "");
+      setEstado(data.uf ?? "");
+    } catch (e) {
+      setErroCep("Erro ao buscar CEP. Tente novamente.");
+    } finally {
+      setBuscandoCep(false);
     }
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
     if (!hasItems) return;
 
-    const linhasProdutos = items
+    if (!nome || !whats || !cep || !rua || !bairro || !cidade || !estado) {
+      alert("Preencha todos os dados principais (nome, WhatsApp, endereço).");
+      return;
+    }
+
+    const itensTexto = items
       .map(
         (item) =>
-          `• ${item.name} — Qtd: ${item.quantity} — R$ ${brl(item.price)}`
+          `• ${item.name} (Qtd: ${item.quantity}) - R$ ${(item.price * item.quantity)
+            .toFixed(2)
+            .replace(".", ",")}`
       )
       .join("%0A");
 
-    const endereco =
-      `Nome: ${name}%0A` +
-      `Telefone/WhatsApp: ${phone}%0A` +
+    const totalTexto = total.toFixed(2).replace(".", ",");
+
+    const endereco = `${rua}, ${numero || "s/ nº"} - ${bairro} - ${cidade}/${estado}`;
+    const complementoTexto = complemento ? ` (${complemento})` : "";
+
+    const msg = `Novo pedido - Loja do Jane%0A%0A` +
+      `Nome: ${nome}%0A` +
+      `WhatsApp: ${whats}%0A` +
       `CEP: ${cep}%0A` +
-      `Rua: ${street}, Nº ${number}%0A` +
-      `Compl.: ${complement}%0A` +
-      `Bairro: ${district}%0A` +
-      `Cidade: ${city} - ${stateUf}`;
+      `Endereço: ${endereco}${complementoTexto}%0A%0A` +
+      `Itens:%0A${itensTexto}%0A%0A` +
+      `Total: R$ ${totalTexto}`;
 
-    const mensagem =
-      `Olá, quero finalizar este pedido:%0A%0A` +
-      `Itens:%0A${linhasProdutos}%0A%0A` +
-      `Total: R$ ${brl(total)}%0A%0A` +
-      `Endereço:%0A${endereco}`;
+    const url = `https://wa.me/5544988606483?text=${msg}`;
 
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${mensagem}`;
     window.open(url, "_blank");
+
+    clear();
   }
 
-  // base dos inputs com animação suave no foco + glow
-  const inputBase =
-    "w-full rounded-full bg-black/80 border border-emerald-500/25 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 " +
-    "transition-all duration-200 ease-out " +
-    "focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/70 focus:ring-offset-2 focus:ring-offset-black " +
-    "focus:shadow-[0_0_25px_rgba(16,185,129,0.35)]";
-
   return (
-    <main className="min-h-screen bg-black text-zinc-50 px-4 py-10">
-      <div className="mx-auto flex max-w-4xl flex-col gap-8">
-        {/* CARD DO CARRINHO */}
-        <section className="rounded-3xl bg-zinc-950 border border-zinc-800/80 p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
-          <h1 className="text-2xl font-semibold mb-4">Carrinho</h1>
+    <div className="min-h-[calc(100vh-5rem)] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 lg:flex-row">
+        {/* COLUNA ESQUERDA – ITENS DO CARRINHO */}
+        <div className="w-full lg:w-2/3 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold text-white">
+              Finalizar pedido
+            </h1>
+
+            <Link
+              href="/"
+              className="text-sm text-emerald-400 hover:text-emerald-300"
+            >
+              ← Voltar para a loja
+            </Link>
+          </div>
 
           {!hasItems && (
-            <p className="text-zinc-400">Seu carrinho está vazio.</p>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-sm text-zinc-300">
+              Seu carrinho está vazio.  
+              <Link href="/" className="text-emerald-400 ml-1">
+                Ver produtos
+              </Link>
+            </div>
           )}
 
           {hasItems && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 rounded-2xl bg-zinc-900 border border-zinc-800 px-4 py-3"
+                  className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"
                 >
                   <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-zinc-950">
                     {item.image && (
@@ -119,177 +146,180 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{item.name}</p>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-white">
+                      {item.name}
+                    </p>
                     <p className="text-xs text-zinc-400">
-                      Qtd: {item.quantity} • R$ {brl(item.price)}
+                      Quantidade: {item.quantity}
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-400">
+                      R$ {(item.price * item.quantity)
+                        .toFixed(2)
+                        .replace(".", ",")}
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => removeItem(item.id)}
-                    className="rounded-full bg-pink-600/90 px-3 py-1 text-xs font-semibold text-white hover:bg-pink-500 transition-colors"
+                    className="text-xs text-zinc-400 hover:text-red-400"
                   >
                     Remover
                   </button>
                 </div>
               ))}
-
-              <div className="mt-4 flex items-center justify-between rounded-2xl bg-zinc-900/80 px-4 py-3 border border-zinc-800">
-                <span className="text-zinc-300 text-sm">Total:</span>
-                <span className="text-2xl font-semibold text-emerald-400">
-                  R$ {brl(total)}
-                </span>
-              </div>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* CARD DO ENDEREÇO COM GLOW */}
-        <section className="relative rounded-[32px] bg-gradient-to-b from-emerald-500/10 via-black to-black p-[1px] shadow-[0_0_80px_rgba(16,185,129,0.35)]">
-          <div className="rounded-[30px] bg-zinc-950/95 border border-emerald-500/20 px-5 py-7 sm:px-7 sm:py-8">
-            <h2 className="text-xl font-semibold mb-6">Endereço</h2>
+        {/* COLUNA DIREITA – DADOS E RESUMO */}
+        <div className="w-full lg:w-1/3 space-y-4">
+          {/* RESUMO */}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-white">
+              Resumo do pedido
+            </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Nome */}
-              <div className="space-y-2">
-                <label className="text-sm text-zinc-300">
-                  Nome <span className="text-pink-400">*</span>
-                </label>
-                <input
-                  className={inputBase}
-                  placeholder="Nome completo"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-400">Total</span>
+              <span className="text-lg font-semibold text-emerald-400">
+                R$ {total.toFixed(2).replace(".", ",")}
+              </span>
+            </div>
 
-              {/* Telefone */}
-              <div className="space-y-2">
-                <label className="text-sm text-zinc-300">
-                  Telefone / WhatsApp{" "}
-                  <span className="text-pink-400">*</span>
-                </label>
-                <input
-                  className={inputBase}
-                  placeholder="(44) 9 9999-9999"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-              </div>
+            <p className="text-xs text-zinc-500">
+              O frete e forma de pagamento serão combinados pelo WhatsApp.
+            </p>
+          </div>
 
-              {/* CEP */}
-              <div className="space-y-2">
-                <label className="text-sm text-zinc-300">
-                  CEP <span className="text-pink-400">*</span>
-                </label>
-                <input
-                  className={inputBase}
-                  placeholder="87000-000"
-                  value={cep}
-                  onChange={(e) => setCep(e.target.value)}
-                  onBlur={handleCepBlur}
-                  required
-                />
-              </div>
+          {/* FORMULÁRIO */}
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5"
+          >
+            <h2 className="text-sm font-semibold text-white">
+              Dados para entrega
+            </h2>
 
-              {/* Rua */}
-              <div className="space-y-2">
-                <label className="text-sm text-zinc-300">
-                  Rua <span className="text-pink-400">*</span>
-                </label>
-                <input
-                  className={inputBase}
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  required
-                />
-              </div>
+            {/* NOME */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400">Nome completo</label>
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                placeholder="Seu nome"
+              />
+            </div>
 
-              {/* Número / Complemento */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm text-zinc-300">
-                    Número <span className="text-pink-400">*</span>
-                  </label>
+            {/* WHATS */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400">WhatsApp</label>
+              <input
+                value={whats}
+                onChange={(e) => setWhats(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                placeholder="(44) 9 9999-9999"
+              />
+            </div>
+
+            {/* CEP */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-xs text-zinc-400">CEP</label>
                   <input
-                    className={inputBase}
-                    value={number}
-                    onChange={(e) => setNumber(e.target.value)}
-                    required
+                    value={cep}
+                    onChange={(e) => setCep(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                    placeholder="87000-000"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-zinc-300">Complemento</label>
-                  <input
-                    className={inputBase}
-                    placeholder="Apto, bloco, referência…"
-                    value={complement}
-                    onChange={(e) => setComplement(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Bairro */}
-              <div className="space-y-2">
-                <label className="text-sm text-zinc-300">
-                  Bairro <span className="text-pink-400">*</span>
-                </label>
-                <input
-                  className={inputBase}
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Cidade / UF */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm text-zinc-300">
-                    Cidade <span className="text-pink-400">*</span>
-                  </label>
-                  <input
-                    className={inputBase}
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-zinc-300">
-                    UF <span className="text-pink-400">*</span>
-                  </label>
-                  <input
-                    className={inputBase}
-                    placeholder="PR"
-                    value={stateUf}
-                    onChange={(e) => setStateUf(e.target.value.toUpperCase())}
-                    maxLength={2}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Botão WhatsApp */}
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <button
-                  type="submit"
-                  disabled={!hasItems}
-                  className="w-full rounded-full bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-black shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.8)] disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
+                  type="button"
+                  onClick={handleBuscarCep}
+                  disabled={buscandoCep}
+                  className="mt-[18px] rounded-xl bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-100 outline-none transition hover:bg-zinc-700 disabled:opacity-60"
                 >
-                  Finalizar compra no WhatsApp
+                  {buscandoCep ? "Buscando..." : "Buscar CEP"}
                 </button>
               </div>
-            </form>
-          </div>
-        </section>
+              {erroCep && (
+                <p className="text-xs text-red-400">{erroCep}</p>
+              )}
+            </div>
+
+            {/* RUA / NÚMERO */}
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-xs text-zinc-400">Rua</label>
+                <input
+                  value={rua}
+                  onChange={(e) => setRua(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                />
+              </div>
+              <div className="w-24 space-y-1.5">
+                <label className="text-xs text-zinc-400">Número</label>
+                <input
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                />
+              </div>
+            </div>
+
+            {/* BAIRRO / CIDADE / UF */}
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-xs text-zinc-400">Bairro</label>
+                <input
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-xs text-zinc-400">Cidade</label>
+                <input
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                />
+              </div>
+              <div className="w-16 space-y-1.5">
+                <label className="text-xs text-zinc-400">UF</label>
+                <input
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 uppercase outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+
+            {/* COMPLEMENTO */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400">Complemento</label>
+              <input
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
+                placeholder="Apartamento, bloco, ponto de referência..."
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={!hasItems}
+              className="mt-2 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_25px_rgba(16,185,129,0.55)] transition hover:bg-emerald-400 hover:shadow-[0_0_35px_rgba(16,185,129,0.7)] disabled:opacity-60 disabled:shadow-none"
+            >
+              Enviar pedido no WhatsApp
+            </button>
+          </form>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
