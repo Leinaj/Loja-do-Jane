@@ -1,13 +1,13 @@
 // app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
-import products from "./data/products";
+import { products } from "./data/products"; // <-- IMPORT NOMEADO
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-5xl mx-auto px-4 pb-16 pt-8">
-        {/* Cabeçalho simples */}
+        {/* Cabeçalho */}
         <header className="mb-8">
           <h1 className="text-2xl md:text-3xl font-semibold">
             Loja da Jane — Ofertas e Moda
@@ -26,7 +26,7 @@ export default function HomePage() {
               href={`/produto/${product.slug}`}
               className="group rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden flex flex-col hover:border-emerald-500/70 transition-colors"
             >
-              {/* Imagem – já é clicável porque está dentro do Link */}
+              {/* Imagem (clicável) */}
               <div className="relative w-full aspect-[4/5]">
                 <Image
                   src={product.image}
@@ -62,7 +62,7 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* Botão Ver – também clicável porque está dentro do Link */}
+                {/* Botão Ver (também clicável) */}
                 <div className="mt-4">
                   <span className="inline-flex items-center justify-center w-full rounded-full border border-emerald-500 text-emerald-400 text-sm font-medium py-2 group-hover:bg-emerald-500 group-hover:text-black transition-colors">
                     Ver
