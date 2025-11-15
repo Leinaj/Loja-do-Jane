@@ -1,59 +1,58 @@
-// app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "./data/products"; // <-- IMPORT NOMEADO
+import { products } from "./data/products";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-5xl mx-auto px-4 pb-16 pt-8">
+
         {/* Cabeçalho */}
         <header className="mb-8">
           <h1 className="text-2xl md:text-3xl font-semibold">
             Loja da Jane — Ofertas e Moda
           </h1>
           <p className="text-zinc-400 text-sm mt-2">
-            Escolha seu produto e clique na foto ou em &quot;Ver&quot; para abrir a
-            página de detalhes.
+            Escolha seu produto e clique na foto ou em “Ver” para abrir a página de detalhes.
           </p>
         </header>
 
-        {/* Grid de produtos */}
+        {/* GRID */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product: any) => (
-            <Link
-              key={product.slug}
-              href={`/produto/${product.slug}`}
-              className="group rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden flex flex-col hover:border-emerald-500/70 transition-colors"
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden shadow-lg shadow-black/20"
             >
-              {/* Imagem (clicável) */}
-              <div className="relative w-full aspect-[4/5]">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  priority={false}
-                />
-              </div>
+              {/* IMAGEM — CLICA E ABRE */}
+              <Link href={`/produto/${product.slug}`}>
+                <div className="relative w-full aspect-[4/5]">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </Link>
 
-              {/* Infos do produto */}
-              <div className="flex-1 flex flex-col p-4 gap-2">
-                <h2 className="text-lg font-semibold group-hover:text-emerald-400 transition-colors">
+              {/* INFOS */}
+              <div className="p-4 flex flex-col gap-2">
+
+                <h2 className="text-lg font-semibold">
                   {product.name}
                 </h2>
 
                 {product.description && (
-                  <p className="text-sm text-zinc-400 line-clamp-2">
+                  <p className="text-sm text-zinc-400">
                     {product.description}
                   </p>
                 )}
 
-                {/* Preço */}
+                {/* PREÇOS */}
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-xl font-semibold text-emerald-400">
-                    {product.priceFormatted ?? product.price}
+                    {product.priceFormatted}
                   </span>
                   {product.oldPriceFormatted && (
                     <span className="text-sm text-zinc-500 line-through">
@@ -62,16 +61,18 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {/* Botão Ver (também clicável) */}
-                <div className="mt-4">
-                  <span className="inline-flex items-center justify-center w-full rounded-full border border-emerald-500 text-emerald-400 text-sm font-medium py-2 group-hover:bg-emerald-500 group-hover:text-black transition-colors">
+                {/* BOTÃO VER */}
+                <Link href={`/produto/${product.slug}`}>
+                  <button className="mt-4 w-full rounded-full border border-emerald-500 text-emerald-400 py-2 text-sm font-medium transition-colors hover:bg-emerald-500 hover:text-black">
                     Ver
-                  </span>
-                </div>
+                  </button>
+                </Link>
+
               </div>
-            </Link>
+            </div>
           ))}
         </section>
+
       </div>
     </main>
   );
