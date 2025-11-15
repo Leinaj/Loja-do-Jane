@@ -3,126 +3,146 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { Product } from "../../../components/products/data";
-import { useCart } from "../../cart-provider";
+import { useCart } from "@/contexts/CartContext";
 
-type Props = {
-  product: Product;
+type ProductProps = {
+  product: {
+    id: number;
+    slug: string;
+    name: string;
+    price: number;
+    priceFormatted?: string;
+    oldPrice?: number;
+    oldPriceFormatted?: string;
+    description?: string;
+    image: string;
+  };
 };
 
-export default function ProductClient({ product }: Props) {
+export default function ProductClient({ product }: ProductProps) {
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
-  const [showToast, setShowToast] = useState(false);
+
+  function handleDecrease() {
+    setQty((prev) => (prev > 1 ? prev - 1 : 1));
+  }
+
+  function handleIncrease() {
+    setQty((prev) => prev + 1);
+  }
 
   function handleAddToCart() {
-    if (qty < 1) return;
+    if (!product) return;
 
     addToCart({
-      id: product.slug,
+      id: product.id,
+      slug: product.slug,
       name: product.name,
       price: product.price,
-      quantity: qty,
       image: product.image,
+      quantity: qty,
     });
-
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
   }
 
   return (
-    <>
-      <div className="min-h-[calc(100vh-5rem)] py-8 sm:py-12">
-        <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 sm:px-6 md:flex-row">
-          {/* FOTO DO PRODUTO */}
-          <div className="w-full md:w-1/2">
-            <div className="relative aspect-square overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950">
+    <main className="min-h-screen bg-black text-white">
+      <div className="max-w-4xl mx-auto px-4 pb-16 pt-8">
+        {/* Botão voltar */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="text-sm text-zinc-400 hover:text-emerald-400 transition-colors"
+          >
+            ← Voltar para a loja
+          </Link>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 md:p-6 flex flex-col md:flex-row gap-6">
+          {/* Imagem grande */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-full max-w-sm aspect-[4/5] bg-white rounded-3xl overflow-hidden">
               <Image
                 src={product.image}
                 alt={product.name}
                 fill
                 className="object-cover"
-                sizes="(min-width: 768px) 400px, 100vw"
+                sizes="(min-width: 768px) 50vw, 100vw"
+                priority
               />
             </div>
           </div>
 
-          {/* INFO / COMPRA */}
-          <div className="w-full md:w-1/2 space-y-6">
+          {/* Infos / ações */}
+          <div className="flex-1 flex flex-col gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white">
+              <h1 className="text-2xl md:text-3xl font-semibold">
                 {product.name}
               </h1>
-              <p className="mt-2 text-sm text-zinc-400">
-                {product.description}
-              </p>
+              {product.description && (
+                <p className="text-zinc-400 text-sm mt-2">
+                  {product.description}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-baseline gap-3">
+            {/* Preço */}
+            <div className="mt-2">
+              <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-semibold text-emerald-400">
-                  {product.price.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
+                  {product.priceFormatted ?? `R$ ${product.price.toFixed(2)}`}
                 </span>
+                {product.oldPriceFormatted && (
+                  <span className="text-sm text-zinc-500 line-through">
+                    {product.oldPriceFormatted}
+                  </span>
+                )}
               </div>
+            </div>
 
-              {/* QUANTIDADE */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-zinc-300">Quantidade:</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={qty}
-                  onChange={(e) =>
-                    setQty(Math.max(1, Number(e.target.value) || 1))
-                  }
-                  className="w-20 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-center text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/40"
-                />
-              </div>
-
-              {/* BOTÕES */}
-              <div className="flex flex-wrap gap-3 pt-2">
+            {/* Quantidade */}
+            <div className="mt-4">
+              <span className="block text-sm mb-2 text-zinc-300">
+                Quantidade:
+              </span>
+              <div className="inline-flex items-center gap-4 bg-zinc-950 border border-zinc-800 rounded-full px-4 py-2">
                 <button
                   type="button"
-                  onClick={handleAddToCart}
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_25px_rgba(16,185,129,0.45)] transition hover:bg-emerald-400 hover:shadow-[0_0_35px_rgba(16,185,129,0.6)]"
+                  onClick={handleDecrease}
+                  className="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center text-lg"
                 >
-                  Adicionar ao carrinho
+                  −
                 </button>
-
-                <Link
-                  href="/"
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+                <span className="min-w-[2rem] text-center">{qty}</span>
+                <button
+                  type="button"
+                  onClick={handleIncrease}
+                  className="w-8 h-8 rounded-full border border-emerald-500 flex items-center justify-center text-lg"
                 >
-                  Voltar para a loja
-                </Link>
+                  +
+                </button>
               </div>
+            </div>
+
+            {/* Botões */}
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="w-full rounded-full bg-emerald-500 text-black font-semibold py-3 shadow-[0_0_25px_rgba(16,185,129,0.6)] hover:bg-emerald-400 transition-colors"
+              >
+                Adicionar ao carrinho
+              </button>
+
+              <Link
+                href="/checkout"
+                className="w-full rounded-full border border-zinc-700 text-zinc-200 font-medium py-3 text-center hover:border-emerald-500 hover:text-emerald-400 transition-colors"
+              >
+                Ir para o carrinho
+              </Link>
             </div>
           </div>
         </div>
       </div>
-
-      {/* TOAST "PRODUTO ADICIONADO" COM GLOW */}
-      {showToast && (
-        <div className="fixed bottom-6 left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2">
-          <div className="pointer-events-none flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-zinc-900/95 px-4 py-3 shadow-[0_0_30px_rgba(16,185,129,0.55)]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20">
-              <span className="text-lg">✅</span>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-emerald-400">
-                Produto adicionado
-              </p>
-              <p className="text-xs text-zinc-300">
-                <span className="font-medium">{product.name}</span> foi
-                adicionado ao carrinho.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </main>
   );
 }
