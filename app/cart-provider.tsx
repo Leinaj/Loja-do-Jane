@@ -18,7 +18,7 @@ export type CartItem = {
 type CartContextType = {
   items: CartItem[];
   total: number;
-  addItem: (item: CartItem) => void;
+  addToCart: (item: CartItem) => void;
   removeItem: (id: string) => void;
   clear: () => void;
 };
@@ -28,12 +28,12 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  function addItem(item: CartItem) {
+  function addToCart(item: CartItem) {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
 
-      // se já existe no carrinho, só soma a quantidade
       if (existing) {
+        // se já existe, só aumenta a quantidade
         return prev.map((i) =>
           i.id === item.id
             ? { ...i, quantity: i.quantity + item.quantity }
@@ -64,7 +64,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         items,
         total,
-        addItem,
+        addToCart,
         removeItem,
         clear,
       }}
@@ -82,5 +82,4 @@ export function useCart() {
   return ctx;
 }
 
-// default export pro layout importar se quiser
 export default CartProvider;
