@@ -1,380 +1,295 @@
+// app/checkout/page.tsx
 "use client";
 
-import Link from "next/link";
+import { useState, FormEvent } from "react";
 import Image from "next/image";
-import { useCart } from "@/contexts/CartContext";
-import { useState, ChangeEvent } from "react";
+import { useCart } from "../contexts/CartContext";
 
-type AddressFormState = {
-  name: string;
-  phone: string;
-  cep: string;
-  street: string;
-  number: string;
-  complement: string;
-  neighborhood: string;
-  city: string;
-  uf: string;
+type CepResponse = {
+  logradouro?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean;
 };
 
+function brl(n: number) {
+  return n.toFixed(2).replace(".", ",");
+}
+
+// número do WhatsApp da loja (com DDI 55)
+const WHATSAPP_NUMBER = "5544988606483";
+
 export default function CheckoutPage() {
-  const { items, total, removeItem, clear } = useCart();
+  const { items, total, removeItem } = useCart();
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cep, setCep] = useState("");
+  const [street, setStreet] = useState("");
+  const [number, setNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [district, setDistrict] = useState("");
+  const [city, setCity] = useState("");
+  const [stateUf, setStateUf] = useState("");
 
   const hasItems = items.length > 0;
 
-  const [address, setAddress] = useState<AddressFormState>({
-    name: "",
-    phone: "",
-    cep: "",
-    street: "",
-    number: "",
-    complement: "",
-    neighborhood: "",
-    city: "",
-    uf: "",
-  });
-
-  const [loadingCep, setLoadingCep] = useState(false);
-
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setAddress((prev) => ({ ...prev, [name]: value }));
-  }
-
   async function handleCepBlur() {
-    const raw = address.cep.replace(/\D/g, "");
-    if (raw.length !== 8) return;
+    const cleanCep = cep.replace(/\D/g, "");
+    if (cleanCep.length !== 8) return;
 
     try {
-      setLoadingCep(true);
-      const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
-      const data = await res.json();
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data: CepResponse = await res.json();
+
       if (data.erro) return;
 
-      setAddress((prev) => ({
-        ...prev,
-        street: data.logradouro ?? prev.street,
-        neighborhood: data.bairro ?? prev.neighborhood,
-        city: data.localidade ?? prev.city,
-        uf: data.uf ?? prev.uf,
-      }));
+      setStreet(data.logradouro ?? "");
+      setDistrict(data.bairro ?? "");
+      setCity(data.localidade ?? "");
+      setStateUf(data.uf ?? "");
     } catch {
-      // se der erro, só ignora
-    } finally {
-      setLoadingCep(false);
+      // se der erro na API, só não preenche nada
     }
   }
 
-  function handleFinishOnWhatsApp() {
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     if (!hasItems) return;
 
-    const lines: string[] = [];
+    const linhasProdutos = items
+      .map(
+        (item) =>
+          `• ${item.name} — Qtd: ${item.quantity} — R$ ${brl(item.price)}`
+      )
+      .join("%0A");
 
-    lines.push("🛒 *Novo pedido Loja da Jane*");
-    lines.push("");
-    lines.push("*Itens:*");
+    const endereco =
+      `Nome: ${name}%0A` +
+      `Telefone/WhatsApp: ${phone}%0A` +
+      `CEP: ${cep}%0A` +
+      `Rua: ${street}, Nº ${number}%0A` +
+      `Compl.: ${complement}%0A` +
+      `Bairro: ${district}%0A` +
+      `Cidade: ${city} - ${stateUf}`;
 
-    for (const item of items) {
-      lines.push(
-        `• ${item.product.name} - Qtd: ${item.qty} - R$ ${item.product.price
-          .toFixed(2)
-          .replace(".", ",")}`
-      );
-    }
+    const mensagem =
+      `Olá, quero finalizar este pedido:%0A%0A` +
+      `Itens:%0A${linhasProdutos}%0A%0A` +
+      `Total: R$ ${brl(total)}%0A%0A` +
+      `Endereço:%0A${endereco}`;
 
-    lines.push("");
-    lines.push(
-      `*Total:* R$ ${total.toFixed(2).replace(".", ",")}`
-    );
-    lines.push("");
-    lines.push("*Endereço de entrega:*");
-    lines.push(`Nome: ${address.name || "-"} `);
-    lines.push(`Telefone: ${address.phone || "-"} `);
-    lines.push(
-      `Endereço: ${address.street || "-"}, ${address.number || "-"} ${
-        address.complement || ""
-      }`
-    );
-    lines.push(
-      `Bairro: ${address.neighborhood || "-"} - ${address.city || "-"} / ${
-        address.uf || "-"
-      }`
-    );
-    lines.push(`CEP: ${address.cep || "-"}`);
-
-    const text = encodeURIComponent(lines.join("\n"));
-
-    // coloca aqui o seu número de WhatsApp com DDI/DD
-    const phoneNumber = "5544988660483"; // altere se quiser
-
-    const url = `https://wa.me/${phoneNumber}?text=${text}`;
-    if (typeof window !== "undefined") {
-      window.open(url, "_blank");
-    }
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${mensagem}`;
+    window.open(url, "_blank");
   }
 
+  // classe base dos inputs com animação suave no foco
+  const inputBase =
+    "w-full rounded-full bg-black/80 border border-emerald-500/25 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 " +
+    "transition-all duration-200 ease-out " +
+    "focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/70 focus:ring-offset-2 focus:ring-offset-black " +
+    "focus:shadow-[0_0_25px_rgba(16,185,129,0.35)]";
+
   return (
-    <main className="min-h-screen bg-black text-white px-4 pb-16 pt-10">
-      <div className="mx-auto max-w-3xl space-y-8">
-        <h1 className="text-3xl font-bold mb-2">Carrinho</h1>
+    <main className="min-h-screen bg-black text-zinc-50 px-4 py-10">
+      <div className="mx-auto flex max-w-4xl flex-col gap-8">
+        {/* CARD DO CARRINHO */}
+        <section className="rounded-3xl bg-zinc-950 border border-zinc-800/80 p-6 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+          <h1 className="text-2xl font-semibold mb-4">Carrinho</h1>
 
-        {/* LISTA DE ITENS */}
-        {!hasItems && (
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
-            <p className="text-lg mb-6">Seu carrinho está vazio.</p>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-3 font-medium text-white"
-            >
-              Voltar para a loja
-            </Link>
-          </div>
-        )}
+          {!hasItems && (
+            <p className="text-zinc-400">Seu carrinho está vazio.</p>
+          )}
 
-        {hasItems && (
-          <>
+          {hasItems && (
             <div className="space-y-4">
               {items.map((item) => (
                 <div
-                  key={item.product.slug} // <- CORRIGIDO AQUI
-                  className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 flex gap-4 items-center"
+                  key={item.id}
+                  className="flex items-center gap-4 rounded-2xl bg-zinc-900 border border-zinc-800 px-4 py-3"
                 >
-                  <div className="w-20 h-20 relative rounded-xl overflow-hidden bg-zinc-800">
-                    <Image
-                      src={item.product.image}
-                      alt={item.product.name}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-zinc-950">
+                    {item.image && (
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                   </div>
 
                   <div className="flex-1">
-                    <div className="font-semibold">{item.product.name}</div>
-                    <div className="text-sm text-zinc-400">
-                      Qtd: {item.qty} • R${" "}
-                      {item.product.price
-                        .toFixed(2)
-                        .replace(".", ",")}
-                    </div>
+                    <p className="font-medium text-sm">{item.name}</p>
+                    <p className="text-xs text-zinc-400">
+                      Qtd: {item.quantity} • R$ {brl(item.price)}
+                    </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => removeItem(item.product.slug)}
-                    className="rounded-full bg-pink-500/90 hover:bg-pink-500 px-4 py-2 text-sm font-medium"
+                    onClick={() => removeItem(item.id)}
+                    className="rounded-full bg-pink-600/90 px-3 py-1 text-xs font-semibold text-white hover:bg-pink-500 transition-colors"
                   >
                     Remover
                   </button>
                 </div>
               ))}
-            </div>
 
-            {/* TOTAL + AÇÕES */}
-            <div className="mt-6 rounded-3xl bg-zinc-900 border border-zinc-800 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xl font-semibold">Total:</span>
-                <span className="text-2xl font-bold text-emerald-400">
-                  R$ {total.toFixed(2).replace(".", ",")}
+              <div className="mt-4 flex items-center justify-between rounded-2xl bg-zinc-900/80 px-4 py-3 border border-zinc-800">
+                <span className="text-zinc-300 text-sm">Total:</span>
+                <span className="text-2xl font-semibold text-emerald-400">
+                  R$ {brl(total)}
                 </span>
               </div>
+            </div>
+          )}
+        </section>
 
-              <div className="flex flex-col gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
-                >
-                  Limpar carrinho
-                </button>
+        {/* CARD DO ENDEREÇO COM GLOW */}
+        <section className="relative rounded-[32px] bg-gradient-to-b from-emerald-500/10 via-black to-black p-[1px] shadow-[0_0_80px_rgba(16,185,129,0.35)]">
+          <div className="rounded-[30px] bg-zinc-950/95 border border-emerald-500/20 px-5 py-7 sm:px-7 sm:py-8">
+            <h2 className="text-xl font-semibold mb-6">Endereço</h2>
 
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Linha: Nome */}
+              <div className="space-y-2">
+                <label className="text-sm text-zinc-300">
+                  Nome <span className="text-pink-400">*</span>
+                </label>
+                <input
+                  className={inputBase}
+                  placeholder="Nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Telefone */}
+              <div className="space-y-2">
+                <label className="text-sm text-zinc-300">
+                  Telefone / WhatsApp{" "}
+                  <span className="text-pink-400">*</span>
+                </label>
+                <input
+                  className={inputBase}
+                  placeholder="(44) 9 9999-9999"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* CEP */}
+              <div className="space-y-2">
+                <label className="text-sm text-zinc-300">
+                  CEP <span className="text-pink-400">*</span>
+                </label>
+                <input
+                  className={inputBase}
+                  placeholder="87000-000"
+                  value={cep}
+                  onChange={(e) => setCep(e.target.value)}
+                  onBlur={handleCepBlur}
+                  required
+                />
+              </div>
+
+              {/* Rua */}
+              <div className="space-y-2">
+                <label className="text-sm text-zinc-300">
+                  Rua <span className="text-pink-400">*</span>
+                </label>
+                <input
+                  className={inputBase}
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Número / Complemento */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm text-zinc-300">
+                    Número <span className="text-pink-400">*</span>
+                  </label>
+                  <input
+                    className={inputBase}
+                    value={number}
+                    onChange={(e) => setNumber(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm text-zinc-300">Complemento</label>
+                  <input
+                    className={inputBase}
+                    placeholder="Apto, bloco, referência…"
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Bairro */}
+              <div className="space-y-2">
+                <label className="text-sm text-zinc-300">
+                  Bairro <span className="text-pink-400">*</span>
+                </label>
+                <input
+                  className={inputBase}
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Cidade / UF */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="text-sm text-zinc-300">
+                    Cidade <span className="text-pink-400">*</span>
+                  </label>
+                  <input
+                    className={inputBase}
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm text-zinc-300">
+                    UF <span className="text-pink-400">*</span>
+                  </label>
+                  <input
+                    className={inputBase}
+                    placeholder="PR"
+                    value={stateUf}
+                    onChange={(e) => setStateUf(e.target.value.toUpperCase())}
+                    maxLength={2}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Botões */}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <button
-                  type="button"
-                  onClick={handleFinishOnWhatsApp}
-                  className="rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600"
+                  type="submit"
+                  disabled={!hasItems}
+                  className="w-full rounded-full bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-black shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.8)] disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
                 >
                   Finalizar compra no WhatsApp
                 </button>
-
-                <Link
-                  href="/"
-                  className="rounded-full border border-emerald-500/60 px-4 py-3 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 text-center"
-                >
-                  Voltar para a loja
-                </Link>
               </div>
-            </div>
-
-            {/* FORMULÁRIO DE ENDEREÇO COM GLOW */}
-            <section className="mt-8 rounded-3xl bg-zinc-900/80 border border-emerald-500/20 p-6 sm:p-8 shadow-[0_0_40px_rgba(16,185,129,0.25)]">
-              <h2 className="text-xl font-semibold mb-4">Endereço</h2>
-
-              <div className="grid grid-cols-1 gap-4">
-                {/* Nome */}
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">
-                    Nome *
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                    <input
-                      name="name"
-                      value={address.name}
-                      onChange={handleChange}
-                      className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                      placeholder="Nome completo"
-                    />
-                  </div>
-                </div>
-
-                {/* Telefone */}
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">
-                    Telefone / WhatsApp *
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                    <input
-                      name="phone"
-                      value={address.phone}
-                      onChange={handleChange}
-                      className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                      placeholder="(44) 9 9999-9999"
-                    />
-                  </div>
-                </div>
-
-                {/* CEP */}
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">
-                    CEP *
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                    <input
-                      name="cep"
-                      value={address.cep}
-                      onChange={handleChange}
-                      onBlur={handleCepBlur}
-                      className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                      placeholder="87000-000"
-                    />
-                    {loadingCep && (
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-emerald-400">
-                        Buscando CEP...
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Rua */}
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">
-                    Rua *
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                    <input
-                      name="street"
-                      value={address.street}
-                      onChange={handleChange}
-                      className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                      placeholder="Rua *"
-                    />
-                  </div>
-                </div>
-
-                {/* Número + Complemento */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-zinc-300 mb-1">
-                      Número *
-                    </label>
-                    <div className="relative group">
-                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                      <input
-                        name="number"
-                        value={address.number}
-                        onChange={handleChange}
-                        className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                        placeholder="Número"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-zinc-300 mb-1">
-                      Complemento
-                    </label>
-                    <div className="relative group">
-                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                      <input
-                        name="complement"
-                        value={address.complement}
-                        onChange={handleChange}
-                        className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                        placeholder="Apto, bloco, referência..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bairro */}
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">
-                    Bairro *
-                  </label>
-                  <div className="relative group">
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                    <input
-                      name="neighborhood"
-                      value={address.neighborhood}
-                      onChange={handleChange}
-                      className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                      placeholder="Bairro *"
-                    />
-                  </div>
-                </div>
-
-                {/* Cidade + UF */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-sm text-zinc-300 mb-1">
-                      Cidade *
-                    </label>
-                    <div className="relative group">
-                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                      <input
-                        name="city"
-                        value={address.city}
-                        onChange={handleChange}
-                        className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                        placeholder="Cidade *"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-zinc-300 mb-1">
-                      UF *
-                    </label>
-                    <div className="relative group">
-                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 opacity-0 blur-xl transition-opacity group-focus-within:opacity-100" />
-                      <input
-                        name="uf"
-                        value={address.uf}
-                        onChange={handleChange}
-                        className="relative w-full rounded-2xl bg-black/60 border border-emerald-500/30 px-4 py-3 outline-none text-sm placeholder:text-zinc-500 shadow-[0_0_0_1px_rgba(16,185,129,0.3)] focus:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-shadow"
-                        placeholder="PR"
-                        maxLength={2}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </>
-        )}
+            </form>
+          </div>
+        </section>
       </div>
     </main>
   );
