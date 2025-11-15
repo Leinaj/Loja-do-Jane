@@ -1,48 +1,28 @@
 // app/data/products.ts
+
 export type Product = {
-  id: string;
+  id: number;
   slug: string;
   name: string;
-  description: string;
   price: number;
+  priceFormatted?: string;
+  oldPrice?: number;
+  oldPriceFormatted?: string;
+  description?: string;
   image: string;
 };
 
-const products: Product[] = [
+export const products: Product[] = [
   {
-    id: 'moletom-cinza',
-    slug: 'moletom-cinza',
-    name: 'Moletom Cinza',
-    description: 'Moletom confortável e estiloso.',
-    price: 159.9,
-    image: '/images/moletom-cinza.jpg',
-  },
-  {
-    id: 'bonie-street',
-    slug: 'bonie-street',
-    name: 'Boné Street',
-    description: 'Boné casual moderno.',
-    price: 79.9,
-    image: '/images/bonie-street.jpg',
-  },
-  {
-    id: 'camiseta-preta',
-    slug: 'camiseta-preta',
-    name: 'Camiseta Preta',
-    description: 'Camiseta básica preta 100% algodão.',
+    id: 1,
+    slug: "camiseta-branca",
+    name: "Camiseta Branca",
     price: 49.9,
-    image: '/images/camiseta-preta.jpg',
+    priceFormatted: "R$ 49,90",
+    oldPrice: 59.9,
+    oldPriceFormatted: "R$ 59,90",
+    description: "Camiseta branca clássica, 100% algodão.",
+    image: "/products/camiseta1.png",
   },
-  {
-    id: 'camiseta-branca',
-    slug: 'camiseta-branca',
-    name: 'Camiseta Branca',
-    description: 'Camiseta básica branca 100% algodão.',
-    price: 49.9,
-    image: '/images/camiseta-branca.jpg',
-  },
+  // …
 ];
-
-export async function getProduct(slug: string): Promise<Product | undefined> {
-  return products.find((p) => p.slug === slug);
-}
