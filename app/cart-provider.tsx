@@ -33,7 +33,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existing = prev.find((i) => i.id === item.id);
 
       if (existing) {
-        // se já existe, só aumenta a quantidade
         return prev.map((i) =>
           i.id === item.id
             ? { ...i, quantity: i.quantity + item.quantity }
@@ -41,7 +40,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      // se não existe, adiciona novo
       return [...prev, item];
     });
   }
