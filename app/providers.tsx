@@ -1,14 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { CartProvider } from '../components/cart/context';
-import ToastBridge from '../components/ui/toast';
+import type { ReactNode } from "react";
+import { CartProvider } from "@/contexts/CartContext";
 
-export default function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <CartProvider>
-      <ToastBridge />
-      {children}
-    </CartProvider>
-  );
+export function Providers({ children }: { children: ReactNode }) {
+  return <CartProvider>{children}</CartProvider>;
 }
