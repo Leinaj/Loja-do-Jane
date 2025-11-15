@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import type { Product } from "../../../components/products/data";
-import { useCart } from "../../contexts/CartContext";
+import type { Product } from "@/components/products/data";
+import { useCart } from "@/contexts/CartContext";
 
 type Props = {
   product: Product;
@@ -15,124 +15,138 @@ function brl(n: number) {
 }
 
 export default function ProductClient({ product }: Props) {
-  const { addItem } = useCart();
+  const { addToCart } = useCart(); // <- nome certo da função do contexto
   const [qty, setQty] = useState(1);
   const [showToast, setShowToast] = useState(false);
 
-  function handleAddToCart() {
-    addItem(
-      {
-        slug: product.slug,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-      },
-      qty
-    );
-
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2300);
+  function handleChangeQty(delta: number) {
+    setQty((current) => {
+      const next = current + delta;
+      if (next < 1) return 1;
+      if (next > 20) return 20;
+      return next;
+    });
   }
 
-  const decrease = () => setQty((q) => (q > 1 ? q - 1 : 1));
-  const increase = () => setQty((q) => q + 1);
+  function handleAddToCart() {
+    addToCart(product, qty);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-xl mx-auto px-4 pb-10">
-        {/* IMAGEM DO PRODUTO */}
-        <div className="mt-4 rounded-3xl overflow-hidden bg-zinc-950 border border-zinc-800">
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={1200}
-            height={900}
-            className="w-full h-auto object-cover"
-            priority
-          />
-        </div>
+    <div className="pb-10">
+      {/* IMAGEM DO PRODUTO */}
+      <div className="relative w-full overflow-hidden rounded-b-[32px] bg-zinc-950 border-b border-zinc-900 aspect-[4/5]">
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          className="object-cover"
+          sizes="(min-width: 768px) 600px, 100vw"
+        />
+      </div>
 
+      <div className="px-4 pt-6 space-y-6">
         {/* TÍTULO E DESCRIÇÃO */}
-        <h1 className="mt-6 text-3xl font-bold">{product.name}</h1>
-        <p className="mt-2 text-zinc-300">{product.description}</p>
+        <header className="space-y-2">
+          <h1 className="text-3xl font-semibold">{product.name}</h1>
+          <p className="text-zinc-300 text-sm leading-relaxed">
+            {product.description}
+          </p>
+        </header>
 
         {/* PREÇO */}
-        <div className="mt-6 flex items-baseline gap-3">
-          <span className="text-3xl text-emerald-400">
-            R$ {brl(product.price)}
-          </span>
-          {typeof product.oldPrice === "number" && (
-            <span className="text-zinc-500 line-through opacity-70">
-              R$ {brl(product.oldPrice)}
+        <section className="space-y-1">
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-bold text-emerald-400">
+              R$ {brl(product.price)}
             </span>
-          )}
-        </div>
+            {typeof product.oldPrice === "number" && (
+              <span className="text-zinc-500 line-through">
+                R$ {brl(product.oldPrice)}
+              </span>
+            )}
+          </div>
+        </section>
 
         {/* QUANTIDADE */}
-        <div className="mt-6 flex items-center gap-4">
-          <span className="text-zinc-300">Quantidade:</span>
-          <div className="flex items-center rounded-full border border-zinc-700 overflow-hidden">
+        <section className="space-y-2">
+          <span className="block text-sm text-zinc-300">Quantidade:</span>
+          <div className="inline-flex items-center justify-between gap-4 rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2">
             <button
               type="button"
-              onClick={decrease}
-              className="px-4 py-2 text-lg disabled:opacity-40"
-              disabled={qty === 1}
+              onClick={() => handleChangeQty(-1)}
+              className="h-9 w-9 rounded-full border border-zinc-700 flex items-center justify-center text-xl leading-none active:scale-95 transition"
             >
-              –
+              −
             </button>
-            <span className="px-4 py-2 text-lg border-x border-zinc-700">
+            <span className="text-lg font-semibold w-8 text-center">
               {qty}
             </span>
             <button
               type="button"
-              onClick={increase}
-              className="px-4 py-2 text-lg"
+              onClick={() => handleChangeQty(1)}
+              className="h-9 w-9 rounded-full bg-emerald-500 flex items-center justify-center text-xl leading-none text-white active:scale-95 transition"
             >
               +
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* BOTÕES */}
-        <div className="mt-8 flex flex-col gap-3">
+        {/* BOTÕES PRINCIPAIS */}
+        <section className="space-y-3 pt-2">
           <button
             type="button"
             onClick={handleAddToCart}
-            className="w-full rounded-full bg-emerald-500 py-3 text-center font-semibold"
+            className="w-full rounded-full bg-emerald-500 py-3.5 text-base font-semibold text-white shadow-[0_0_25px_rgba(16,185,129,0.6)] active:scale-[0.99] transition"
           >
             Adicionar ao carrinho
           </button>
 
           <Link
             href="/checkout"
-            className="w-full rounded-full border border-emerald-500 py-3 text-center font-semibold text-emerald-400"
+            className="block w-full rounded-full border border-emerald-500/70 py-3 text-base font-medium text-emerald-400 text-center hover:bg-emerald-500/10 transition"
           >
             Ir para o carrinho
           </Link>
 
           <Link
             href="/"
-            className="w-full rounded-full border border-zinc-700 py-3 text-center font-semibold text-zinc-200"
+            className="block w-full rounded-full border border-zinc-700 py-3 text-base font-medium text-zinc-200 text-center hover:bg-zinc-900 transition"
           >
             Voltar para a loja
           </Link>
-        </div>
+        </section>
       </div>
 
-      {/* TOAST BONITÃO */}
+      {/* TOAST “PRODUTO ADICIONADO” COM GLOW */}
       {showToast && (
-        <div className="fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
-          <div className="pointer-events-none flex max-w-md flex-row items-center gap-3 rounded-3xl bg-zinc-950/90 border border-emerald-500/60 px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.75)] backdrop-blur-md">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500">
-              <span className="text-black text-xl">✓</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-emerald-400">
-                Produto adicionado
-              </span>
-              <span className="text-xs text-zinc-300">
-                {product.name} foi colocado no seu carrinho.
-              </span>
+        <div className="fixed inset-x-0 bottom-4 px-4 z-50">
+          <div className="mx-auto max-w-xl">
+            <div className="relative group">
+              <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-r from-emerald-500/40 via-emerald-400/20 to-emerald-500/40 blur-2xl opacity-90 group-hover:opacity-100 transition-opacity" />
+              <div className="relative rounded-3xl bg-zinc-950/95 border border-emerald-500/60 px-4 py-3 flex items-center gap-3 shadow-[0_0_30px_rgba(16,185,129,0.8)]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/90 text-black text-lg">
+                  ✓
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-emerald-300">
+                    Produto adicionado
+                  </p>
+                  <p className="text-xs text-zinc-300">
+                    {product.name} (Qtd: {qty}) foi colocado no seu
+                    carrinho.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowToast(false)}
+                  className="text-xs text-zinc-400 hover:text-zinc-200"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>
