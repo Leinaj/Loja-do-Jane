@@ -1,9 +1,8 @@
-// app/checkout/page.tsx
 "use client";
 
 import { useState, FormEvent } from "react";
 import Image from "next/image";
-import { useCart } from "../contexts/CartContext";
+import { useCart } from "../contexts/cart-context"; // <-- AQUI O CAMINHO CERTO
 
 type CepResponse = {
   logradouro?: string;
@@ -153,7 +152,7 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-6">Endereço</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Linha: Nome */}
+              {/* Nome */}
               <div className="space-y-2">
                 <label className="text-sm text-zinc-300">
                   Nome <span className="text-pink-400">*</span>
@@ -277,7 +276,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Botões */}
+              {/* Botão WhatsApp */}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <button
                   type="submit"
