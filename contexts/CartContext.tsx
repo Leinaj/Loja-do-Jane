@@ -1,74 +1,64 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import type { Product } from "@/components/products/data";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type CartItem = {
-  product: Product;
-  qty: number;
+  id: number;
+  slug: string;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
 };
 
-type CartContextType = {
+export type CartContextType = {
   items: CartItem[];
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (slug: string) => void;
+  clearCart: () => void;
   total: number;
-  addToCart: (product: Product, qty: number) => void;
-  removeItem: (slug: string) => void;
-  clear: () => void; // <- é esse nome que o checkout está usando
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Carrega carrinho do localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem("cart");
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        // se der erro no parse, zera o carrinho
-        setItems([]);
-      }
-    }
-  }, []);
-
-  // Salva carrinho no localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("cart", JSON.stringify(items));
-  }, [items]);
-
-  function addToCart(product: Product, qty: number) {
+  function addToCart(item: CartItem) {
     setItems((prev) => {
-      const existing = prev.find((i) => i.product.slug === product.slug);
+      const existing = prev.find((i) => i.slug === item.slug);
       if (existing) {
         return prev.map((i) =>
-          i.product.slug === product.slug ? { ...i, qty: i.qty + qty } : i
+          i.slug === item.slug
+            ? { ...i, quantity: i.quantity + item.quantity }
+            : i
         );
       }
-      return [...prev, { product, qty }];
+      return [...prev, item];
     });
   }
 
-  function removeItem(slug: string) {
-    setItems((prev) => prev.filter((i) => i.product.slug !== slug));
+  function removeFromCart(slug: string) {
+    setItems((prev) => prev.filter((i) => i.slug !== slug));
   }
 
-  function clear() {
+  function clearCart() {
     setItems([]);
   }
 
   const total = items.reduce(
-    (acc, i) => acc + i.product.price * i.qty,
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
 
   return (
     <CartContext.Provider
-      value={{ items, total, addToCart, removeItem, clear }}
+      value={{ items, addToCart, removeFromCart, clearCart, total }}
     >
       {children}
     </CartContext.Provider>
@@ -78,7 +68,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) {
-    throw new Error("useCart must be inside CartProvider");
+    throw new Error("useCart deve ser usado dentro de CartProvider");
   }
   return ctx;
 }
