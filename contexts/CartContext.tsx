@@ -13,7 +13,7 @@ type CartContextType = {
   total: number;
   addToCart: (product: Product, qty: number) => void;
   removeItem: (slug: string) => void;
-  clearCart: () => void;
+  clear: () => void; // <- é esse nome que o checkout está usando
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -21,13 +21,24 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // Carrega carrinho do localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("cart");
-    if (saved) setItems(JSON.parse(saved));
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem("cart");
+    if (saved) {
+      try {
+        setItems(JSON.parse(saved));
+      } catch {
+        // se der erro no parse, zera o carrinho
+        setItems([]);
+      }
+    }
   }, []);
 
+  // Salva carrinho no localStorage
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(items));
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
 
   function addToCart(product: Product, qty: number) {
@@ -46,15 +57,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((i) => i.product.slug !== slug));
   }
 
-  function clearCart() {
+  function clear() {
     setItems([]);
   }
 
-  const total = items.reduce((acc, i) => acc + i.product.price * i.qty, 0);
+  const total = items.reduce(
+    (acc, i) => acc + i.product.price * i.qty,
+    0
+  );
 
   return (
     <CartContext.Provider
-      value={{ items, total, addToCart, removeItem, clearCart }}
+      value={{ items, total, addToCart, removeItem, clear }}
     >
       {children}
     </CartContext.Provider>
@@ -63,6 +77,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be inside CartProvider");
+  if (!ctx) {
+    throw new Error("useCart must be inside CartProvider");
+  }
   return ctx;
 }
