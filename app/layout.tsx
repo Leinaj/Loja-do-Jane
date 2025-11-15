@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
+import { ReactNode } from "react";
+import CartProvider from "./cart-provider";
 
 export const metadata: Metadata = {
-  title: "Loja da Jane — Ofertas e Moda",
-  description: "Ofertas de moda com compra via WhatsApp.",
+  title: "Loja do Jane",
+  description: "Loja do Jane - sua loja online",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-black text-white">
-        <Providers>{children}</Providers>
+      <body className="bg-zinc-950 text-zinc-50">
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );
