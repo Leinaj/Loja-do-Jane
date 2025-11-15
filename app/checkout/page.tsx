@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import Image from "next/image";
-import { useCart } from "../contexts/cart-context"; // <-- AQUI O CAMINHO CERTO
+import { useCart } from "../contexts/CartContext"; // <- AGORA BATE COM O NOME DO ARQUIVO
 
 type CepResponse = {
   logradouro?: string;
@@ -83,7 +83,7 @@ export default function CheckoutPage() {
     window.open(url, "_blank");
   }
 
-  // classe base dos inputs com animação suave no foco
+  // base dos inputs com animação suave no foco
   const inputBase =
     "w-full rounded-full bg-black/80 border border-emerald-500/25 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 " +
     "transition-all duration-200 ease-out " +
