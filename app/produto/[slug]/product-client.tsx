@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/components/products/data";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "../../cart-provider";
 
 type Props = {
   product: Product;
