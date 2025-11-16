@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import Link from "next/link";
+import { products } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
-import { products, type Product } from "@/lib/products";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -13,45 +13,38 @@ function formatCurrency(value: number) {
   });
 }
 
-type PageProps = {
+type ProductPageProps = {
   params: {
     slug: string;
   };
 };
 
-export default function ProductPage({ params }: PageProps) {
-  const { slug } = params;
-  const { addToCart } = useCart();
+export default function ProductPage({ params }: ProductPageProps) {
+  const product = products.find((p) => p.slug === params.slug);
 
-  const product = products.find((p) => p.slug === slug);
-
+  // se der algum slug estranho, só mostra mensagem simples
   if (!product) {
-    notFound();
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-black text-white">
+        <p>Produto não encontrado.</p>
+      </main>
+    );
   }
 
-  const safeProduct = product as Product;
-
+  const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-
-  function handleIncrement() {
-    setQuantity((prev) => prev + 1);
-  }
-
-  function handleDecrement() {
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
-  }
 
   function handleAddToCart() {
     addToCart(
       {
-        id: safeProduct.id,
-        slug: safeProduct.slug,
-        name: safeProduct.name,
-        price: safeProduct.price,
-        description: safeProduct.description,
-        image: safeProduct.image,
-        oldPrice: safeProduct.oldPrice,
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        description: product.description,
+        oldPrice: product.oldPrice,
       },
       quantity
     );
@@ -60,134 +53,118 @@ export default function ProductPage({ params }: PageProps) {
     setTimeout(() => setAdded(false), 2000);
   }
 
+  function handleDecrease() {
+    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+  }
+
+  function handleIncrease() {
+    setQuantity((prev) => prev + 1);
+  }
+
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* topo */}
+      {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-emerald-500/20 bg-black/90 px-4 py-3 backdrop-blur-md">
-        <h1 className="text-lg font-semibold text-emerald-400">Loja do Jane</h1>
+        <Link
+          href="/"
+          className="text-lg font-semibold text-emerald-400 hover:text-emerald-300"
+        >
+          Loja do Jane
+        </Link>
+
+        <Link
+          href="/checkout"
+          className="flex items-center gap-2 rounded-full border border-emerald-400/40 px-4 py-1 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.5)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
+        >
+          🛒 Ir para o carrinho
+        </Link>
       </header>
 
-      <section className="px-4 pb-16 pt-6">
-        {/* imagem */}
-        <div className="overflow-hidden rounded-3xl bg-black">
-          <div className="relative h-80 w-full">
+      <section className="px-4 pb-20 pt-6">
+        {/* FOTO COM FEEDBACK NO TOQUE */}
+        <div className="rounded-3xl bg-black/50 p-2">
+          <div className="relative overflow-hidden rounded-3xl bg-black/60 shadow-[0_0_26px_rgba(16,185,129,0.45)] transition-all duration-150 active:scale-[0.97] active:brightness-90">
             <Image
-              src={safeProduct.image}
-              alt={safeProduct.name}
-              fill
-              className="object-cover"
+              src={product.image}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="h-auto w-full object-cover"
+              priority
             />
           </div>
         </div>
 
-        {/* infos do produto */}
+        {/* TEXTO / PREÇOS */}
         <div className="mt-5">
-          <h2 className="text-2xl font-semibold text-white">
-            {safeProduct.name}
-          </h2>
-          <p className="mt-1 text-sm text-gray-300">
-            {safeProduct.description}
-          </p>
+          <h1 className="text-2xl font-semibold">{product.name}</h1>
+          <p className="mt-1 text-sm text-gray-400">{product.description}</p>
 
           <div className="mt-3 flex items-center gap-3">
             <span className="text-2xl font-bold text-emerald-400">
-              {formatCurrency(safeProduct.price)}
+              {formatCurrency(product.price)}
             </span>
-
-            {safeProduct.oldPrice && (
+            {product.oldPrice && (
               <span className="text-sm text-gray-500 line-through">
-                {formatCurrency(safeProduct.oldPrice)}
+                {formatCurrency(product.oldPrice)}
               </span>
             )}
           </div>
+        </div>
 
-          {/* quantidade */}
-          <div className="mt-6">
-            <p className="mb-3 text-sm text-gray-300">Quantidade:</p>
-            <div className="flex items-center gap-6">
-              <button
-                type="button"
-                onClick={handleDecrement}
-                className="
-                  flex h-12 w-12 items-center justify-center rounded-full
-                  border border-emerald-500/60 text-2xl text-emerald-300
-                  transition-all duration-150
-                  active:scale-95 active:bg-emerald-500/10
-                  focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-                "
-              >
-                −
-              </button>
+        {/* CONTROLE DE QUANTIDADE */}
+        <div className="mt-6">
+          <p className="text-sm text-gray-300">Quantidade:</p>
+          <div className="mt-3 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={handleDecrease}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/40 text-2xl text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95 active:bg-emerald-500/20"
+            >
+              –
+            </button>
 
-              <span className="text-lg">{quantity}</span>
+            <span className="w-6 text-center text-lg font-medium">
+              {quantity}
+            </span>
 
-              <button
-                type="button"
-                onClick={handleIncrement}
-                className="
-                  flex h-12 w-12 items-center justify-center rounded-full
-                  border border-emerald-500/60 text-2xl text-emerald-300
-                  transition-all duration-150
-                  active:scale-95 active:bg-emerald-500/10
-                  focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-                "
-              >
-                +
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleIncrease}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/40 text-2xl text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95 active:bg-emerald-500/20"
+            >
+              +
+            </button>
           </div>
+        </div>
 
-          {/* BOTÃO PRINCIPAL */}
+        {/* BOTÃO PRINCIPAL + SEGUNDO BOTÃO */}
+        <div className="mt-8 space-y-3">
           <button
             type="button"
             onClick={handleAddToCart}
-            className="
-              mt-8 w-full rounded-full bg-emerald-500
-              py-4 text-center text-base font-semibold text-black
-              shadow-[0_0_25px_rgba(16,185,129,0.7)]
-              transition-all duration-150
-              active:scale-95 active:bg-emerald-400
-              focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-            "
+            className="w-full rounded-full bg-emerald-500 py-4 text-center text-base font-semibold text-black shadow-[0_0_30px_rgba(16,185,129,0.9)] transition-all duration-150 hover:bg-emerald-400 active:scale-[0.97] active:bg-emerald-300"
           >
             Adicionar ao carrinho
           </button>
 
-          {/* TOAST BONITINHO ENTRE OS BOTÕES */}
-          {added && (
-            <div className="mt-3 flex w-full items-center justify-center">
-              <div
-                className="
-                  flex items-center gap-2 rounded-full border border-emerald-500/60
-                  bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300
-                  shadow-[0_0_18px_rgba(16,185,129,0.4)] backdrop-blur-sm
-                "
-              >
-                <span className="rounded-full bg-emerald-500/80 p-1 text-xs leading-none text-black">
-                  ✓
-                </span>
-                <span>Produto adicionado ao carrinho</span>
-              </div>
-            </div>
-          )}
-
-          {/* BOTÃO SECUNDÁRIO */}
-          <button
-            type="button"
-            className="
-              mt-4 w-full rounded-full border border-emerald-500
-              py-4 text-center text-base font-semibold text-emerald-400
-              transition-all duration-150
-              active:scale-95 active:bg-emerald-500/10
-              focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-            "
-            onClick={() => {
-              window.location.href = "/checkout";
-            }}
+          <Link
+            href="/checkout"
+            className="flex w-full items-center justify-center rounded-full border border-emerald-500/60 bg-black/60 px-6 py-3 text-base font-semibold text-emerald-300 shadow-[0_0_22px_rgba(16,185,129,0.55)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-[0.97] active:bg-emerald-500/20"
           >
             Ir para o carrinho
-          </button>
+          </Link>
         </div>
+
+        {/* TOAST "PRODUTO ADICIONADO" */}
+        {added && (
+          <div className="mt-4 flex items-center justify-center">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.6)]">
+              <span className="text-lg">✅</span>
+              <span>Produto adicionado ao carrinho</span>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );
