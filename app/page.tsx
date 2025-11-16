@@ -1,8 +1,5 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/contexts/CartContext";
 import { products } from "@/lib/products";
 
 function formatCurrency(value: number) {
@@ -13,105 +10,82 @@ function formatCurrency(value: number) {
 }
 
 export default function HomePage() {
-  const { cart } = useCart();
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* topo fixo com nome da loja e carrinho */}
+      {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-emerald-500/20 bg-black/90 px-4 py-3 backdrop-blur-md">
-        <h1 className="text-lg font-semibold text-emerald-400">Loja do Jane</h1>
+        <h1 className="text-lg font-semibold text-emerald-400">
+          Loja do Jane
+        </h1>
 
         <Link
           href="/checkout"
-          className="
-            flex items-center gap-2 rounded-full border border-emerald-500/50
-            px-4 py-2 text-sm text-emerald-300
-            shadow-[0_0_15px_rgba(16,185,129,0.5)]
-            transition-all duration-150
-            active:scale-95 active:bg-emerald-500/10
-            focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-          "
+          className="flex items-center gap-2 rounded-full border border-emerald-400/40 px-4 py-1 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.5)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
         >
-          <span className="text-lg">🛒</span>
-          <span>
-            {cartCount === 0
-              ? "Carrinho vazio"
-              : cartCount === 1
-              ? "1 item"
-              : `${cartCount} itens`}
-          </span>
+          🛒 Ver carrinho
         </Link>
       </header>
 
-      <section className="px-4 pb-10 pt-6">
-        <h2 className="text-3xl font-bold text-white">
+      <section className="px-4 pb-16 pt-6">
+        <h2 className="text-3xl font-semibold">
           Loja do Jane — Ofertas e Moda
         </h2>
-        <p className="mt-3 text-sm text-gray-300">
-          Escolha seu produto e clique na foto ou em &quot;Ver&quot; para abrir
-          a página de detalhes.
+        <p className="mt-2 text-sm text-gray-300">
+          Escolha seu produto e clique na foto ou em &quot;Ver&quot; para abrir a
+          página de detalhes.
         </p>
 
         <div className="mt-6 space-y-6">
           {products.map((product) => (
             <article
-              key={product.id}
-              className="overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/10 to-black/80 shadow-[0_0_25px_rgba(16,185,129,0.35)]"
+              key={product.slug}
+              className="rounded-3xl border border-emerald-500/40 bg-black/70 p-3 shadow-[0_0_24px_rgba(16,185,129,0.45)]"
             >
-              {/* IMAGEM – CLICÁVEL */}
               <Link
                 href={`/produto/${product.slug}`}
-                className="block overflow-hidden rounded-b-3xl rounded-t-3xl bg-black"
+                className="group block"
               >
-                <div className="relative h-72 w-full">
+                {/* CONTAINER DA FOTO COM FEEDBACK */}
+                <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-black/60 transition-all duration-150 group-active:scale-[0.97] group-active:brightness-90 group-hover:brightness-110">
                   <Image
                     src={product.image}
                     alt={product.name}
                     fill
+                    sizes="(min-width: 768px) 500px, 100vw"
                     className="object-cover"
                   />
                 </div>
-              </Link>
 
-              <div className="px-5 pb-5 pt-4">
-                <h3 className="text-xl font-semibold text-white">
-                  {product.name}
-                </h3>
-                <p className="mt-1 text-sm text-gray-300">
-                  {product.description}
-                </p>
+                {/* TEXTOS */}
+                <div className="mt-4">
+                  <h3 className="text-xl font-semibold">{product.name}</h3>
+                  <p className="mt-1 text-sm text-gray-400">
+                    {product.description}
+                  </p>
 
-                {/* PREÇOS */}
-                <div className="mt-3 flex items-center gap-3">
-                  <span className="text-xl font-bold text-emerald-400">
-                    {formatCurrency(product.price)}
-                  </span>
-
-                  {product.oldPrice && (
-                    <span className="text-sm text-gray-500 line-through">
-                      {formatCurrency(product.oldPrice)}
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="text-xl font-bold text-emerald-400">
+                      {formatCurrency(product.price)}
                     </span>
-                  )}
+
+                    {product.oldPrice && (
+                      <span className="text-sm text-gray-500 line-through">
+                        {formatCurrency(product.oldPrice)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* BOTÃO VER – COM FEEDBACK DE TOQUE */}
-                <Link href={`/produto/${product.slug}`} className="block">
+                {/* BOTÃO VER COM FEEDBACK */}
+                <div className="mt-4">
                   <button
                     type="button"
-                    className="
-                      mt-4 w-full rounded-full border border-emerald-500
-                      bg-transparent py-3 text-base font-semibold text-emerald-400
-                      shadow-[0_0_20px_rgba(16,185,129,0.4)]
-                      transition-all duration-150
-                      active:scale-95 active:bg-emerald-500/10 active:shadow-[0_0_30px_rgba(16,185,129,0.7)]
-                      focus:outline-none focus:ring-2 focus:ring-emerald-400/70
-                    "
+                    className="flex w-full items-center justify-center rounded-full border border-emerald-500/60 bg-emerald-500/5 px-6 py-3 text-base font-semibold text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all duration-150 hover:bg-emerald-500/20 active:scale-[0.97] active:bg-emerald-500/30"
                   >
                     Ver
                   </button>
-                </Link>
-              </div>
+                </div>
+              </Link>
             </article>
           ))}
         </div>
