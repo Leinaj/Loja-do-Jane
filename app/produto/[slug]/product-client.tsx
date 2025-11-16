@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
-import type { Product } from "@/app/data/products";
+// ✅ CAMINHO CORRETO
+import type { Product } from "@/data/products";
 
 type Props = {
   product: Product;
