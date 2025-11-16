@@ -21,8 +21,11 @@ type ProductPageProps = {
 
 export default function ProductPage({ params }: ProductPageProps) {
   const product = products.find((p) => p.slug === params.slug);
+  const { addToCart } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
 
-  // se der algum slug estranho, só mostra mensagem simples
+  // se o slug for inválido: tela simples
   if (!product) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -31,11 +34,10 @@ export default function ProductPage({ params }: ProductPageProps) {
     );
   }
 
-  const { addToCart } = useCart();
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
-
   function handleAddToCart() {
+    // segurança extra pro TypeScript (mesmo já tendo o if lá em cima)
+    if (!product) return;
+
     addToCart(
       {
         id: product.id,
@@ -138,7 +140,7 @@ export default function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
 
-        {/* BOTÃO PRINCIPAL + SEGUNDO BOTÃO */}
+        {/* BOTÕES */}
         <div className="mt-8 space-y-3">
           <button
             type="button"
