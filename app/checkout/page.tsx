@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
 
 function formatCurrency(value: number) {
@@ -91,12 +92,30 @@ ${itemsText}
                 {cart.map((item) => (
                   <li
                     key={item.slug}
-                    className="flex items-center justify-between text-sm text-gray-200"
+                    className="flex items-center justify-between gap-3 text-sm text-gray-200"
                   >
-                    <div>
-                      <p className="font-medium text-white">{item.name}</p>
-                      <p className="text-xs text-gray-400">
-                        Qtd: {item.quantity} ·{" "}
+                    {/* miniatura */}
+                    <div className="flex items-center gap-3">
+                      <div className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-black/60">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={56}
+                          height={56}
+                          className="h-14 w-14 object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{item.name}</p>
+                        <p className="text-xs text-gray-400">
+                          Qtd: {item.quantity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Subtotal</p>
+                      <p className="text-sm font-semibold text-emerald-400">
                         {formatCurrency(item.price * item.quantity)}
                       </p>
                     </div>
