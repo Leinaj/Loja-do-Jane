@@ -7,7 +7,15 @@ import { useCart } from "@/contexts/CartContext";
 
 export default function TopBar() {
   const pathname = usePathname();
-  const { totalItems } = useCart();
+  const cart: any = useCart();
+
+  // calcula quantidade total de itens de forma segura
+  const totalItems: number = Array.isArray(cart?.items)
+    ? cart.items.reduce(
+        (sum: number, item: any) => sum + (item.quantity ?? 0),
+        0
+      )
+    : 0;
 
   // --- Versão ESPECIAL só para o checkout ---
   if (pathname.startsWith("/checkout")) {
