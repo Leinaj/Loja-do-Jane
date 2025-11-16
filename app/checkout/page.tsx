@@ -3,12 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
-
-type ProductPageProps = {
-  params: { slug: string };
-};
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -17,159 +12,256 @@ function formatCurrency(value: number) {
   });
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
-  const { addToCart } = useCart();
-  const product = products.find((p) => p.slug === params.slug);
+export default function CheckoutPage() {
+  const { cart, clearCart, getCartTotal } = useCart();
 
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cep, setCep] = useState("");
+  const [street, setStreet] = useState("");
+  const [number, setNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [district, setDistrict] = useState("");
+  const [city, setCity] = useState("");
+  const [error, setError] = useState("");
 
-  // Se não achar o produto, mostra uma página simples
-  if (!product) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="px-6 text-center">
-          <h1 className="text-2xl font-bold">Produto não encontrado</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Parece que este item sumiu do estoque.
-          </p>
-          <Link
-            href="/"
-            className="mt-4 inline-block rounded-full bg-emerald-500 px-6 py-2 text-sm font-semibold text-black shadow-[0_0_18px_rgba(16,185,129,0.7)] transition-all duration-150 hover:bg-emerald-400 active:scale-95"
-          >
-            Voltar para a loja
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const total = getCartTotal();
 
-  function handleAddToCart() {
-    addToCart(
-      {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        description: product.description,
-        oldPrice: product.oldPrice,
-        priceFormatted: product.priceFormatted,
-        oldPriceFormatted: product.oldPriceFormatted,
-      },
-      quantity
-    );
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  }
+    if (!cart.length) {
+      setError("Seu carrinho está vazio.");
+      return;
+    }
 
-  function increaseQuantity() {
-    setQuantity((prev) => prev + 1);
-  }
+    if (!name || !phone || !cep || !street || !number || !city) {
+      setError("Preencha os campos obrigatórios marcados com *.");
+      return;
+    }
 
-  function decreaseQuantity() {
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+    setError("");
+
+    const itensTexto = cart
+      .map(
+        (item) =>
+          `- ${item.name} (Qtd: ${item.quantity}) — ${formatCurrency(
+            item.price * item.quantity
+          )}`
+      )
+      .join("\n");
+
+    const message = `
+*Novo pedido - Loja do Jane*
+
+*Itens:*
+${itensTexto}
+
+*Total:* ${formatCurrency(total)}
+
+*Cliente:*
+Nome: ${name}
+WhatsApp: ${phone}
+
+*Endereço:*
+CEP: ${cep}
+Rua: ${street}, ${number}${complement ? " - " + complement : ""}
+Bairro: ${district || "-"}
+Cidade: ${city}
+`.trim();
+
+    // Coloca aqui o número do seu WhatsApp no formato internacional, ex: 5544999999999
+    const phoneNumber = "5544999999999";
+
+    if (typeof window !== "undefined") {
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+        message
+      )}`;
+      window.open(url, "_blank");
+    }
+
+    clearCart();
   }
 
   return (
     <main className="min-h-screen bg-black text-white">
       {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-emerald-500/20 bg-black/90 px-4 py-3 backdrop-blur-md">
-        <h1 className="text-lg font-semibold text-emerald-400">Loja do Jane</h1>
+        <Link
+          href="/"
+          className="text-lg font-semibold text-emerald-400 hover:text-emerald-300"
+        >
+          Loja do Jane
+        </Link>
 
         <Link
-          href="/checkout"
+          href="/"
           className="flex items-center gap-2 rounded-full border border-emerald-400/40 px-4 py-1 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.5)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
         >
-          <span className="text-base">🛒</span>
-          <span>Ir para o carrinho</span>
+          Voltar para a loja
         </Link>
       </header>
 
       <section className="px-4 pb-16 pt-6">
-        {/* IMAGEM COM FEEDBACK DE TOQUE */}
-        <div className="mb-4 overflow-hidden rounded-3xl border border-emerald-500/30 bg-black/60 shadow-[0_0_22px_rgba(16,185,129,0.25)]">
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={800}
-            height={800}
-            priority
-            className="h-[280px] w-full object-cover transition-transform duration-150 hover:scale-[1.02] active:scale-95"
-          />
-        </div>
+        <h1 className="text-2xl font-semibold">Finalizar pedido</h1>
 
-        {/* TEXTO */}
-        <h2 className="text-2xl font-semibold text-white">{product.name}</h2>
-        <p className="mt-1 text-sm text-gray-300">{product.description}</p>
+        {/* RESUMO DO PEDIDO COM MINIATURAS */}
+        <div className="mt-4 rounded-3xl border border-emerald-500/30 bg-black/60 p-4 shadow-[0_0_22px_rgba(16,185,129,0.3)]">
+          <h2 className="text-lg font-semibold text-emerald-300">
+            Resumo do pedido
+          </h2>
 
-        <div className="mt-3 flex items-baseline gap-3">
-          <span className="text-2xl font-bold text-emerald-400">
-            {formatCurrency(product.price)}
-          </span>
-          {product.oldPrice && (
-            <span className="text-sm text-gray-500 line-through">
-              {formatCurrency(product.oldPrice)}
-            </span>
+          {cart.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-400">
+              Seu carrinho está vazio.
+            </p>
+          ) : (
+            <>
+              <div className="mt-3 space-y-3">
+                {cart.map((item) => (
+                  <div
+                    key={item.slug}
+                    className="flex items-center gap-3 rounded-2xl bg-emerald-500/5 px-2 py-2"
+                  >
+                    <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-emerald-500/40 bg-black/40">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-gray-400">
+                        Qtd: {item.quantity} ·{" "}
+                        {formatCurrency(item.price * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 border-t border-emerald-500/20 pt-3 flex items-center justify-between">
+                <span className="text-sm text-gray-300">Total</span>
+                <span className="text-xl font-semibold text-emerald-400">
+                  {formatCurrency(total)}
+                </span>
+              </div>
+            </>
           )}
         </div>
 
-        {/* QUANTIDADE */}
-        <div className="mt-6">
-          <p className="text-sm text-gray-300">Quantidade:</p>
-          <div className="mt-3 flex items-center gap-4">
-            <button
-              type="button"
-              onClick={decreaseQuantity}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/40 text-xl text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.4)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
-            >
-              −
-            </button>
-
-            <span className="w-6 text-center text-lg font-semibold">
-              {quantity}
-            </span>
-
-            <button
-              type="button"
-              onClick={increaseQuantity}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/40 text-xl text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.4)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
-            >
-              +
-            </button>
+        {/* FORMULÁRIO DE DADOS */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="mb-1 block text-sm">
+              Nome completo <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="Seu nome"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
-        </div>
 
-        {/* BOTÕES */}
-        <div className="mt-6 space-y-3">
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="w-full rounded-full bg-emerald-500 py-4 text-center text-base font-semibold text-black shadow-[0_0_28px_rgba(16,185,129,0.8)] transition-all duration-150 hover:bg-emerald-400 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400/70"
-          >
-            Adicionar ao carrinho
-          </button>
+          <div>
+            <label className="mb-1 block text-sm">
+              WhatsApp <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="(44) 9 9999-9999"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
 
-          <Link
-            href="/checkout"
-            className="flex w-full items-center justify-center rounded-full border border-emerald-400/60 bg-black/40 py-3 text-sm font-semibold text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-95"
-          >
-            Ir para o carrinho
-          </Link>
-        </div>
+          <div>
+            <label className="mb-1 block text-sm">
+              CEP <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="00000-000"
+              value={cep}
+              onChange={(e) => setCep(e.target.value)}
+            />
+          </div>
 
-        {/* TOAST "PRODUTO ADICIONADO" */}
-        {added && (
-          <div className="mt-4 flex items-center justify-center">
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm text-emerald-200 shadow-[0_0_22px_rgba(16,185,129,0.6)] backdrop-blur-md">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs text-black">
-                ✔
-              </span>
-              <span>Produto adicionado ao carrinho</span>
+          <div>
+            <label className="mb-1 block text-sm">
+              Rua <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="Nome da rua"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="mb-1 block text-sm">
+                Número <span className="text-red-400">*</span>
+              </label>
+              <input
+                className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+                placeholder="123"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+              />
+            </div>
+
+            <div className="flex-1">
+              <label className="mb-1 block text-sm">Complemento</label>
+              <input
+                className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+                placeholder="Apto, bloco, casa..."
+                value={complement}
+                onChange={(e) => setComplement(e.target.value)}
+              />
             </div>
           </div>
-        )}
+
+          <div>
+            <label className="mb-1 block text-sm">Bairro</label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="Seu bairro"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm">
+              Cidade <span className="text-red-400">*</span>
+            </label>
+            <input
+              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/60"
+              placeholder="Sua cidade"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
+
+          {error && (
+            <p className="pt-1 text-sm font-medium text-red-400">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!cart.length}
+            className="mt-2 w-full rounded-full bg-emerald-500 py-4 text-center text-base font-semibold text-black shadow-[0_0_28px_rgba(16,185,129,0.8)] transition-all duration-150 hover:bg-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:bg-emerald-500/40 disabled:text-emerald-900"
+          >
+            Enviar pedido pelo WhatsApp
+          </button>
+        </form>
       </section>
     </main>
   );
