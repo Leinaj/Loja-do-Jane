@@ -24,7 +24,11 @@ export default function ProductClient({ product }: Props) {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, qty);
+    // addToCart aceita só 1 argumento (product)
+    // Então adicionamos o produto "qty" vezes
+    for (let i = 0; i < qty; i++) {
+      addToCart(product);
+    }
   };
 
   return (
