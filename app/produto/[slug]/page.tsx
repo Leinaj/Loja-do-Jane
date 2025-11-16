@@ -47,7 +47,9 @@ export default function ProductPage() {
   }
 
   function handleAddToCart() {
-    // Aqui o product sempre existe, por causa do if acima
+    // aqui garante pro TypeScript que product existe
+    if (!product) return;
+
     addToCart(
       {
         id: product.id,
@@ -66,7 +68,8 @@ export default function ProductPage() {
   }
 
   function handleGoToCart() {
-    // Se ainda não adicionou, adiciona antes de mandar pro carrinho
+    if (!product) return;
+    // se ainda não adicionou, adiciona antes de ir pro carrinho
     if (!added) {
       handleAddToCart();
     }
