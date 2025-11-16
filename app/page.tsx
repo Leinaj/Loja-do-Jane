@@ -3,6 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { products } from "@/lib/products";
 
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-black text-white pb-10">
@@ -45,11 +52,12 @@ export default function HomePage() {
             {/* PREÇOS */}
             <div className="mt-3 flex items-center gap-3">
               <span className="text-green-400 font-bold text-xl">
-                {product.priceFormatted}
+                {formatCurrency(product.price)}
               </span>
-              {product.oldPriceFormatted && (
+
+              {product.oldPrice && (
                 <span className="text-gray-500 line-through">
-                  {product.oldPriceFormatted}
+                  {formatCurrency(product.oldPrice)}
                 </span>
               )}
             </div>
