@@ -27,6 +27,9 @@ export type CartItem = ProductForCart & {
 
 type CartContextData = {
   cart: CartItem[];
+  items: CartItem[];             // 👈 Adicionado
+  total: number;                 // 👈 Adicionado
+  totalFormatted: string;        // 👈 Adicionado
   addToCart: (product: ProductForCart, quantity?: number) => void;
   removeFromCart: (slug: string) => void;
   clearCart: () => void;
@@ -98,9 +101,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   }
 
+  const total = getCartTotal();
+
+  const totalFormatted = total.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, clearCart, getCartTotal }}
+      value={{
+        cart,
+        items: cart,        // 👈 compatível com quem usa "items"
+        total,              // 👈 compatível com quem usa "total"
+        totalFormatted,     // 👈 versão BRL
+        addToCart,
+        removeFromCart,
+        clearCart,
+        getCartTotal,
+      }}
     >
       {children}
     </CartContext.Provider>
