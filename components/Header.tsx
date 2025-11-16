@@ -4,17 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 
-export function Header() {
+export default function Header() {
   const { items } = useCart();
   const pathname = usePathname();
 
   const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const isCheckout = pathname?.startsWith("/checkout"); // vale pra /checkout e /checkout/
 
-  // estamos no checkout?
-  const isCheckout =
-    pathname === "/checkout" || pathname === "/checkout/";
-
-  // ✅ HEADER ESPECIAL SÓ NO CHECKOUT
+  // ✅ HEADER ESPECIAL SOMENTE NO CHECKOUT
   if (isCheckout) {
     return (
       <header className="border-b border-emerald-500/20 bg-black/80 backdrop-blur-sm">
@@ -30,7 +27,7 @@ export function Header() {
     );
   }
 
-  // ✅ HEADER NORMAL NAS OUTRAS TELAS (home, produto, etc.)
+  // ✅ HEADER NORMAL NAS OUTRAS PÁGINAS
   return (
     <header className="border-b border-emerald-500/20 bg-black/80 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
@@ -47,7 +44,9 @@ export function Header() {
         >
           <span>🛒</span>
           <span>
-            Ver carrinho ({itemsCount})
+            {itemsCount === 0
+              ? "Ver carrinho"
+              : `${itemsCount} ${itemsCount === 1 ? "item" : "items"}`}
           </span>
         </Link>
       </div>
