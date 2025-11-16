@@ -4,60 +4,104 @@
 import {
   createContext,
   useContext,
-  useMemo,
+  useEffect,
   useState,
-  type ReactNode,
+  ReactNode,
 } from "react";
-import type { Product } from "@/app/data/products";
 
-export type CartItem = Product & {
+type ProductForCart = {
+  id: number;
+  slug: string;
+  name: string;
+  price: number;
+  priceFormatted?: string;
+  oldPrice?: number;
+  oldPriceFormatted?: string;
+  description?: string;
+  image: string;
+};
+
+export type CartItem = ProductForCart & {
   quantity: number;
 };
 
-type CartContextType = {
-  items: CartItem[];
-  total: number;
-  addToCart: (product: Product, quantity?: number) => void;
+type CartContextData = {
+  cart: CartItem[];
+  addToCart: (product: ProductForCart, quantity?: number) => void;
+  removeFromCart: (slug: string) => void;
   clearCart: () => void;
+  getCartTotal: () => number;
 };
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const CartContext = createContext<CartContextData | undefined>(undefined);
+
+const STORAGE_KEY = "lojadojane-cart";
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product, quantity = 1) => {
-    setItems((prev) => {
-      const index = prev.findIndex((item) => item.id === product.id);
+  // Carrega o carrinho salvo no navegador
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as CartItem[];
+        setCart(parsed);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar carrinho:", err);
+    }
+  }, []);
 
-      // já existe no carrinho -> soma a quantidade
-      if (index >= 0) {
-        const clone = [...prev];
-        clone[index] = {
-          ...clone[index],
-          quantity: clone[index].quantity + quantity,
-        };
-        return clone;
+  // Salva sempre que o carrinho muda
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    } catch (err) {
+      console.error("Erro ao salvar carrinho:", err);
+    }
+  }, [cart]);
+
+  function addToCart(product: ProductForCart, quantity: number = 1) {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.slug === product.slug);
+
+      if (!existing) {
+        return [
+          ...prev,
+          {
+            ...product,
+            quantity,
+          },
+        ];
       }
 
-      // não existe -> adiciona
-      return [...prev, { ...product, quantity }];
+      return prev.map((item) =>
+        item.slug === product.slug
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
     });
-  };
+  }
 
-  const clearCart = () => setItems([]);
+  function removeFromCart(slug: string) {
+    setCart((prev) => prev.filter((item) => item.slug !== slug));
+  }
 
-  const total = useMemo(
-    () =>
-      items.reduce(
-        (sum, item) => sum + item.price * (item.quantity ?? 1),
-        0
-      ),
-    [items]
-  );
+  function clearCart() {
+    setCart([]);
+  }
+
+  function getCartTotal() {
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  }
 
   return (
-    <CartContext.Provider value={{ items, total, addToCart, clearCart }}>
+    <CartContext.Provider
+      value={{ cart, addToCart, removeFromCart, clearCart, getCartTotal }}
+    >
       {children}
     </CartContext.Provider>
   );
