@@ -1,44 +1,44 @@
+// app/produto/[slug]/page.tsx
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { products } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
 
-type ProductPageProps = {
-  params: {
-    slug: string;
-  };
-};
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-export default function ProductPage({ params }: ProductPageProps) {
+export default function ProductPage() {
+  const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const { addToCart } = useCart();
+
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const product = products.find((p) => p.slug === params.slug);
+  // Acha o produto pelo slug
+  const product = useMemo(
+    () => products.find((p) => p.slug === slug),
+    [slug]
+  );
 
-  // Se não achar o produto, mostra 404 bonitinho
+  function formatPrice(value: number) {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  // Se não achou o produto, mostra uma telinha 404 estilosa
   if (!product) {
     return (
-      <main className="px-4 py-10 text-center">
-        <h1 className="text-2xl font-bold mb-2">404 — Página não encontrada</h1>
-        <p className="text-gray-300 mb-6">
-          Parece que você foi parar num canto vazio da loja 😅
+      <main className="px-4 py-10 text-center text-gray-100">
+        <h1 className="text-2xl font-semibold mb-3">Produto não encontrado</h1>
+        <p className="mb-6 text-gray-400">
+          Parece que esse item saiu da vitrine.
         </p>
         <button
-          type="button"
           onClick={() => router.push("/")}
-          className="px-6 py-3 rounded-full bg-emerald-500 text-black font-semibold hover:bg-emerald-400 transition-all"
+          className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-medium text-black hover:bg-emerald-400 transition"
         >
           Voltar para a loja
         </button>
@@ -47,57 +47,80 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   function handleAddToCart() {
-  if (!product) return; // segurança pro TypeScript e pro app
+    // Aqui o product sempre existe, por causa do if acima
+    addToCart(
+      {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.price,
+        oldPrice: product.oldPrice,
+        description: product.description,
+        image: product.image,
+      },
+      quantity
+    );
 
-  addToCart(product, quantity);
-  setAdded(true);
-  setTimeout(() => setAdded(false), 2000);
-}
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  }
+
+  function handleGoToCart() {
+    // Se ainda não adicionou, adiciona antes de mandar pro carrinho
+    if (!added) {
+      handleAddToCart();
+    }
+    router.push("/checkout");
+  }
 
   return (
-    <main className="px-4 pb-20 pt-6">
+    <main className="px-4 pb-24 pt-6">
       {/* Imagem do produto */}
       <div className="rounded-2xl overflow-hidden mb-4 bg-black/40">
         <Image
           src={product.image}
           alt={product.name}
-          width={1000}
-          height={1000}
+          width={800}
+          height={800}
           className="w-full h-auto object-cover"
         />
       </div>
 
-      {/* Infos do produto */}
-      <h1 className="text-2xl font-bold mb-1">{product.name}</h1>
-      <p className="text-gray-300 mb-4">{product.description}</p>
+      {/* Título e descrição */}
+      <h1 className="text-2xl font-semibold text-white">{product.name}</h1>
+      <p className="mt-1 text-sm text-gray-400">{product.description}</p>
 
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-green-400 font-bold text-2xl">
+      {/* Preço */}
+      <div className="mt-3 flex items-center gap-3">
+        <span className="text-green-400 font-bold text-xl">
           {formatPrice(product.price)}
         </span>
+
         {product.oldPrice && (
-          <span className="text-gray-500 line-through">
+          <span className="text-gray-500 line-through text-sm">
             {formatPrice(product.oldPrice)}
           </span>
         )}
       </div>
 
       {/* Quantidade */}
-      <div className="mb-4">
-        <span className="block mb-2">Quantidade:</span>
-        <div className="flex items-center gap-4">
+      <div className="mt-6">
+        <p className="text-sm text-gray-300 mb-2">Quantidade:</p>
+        <div className="inline-flex items-center gap-4 rounded-full border border-gray-700 px-4 py-2">
           <button
-            type="button"
-            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            className="w-10 h-10 rounded-full border border-gray-500 flex items-center justify-center text-xl"
+            onClick={() =>
+              setQuantity((prev) => (prev > 1 ? prev - 1 : prev))
+            }
+            className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center text-lg text-gray-100"
           >
-            −
+            –
           </button>
-          <span className="w-8 text-center text-lg">{quantity}</span>
+          <span className="w-4 text-center text-base text-gray-100">
+            {quantity}
+          </span>
           <button
-            type="button"
-            onClick={() => setQuantity((q) => q + 1)}
-            className="w-10 h-10 rounded-full border border-emerald-500 flex items-center justify-center text-xl"
+            onClick={() => setQuantity((prev) => prev + 1)}
+            className="w-8 h-8 rounded-full border border-emerald-500 flex items-center justify-center text-lg text-emerald-400"
           >
             +
           </button>
@@ -105,27 +128,31 @@ export default function ProductPage({ params }: ProductPageProps) {
       </div>
 
       {/* Botões */}
-      <button
-        type="button"
-        onClick={handleAddToCart}
-        className="w-full py-3 rounded-full bg-emerald-500 text-black font-semibold text-center shadow-[0_0_15px_rgba(16,185,129,0.6)] mb-3"
-      >
-        Adicionar ao carrinho
-      </button>
+      <div className="mt-6 flex flex-col gap-3">
+        <button
+          onClick={handleAddToCart}
+          className="rounded-full bg-emerald-500 px-6 py-3 text-center text-base font-semibold text-black shadow-[0_0_25px_rgba(16,185,129,0.7)] hover:bg-emerald-400 transition"
+        >
+          Adicionar ao carrinho
+        </button>
 
-      <button
-        type="button"
-        onClick={() => router.push("/checkout")}
-        className="w-full py-3 rounded-full border border-emerald-500 text-emerald-400 font-semibold text-center"
-      >
-        Ir para o carrinho
-      </button>
+        <button
+          onClick={handleGoToCart}
+          className="rounded-full border border-emerald-500 px-6 py-3 text-center text-base font-semibold text-emerald-400 hover:bg-emerald-500/10 transition"
+        >
+          Ir para o carrinho
+        </button>
+      </div>
 
+      {/* Aviso de produto adicionado */}
       {added && (
-  <div className="mt-4 flex justify-center">
-    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-400/60 px-4 py-2 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
-      <span className="text-base">✅</span>
-      <span>Produto adicionado ao carrinho</span>
-    </div>
-  </div>
-)}
+        <div className="mt-4 flex justify-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-400/60 px-4 py-2 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
+            <span className="text-base">✅</span>
+            <span>Produto adicionado ao carrinho</span>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
