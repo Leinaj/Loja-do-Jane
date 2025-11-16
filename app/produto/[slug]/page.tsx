@@ -122,10 +122,10 @@ export default function ProductPage({ params }: ProductPageProps) {
       </button>
 
       {added && (
-        <p className="mt-3 text-center text-sm text-emerald-400">
-          Produto adicionado ao carrinho ✅
-        </p>
-      )}
-    </main>
-  );
-}
+  <div className="mt-4 flex justify-center">
+    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-400/60 px-4 py-2 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
+      <span className="text-base">✅</span>
+      <span>Produto adicionado ao carrinho</span>
+    </div>
+  </div>
+)}
