@@ -6,7 +6,11 @@ import { useCart } from "@/contexts/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 
-const WHATSAPP_NUMBER = "5544999999999"; // se quiser, troca aqui pelo seu número com DDI/DDD
+// antes
+// const WHATSAPP_NUMBER = "5544999999999";
+
+// depois
+const WHATSAPP_NUMBER = "5544988606483";
 
 export default function CheckoutPage() {
   const { cart, getCartTotal, clearCart } = useCart();
