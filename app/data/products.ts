@@ -21,8 +21,7 @@ export const products: Product[] = [
     priceFormatted: "R$ 49,90",
     oldPrice: 59.9,
     oldPriceFormatted: "R$ 59,90",
-    description: "Camiseta branca clássica, 100% algodão.",
+    description: "Camiseta branca clássica, 100% algodão, perfeita para o dia a dia.",
     image: "/products/camiseta1.png",
   },
-  // …
 ];
