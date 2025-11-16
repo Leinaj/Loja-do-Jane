@@ -22,6 +22,7 @@ export const products: Product[] = [
     oldPrice: 59.9,
     oldPriceFormatted: "R$ 59,90",
     description: "Camiseta branca clássica, 100% algodão, perfeita para o dia a dia.",
+    // ⬇️ AJUSTA ESSE CAMINHO PRO NOME CERTO DA IMAGEM NA PASTA public
     image: "/products/camiseta1.png",
   },
 ];
