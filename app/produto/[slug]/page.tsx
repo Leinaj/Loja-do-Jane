@@ -47,7 +47,6 @@ export default function ProductPage() {
   }
 
   function handleAddToCart() {
-    // aqui garante pro TypeScript que product existe
     if (!product) return;
 
     addToCart(
@@ -69,7 +68,6 @@ export default function ProductPage() {
 
   function handleGoToCart() {
     if (!product) return;
-    // se ainda não adicionou, adiciona antes de ir pro carrinho
     if (!added) {
       handleAddToCart();
     }
@@ -130,7 +128,7 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* Botões */}
+      {/* Botões + aviso */}
       <div className="mt-6 flex flex-col gap-3">
         <button
           onClick={handleAddToCart}
@@ -139,6 +137,16 @@ export default function ProductPage() {
           Adicionar ao carrinho
         </button>
 
+        {/* AVISO LOGO ABAIXO DO BOTÃO VERDE */}
+        {added && (
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-400/40 px-4 py-2 text-[11px] font-medium text-emerald-200 shadow-[0_0_14px_rgba(34,197,94,0.35)]">
+              <span className="text-sm">✅</span>
+              <span>Produto adicionado ao carrinho</span>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleGoToCart}
           className="rounded-full border border-emerald-500 px-6 py-3 text-center text-base font-semibold text-emerald-400 hover:bg-emerald-500/10 transition"
@@ -146,16 +154,6 @@ export default function ProductPage() {
           Ir para o carrinho
         </button>
       </div>
-
-      {/* Aviso de produto adicionado */}
-      {added && (
-        <div className="mt-4 flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-400/60 px-4 py-2 text-xs font-medium text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
-            <span className="text-base">✅</span>
-            <span>Produto adicionado ao carrinho</span>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
