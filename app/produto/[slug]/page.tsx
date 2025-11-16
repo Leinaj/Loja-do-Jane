@@ -27,7 +27,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const product = products.find((p) => p.slug === params.slug);
 
-  // Se o slug não existir na lista de produtos
+  // Se não achar o produto, mostra 404 bonitinho
   if (!product) {
     return (
       <main className="px-4 py-10 text-center">
@@ -36,6 +36,7 @@ export default function ProductPage({ params }: ProductPageProps) {
           Parece que você foi parar num canto vazio da loja 😅
         </p>
         <button
+          type="button"
           onClick={() => router.push("/")}
           className="px-6 py-3 rounded-full bg-emerald-500 text-black font-semibold hover:bg-emerald-400 transition-all"
         >
@@ -53,7 +54,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   return (
     <main className="px-4 pb-20 pt-6">
-      {/* imagem */}
+      {/* Imagem do produto */}
       <div className="rounded-2xl overflow-hidden mb-4 bg-black/40">
         <Image
           src={product.image}
@@ -64,6 +65,65 @@ export default function ProductPage({ params }: ProductPageProps) {
         />
       </div>
 
-      {/* texto */}
+      {/* Infos do produto */}
       <h1 className="text-2xl font-bold mb-1">{product.name}</h1>
-      <p className="text
+      <p className="text-gray-300 mb-4">{product.description}</p>
+
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-green-400 font-bold text-2xl">
+          {formatPrice(product.price)}
+        </span>
+        {product.oldPrice && (
+          <span className="text-gray-500 line-through">
+            {formatPrice(product.oldPrice)}
+          </span>
+        )}
+      </div>
+
+      {/* Quantidade */}
+      <div className="mb-4">
+        <span className="block mb-2">Quantidade:</span>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            className="w-10 h-10 rounded-full border border-gray-500 flex items-center justify-center text-xl"
+          >
+            −
+          </button>
+          <span className="w-8 text-center text-lg">{quantity}</span>
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => q + 1)}
+            className="w-10 h-10 rounded-full border border-emerald-500 flex items-center justify-center text-xl"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {/* Botões */}
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        className="w-full py-3 rounded-full bg-emerald-500 text-black font-semibold text-center shadow-[0_0_15px_rgba(16,185,129,0.6)] mb-3"
+      >
+        Adicionar ao carrinho
+      </button>
+
+      <button
+        type="button"
+        onClick={() => router.push("/checkout")}
+        className="w-full py-3 rounded-full border border-emerald-500 text-emerald-400 font-semibold text-center"
+      >
+        Ir para o carrinho
+      </button>
+
+      {added && (
+        <p className="mt-3 text-center text-sm text-emerald-400">
+          Produto adicionado ao carrinho ✅
+        </p>
+      )}
+    </main>
+  );
+}
