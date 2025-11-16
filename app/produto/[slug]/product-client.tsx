@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 
 type Props = {
-  product: any; // deixa flexível pra bater com os dados que você já usa
+  product: any; // deixa flexível pra bater com o products.ts
 };
 
 export default function ProductClient({ product }: Props) {
@@ -17,13 +17,25 @@ export default function ProductClient({ product }: Props) {
 
   if (!product) return null;
 
-  // tenta pegar o campo certo da imagem, independente do nome
-  const imageSrc =
+  // 1) tenta pegar algum campo de imagem
+  const directImage: string | undefined =
     product.image ||
     product.imageUrl ||
     product.img ||
-    product.photo ||
-    "";
+    product.photo;
+
+  // 2) se não tiver, monta pela slug: /brands/slug.png ou .jpg
+  let imageSrc: string | undefined = directImage;
+
+  if (!imageSrc && product.slug) {
+    const slug = String(product.slug);
+    imageSrc = `/brands/${slug}.png`;
+  }
+
+  if (!imageSrc && product.slug) {
+    const slug = String(product.slug);
+    imageSrc = `/brands/${slug}.jpg`;
+  }
 
   const priceText =
     product.priceFormatted ??
@@ -76,7 +88,6 @@ export default function ProductClient({ product }: Props) {
               priority
             />
           ) : (
-            // fallback se por algum motivo não tiver imagem
             <div className="w-full aspect-[4/3] flex items-center justify-center text-sm text-zinc-400">
               (imagem não encontrada)
             </div>
