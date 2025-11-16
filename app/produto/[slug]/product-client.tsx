@@ -6,17 +6,42 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 
-import { products } from "@/data/products";
-type Product = (typeof products)[number];
-
 type Props = {
-  product: Product;
+  product: any; // deixa flexível pra bater com os dados que você já usa
 };
 
 export default function ProductClient({ product }: Props) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+
+  if (!product) return null;
+
+  // tenta pegar o campo certo da imagem, independente do nome
+  const imageSrc =
+    product.image ||
+    product.imageUrl ||
+    product.img ||
+    product.photo ||
+    "";
+
+  const priceText =
+    product.priceFormatted ??
+    (typeof product.price === "number"
+      ? product.price.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      : "");
+
+  const oldPriceText =
+    product.oldPriceFormatted ??
+    (typeof product.oldPrice === "number"
+      ? product.oldPrice.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })
+      : "");
 
   function handleAddToCart() {
     addToCart(product, quantity);
@@ -39,16 +64,23 @@ export default function ProductClient({ product }: Props) {
 
       {/* Card do produto */}
       <section className="rounded-3xl bg-gradient-to-b from-emerald-900/20 via-black to-black/90 p-4 shadow-[0_0_40px_rgba(16,185,129,0.25)] mb-8">
-        {/* Imagem 100% funcional */}
+        {/* Imagem */}
         <div className="mb-4 overflow-hidden rounded-3xl bg-black/60">
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={800}
-            height={800}
-            className="w-full h-auto object-cover"
-            priority
-          />
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt={product.name}
+              width={800}
+              height={800}
+              className="w-full h-auto object-cover"
+              priority
+            />
+          ) : (
+            // fallback se por algum motivo não tiver imagem
+            <div className="w-full aspect-[4/3] flex items-center justify-center text-sm text-zinc-400">
+              (imagem não encontrada)
+            </div>
+          )}
         </div>
 
         {/* Nome e descrição */}
@@ -59,12 +91,16 @@ export default function ProductClient({ product }: Props) {
 
         {/* Preço */}
         <div className="mt-2 flex items-baseline gap-2 mb-6">
-          <span className="text-3xl font-semibold text-emerald-400">
-            {product.price.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-          </span>
+          {priceText && (
+            <span className="text-3xl font-semibold text-emerald-400">
+              {priceText}
+            </span>
+          )}
+          {oldPriceText && (
+            <span className="text-sm text-zinc-500 line-through">
+              {oldPriceText}
+            </span>
+          )}
         </div>
 
         {/* Quantidade */}
