@@ -111,8 +111,62 @@ export default function CheckoutPage() {
         Preencha seus dados para finalizar o pedido.
       </p>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)]">
-        {/* FORMULÁRIO */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)]">
+        {/* RESUMO DO PEDIDO (AGORA EM CIMA NO MOBILE / ESQUERDA NO DESKTOP) */}
+        <aside className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-4">
+          <h2 className="text-lg font-semibold mb-2">Resumo do pedido</h2>
+
+          {cart.length === 0 ? (
+            <p className="text-sm text-zinc-400">Seu carrinho está vazio.</p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4">
+                {cart.map((item) => (
+                  <div
+                    key={item.slug}
+                    className="flex items-center gap-3 rounded-2xl bg-black/40 border border-zinc-800 px-3 py-2"
+                  >
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-900">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        Quantidade: {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-sm font-semibold text-emerald-400">
+                      R$ {(item.price * item.quantity)
+                        .toFixed(2)
+                        .replace(".", ",")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 border-t border-zinc-800 pt-4 flex items-center justify-between">
+                <span className="text-sm">Total</span>
+                <span className="text-xl font-semibold text-emerald-400">
+                  R$ {total.toFixed(2).replace(".", ",")}
+                </span>
+              </div>
+            </>
+          )}
+
+          <Link
+            href="/"
+            className="mt-2 text-sm text-zinc-400 hover:text-emerald-400 transition-colors"
+          >
+            ← Voltar para a loja
+          </Link>
+        </aside>
+
+        {/* FORMULÁRIO (AGORA EMBAIXO NO MOBILE / DIREITA NO DESKTOP) */}
         <form
           onSubmit={handleSubmit}
           className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-4"
@@ -228,58 +282,6 @@ export default function CheckoutPage() {
             </p>
           )}
         </form>
-
-        {/* RESUMO DO PEDIDO */}
-        <aside className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-4">
-          <h2 className="text-lg font-semibold mb-2">Resumo do pedido</h2>
-
-          {cart.length === 0 ? (
-            <p className="text-sm text-zinc-400">Seu carrinho está vazio.</p>
-          ) : (
-            <>
-              <div className="flex flex-col gap-4">
-                {cart.map((item) => (
-                  <div
-                    key={item.slug}
-                    className="flex items-center gap-3 rounded-2xl bg-black/40 border border-zinc-800 px-3 py-2"
-                  >
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-900">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        Quantidade: {item.quantity}
-                      </p>
-                    </div>
-                    <div className="text-sm font-semibold text-emerald-400">
-                      R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 border-t border-zinc-800 pt-4 flex items-center justify-between">
-                <span className="text-sm">Total</span>
-                <span className="text-xl font-semibold text-emerald-400">
-                  R$ {total.toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-            </>
-          )}
-
-          <Link
-            href="/"
-            className="mt-2 text-sm text-zinc-400 hover:text-emerald-400 transition-colors"
-          >
-            ← Voltar para a loja
-          </Link>
-        </aside>
       </div>
     </div>
   );
