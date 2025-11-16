@@ -1,11 +1,11 @@
 "use client";
 
-import { useCart } from "@/app/contexts/CartContext";
+import { useState, useEffect } from "react";
+import { useCart } from "@/contexts/CartContext";
 import Link from "next/link";
-import { useState } from "react";
 
 export default function CheckoutPage() {
-  const { cart, total, clearCart } = useCart();
+  const { cart, clearCart, total } = useCart();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -17,191 +17,169 @@ export default function CheckoutPage() {
   const [city, setCity] = useState("");
   const [uf, setUf] = useState("");
 
-  const handleFinish = () => {
-    if (!name || !phone || !cep || !street || !number || !district || !city || !uf) {
-      alert("Preencha todos os campos obrigatórios.");
-      return;
+  // Buscar endereço pelo CEP
+  const handleCepBlur = async () => {
+    if (cep.length < 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+
+      if (!data.erro) {
+        setStreet(data.logradouro || "");
+        setDistrict(data.bairro || "");
+        setCity(data.localidade || "");
+        setUf(data.uf || "");
+      }
+    } catch (error) {
+      console.log("Erro ao buscar CEP:", error);
     }
+  };
 
-    const message = `
-🛒 *Novo Pedido - Loja do Jane*
+  const finalizeWhatsApp = () => {
+    const msg =
+      `🔥 *Novo Pedido Loja do Jane*\n\n` +
+      `👤 *Cliente:* ${name}\n` +
+      `📱 *Telefone:* ${phone}\n\n` +
+      `📦 *Itens:* \n` +
+      cart.map((item) => `• ${item.name} — ${item.quantity}x`).join("\n") +
+      `\n\n💰 *Total:* R$ ${total.toFixed(2)}\n\n` +
+      `📍 *Endereço:* \n` +
+      `${street}, ${number}\n` +
+      `${district} - ${city} / ${uf}\n` +
+      `Complemento: ${complement}\n` +
+      `CEP: ${cep}`;
 
-👤 *Cliente:* ${name}
-📱 *Telefone:* ${phone}
-
-📦 *Endereço:* 
-${street}, ${number}
-${complement ? complement + "\n" : ""}
-${district} - ${city}/${uf}
-CEP: ${cep}
-
-📝 *Itens do Pedido:*
-${cart
-  .map(
-    (item) =>
-      `• ${item.name} — Quantidade: ${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2)}`
-  )
-  .join("\n")}
-
-💰 *Total:* R$ ${total.toFixed(2)}
-
-Aguardando confirmação.`;
-
-    const phoneNumber = "44988606483";
-    const url = `https://wa.me/55${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-    window.location.href = url;
+    const url = `https://wa.me/5544988606483?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="p-4 max-w-2xl mx-auto text-white">
+      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-      <Link
-        href="/"
-        className="text-sm text-zinc-400 hover:text-zinc-200 mb-4 inline-block"
-      >
-        ← Voltar para a loja
-      </Link>
+      {/* ======================= */}
+      {/* RESUMO DO PEDIDO PRIMEIRO */}
+      {/* ======================= */}
+      <div className="bg-black/30 p-4 rounded-xl border border-white/10 backdrop-blur mb-8">
+        <h2 className="text-xl font-semibold mb-4">Resumo do pedido</h2>
 
-      <h1 className="text-3xl font-semibold mb-6">Checkout</h1>
-
-      {/* 🔥 RESUMO DO PEDIDO AGORA FICA EM CIMA */}
-      <div className="bg-zinc-900 p-6 rounded-3xl shadow-lg shadow-emerald-500/10 mb-10">
-        <h2 className="text-2xl font-semibold mb-4">Resumo do pedido</h2>
-
-        {cart.length === 0 ? (
-          <p className="text-zinc-400">Seu carrinho está vazio.</p>
-        ) : (
-          <div className="space-y-4">
-            {cart.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b border-zinc-800 pb-4"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-zinc-400">
-                      Quantidade: {item.quantity}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-emerald-500 font-medium">
-                  R$ {(item.price * item.quantity).toFixed(2)}
-                </p>
+        {cart.map((item, index) => (
+          <div key={index} className="flex justify-between items-center py-3">
+            <div className="flex items-center gap-3">
+              <img
+                src={item.image}
+                className="w-12 h-12 object-cover rounded-full"
+              />
+              <div>
+                <p className="font-medium">{item.name}</p>
+                <p className="text-sm text-gray-400">Quantidade: {item.quantity}</p>
               </div>
-            ))}
-
-            <div className="flex items-center justify-between pt-2 text-lg font-semibold">
-              <p>Total</p>
-              <p className="text-emerald-500">R$ {total.toFixed(2)}</p>
             </div>
-
-            <Link
-              href="/"
-              className="text-sm text-zinc-400 hover:text-zinc-200 mt-2 inline-block"
-            >
-              ← Voltar para a loja
-            </Link>
+            <span className="text-green-400 font-semibold">
+              R$ {item.price.toFixed(2)}
+            </span>
           </div>
-        )}
-      </div>
+        ))}
 
-      {/* 🔻 FORMULÁRIO DE ENDEREÇO AGORA FICA EMBAIXO */}
-      <h2 className="text-2xl font-semibold mb-2">Endereço</h2>
-      <p className="text-zinc-400 mb-6 text-sm">
-        Preencha seus dados para finalizar o pedido.
-      </p>
+        <hr className="border-white/10 my-3" />
 
-      <form className="space-y-6">
-
-        {/* CEP */}
-        <div>
-          <label className="block mb-1 text-sm">CEP *</label>
-          <input
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
-            value={cep}
-            onChange={(e) => setCep(e.target.value)}
-          />
+        <div className="flex justify-between text-lg font-bold">
+          <span>Total</span>
+          <span className="text-green-400">R$ {total.toFixed(2)}</span>
         </div>
 
-        {/* Rua */}
-        <div>
-          <label className="block mb-1 text-sm">Rua *</label>
+        <Link href="/" className="text-sm text-gray-300 mt-3 block underline">
+          ← Voltar para a loja
+        </Link>
+      </div>
+
+      {/* ======================= */}
+      {/* CAMPOS DE ENDEREÇO DEPOIS */}
+      {/* ======================= */}
+
+      <h2 className="text-xl font-semibold mb-3">
+        Preencha seus dados para finalizar o pedido
+      </h2>
+
+      <div className="bg-black/30 p-4 rounded-xl border border-white/10 backdrop-blur">
+        <div className="flex flex-col gap-4">
+
           <input
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+            className="bg-black/30 p-3 rounded-xl border border-white/10"
+            placeholder="Nome completo *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <input
+            className="bg-black/30 p-3 rounded-xl border border-white/10"
+            placeholder="Telefone / WhatsApp *"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+
+          <input
+            className="bg-black/30 p-3 rounded-xl border border-white/10"
+            placeholder="CEP *"
+            value={cep}
+            onChange={(e) => setCep(e.target.value)}
+            onBlur={handleCepBlur}
+          />
+
+          <input
+            className="bg-black/30 p-3 rounded-xl border border-white/10"
+            placeholder="Rua *"
             value={street}
             onChange={(e) => setStreet(e.target.value)}
           />
-        </div>
 
-        {/* Número + Complemento */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-1 text-sm">Número *</label>
+          <div className="flex gap-4">
             <input
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+              className="bg-black/30 p-3 rounded-xl border border-white/10 w-1/2"
+              placeholder="Número *"
               value={number}
               onChange={(e) => setNumber(e.target.value)}
             />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm">Complemento</label>
             <input
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+              className="bg-black/30 p-3 rounded-xl border border-white/10 w-1/2"
+              placeholder="Complemento"
               value={complement}
               onChange={(e) => setComplement(e.target.value)}
             />
           </div>
-        </div>
 
-        {/* Bairro */}
-        <div>
-          <label className="block mb-1 text-sm">Bairro *</label>
           <input
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+            className="bg-black/30 p-3 rounded-xl border border-white/10"
+            placeholder="Bairro *"
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
           />
-        </div>
 
-        {/* Cidade + UF */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2">
-            <label className="block mb-1 text-sm">Cidade *</label>
+          <div className="flex gap-4">
             <input
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+              className="bg-black/30 p-3 rounded-xl border border-white/10 w-2/3"
+              placeholder="Cidade *"
               value={city}
               onChange={(e) => setCity(e.target.value)}
             />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm">UF *</label>
             <input
+              className="bg-black/30 p-3 rounded-xl border border-white/10 w-1/3"
+              placeholder="UF *"
               maxLength={2}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-center uppercase"
               value={uf}
               onChange={(e) => setUf(e.target.value.toUpperCase())}
             />
           </div>
-        </div>
 
-        {/* Botão */}
-        <button
-          type="button"
-          onClick={handleFinish}
-          className="w-full py-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold shadow-lg shadow-emerald-500/20 transition-all"
-        >
-          Finalizar pedido pelo WhatsApp
-        </button>
-      </form>
+          <button
+            onClick={finalizeWhatsApp}
+            className="mt-4 bg-green-600 hover:bg-green-500 text-black font-semibold p-4 rounded-full shadow-lg shadow-green-500/40 transition"
+          >
+            Finalizar pedido pelo WhatsApp
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
