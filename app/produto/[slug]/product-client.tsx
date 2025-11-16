@@ -14,6 +14,7 @@ type Props = {
 export default function ProductClient({ product }: Props) {
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
+  const [msg, setMsg] = useState("");
 
   const handleDecrease = () => {
     setQty((prev) => (prev > 1 ? prev - 1 : 1));
@@ -24,19 +25,14 @@ export default function ProductClient({ product }: Props) {
   };
 
   const handleAddToCart = () => {
-    // Monta o item do carrinho com quantity
-    const item = {
-      ...product,
-      quantity: qty,
-    } as any; // força o tipo pra bater com CartItem
-
-    addToCart(item);
+    addToCart(product, qty);
+    setMsg("Produto adicionado ao carrinho ✅");
+    setTimeout(() => setMsg(""), 2000);
   };
 
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-3xl mx-auto px-4 pb-16 pt-8">
-        {/* Voltar */}
         <Link
           href="/"
           className="text-sm text-emerald-400 hover:underline inline-flex items-center gap-1"
@@ -44,7 +40,6 @@ export default function ProductClient({ product }: Props) {
           ← Voltar para a loja
         </Link>
 
-        {/* Card principal */}
         <div className="mt-4 rounded-3xl bg-zinc-950 border border-zinc-800 overflow-hidden">
           {/* Imagem grande */}
           <div className="relative w-full aspect-[4/5] bg-black">
@@ -58,7 +53,7 @@ export default function ProductClient({ product }: Props) {
             />
           </div>
 
-          {/* Infos do produto */}
+          {/* Infos */}
           <div className="p-6 space-y-4">
             <div>
               <h1 className="text-2xl font-semibold">{product.name}</h1>
@@ -69,10 +64,9 @@ export default function ProductClient({ product }: Props) {
               )}
             </div>
 
-            {/* Preços */}
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-semibold text-emerald-400">
-                {product.priceFormatted ?? product.price}
+                {product.priceFormatted}
               </span>
               {product.oldPriceFormatted && (
                 <span className="text-sm text-zinc-500 line-through">
@@ -119,6 +113,12 @@ export default function ProductClient({ product }: Props) {
               >
                 Ir para o carrinho
               </Link>
+
+              {msg && (
+                <p className="text-xs text-emerald-400 text-center mt-1">
+                  {msg}
+                </p>
+              )}
             </div>
           </div>
         </div>
