@@ -36,7 +36,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   function handleAddToCart() {
-    // Extra: garante pro TypeScript que existe produto
+    // Só por segurança pro TS
     if (!product) return;
 
     addToCart(
@@ -123,21 +123,19 @@ export default function ProductPage({ params }: ProductPageProps) {
         Adicionar ao carrinho
       </button>
 
-      {/* Toast "Produto adicionado" */}
-      <div
-        className={`mt-3 flex w-full items-center justify-center transition-all duration-500 ${
-          added ? "opacity-100 translate-y-0" : "pointer-events-none -translate-y-2 opacity-0"
-        }`}
-      >
-        <div className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 shadow-lg shadow-emerald-500/20 backdrop-blur">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/80 text-xs">
-            ✅
-          </span>
-          <span className="flex-1">Produto adicionado ao carrinho</span>
+      {/* Toast "Produto adicionado" - agora não ocupa espaço quando está escondido */}
+      {added && (
+        <div className="mt-3 flex w-full items-center justify-center transition-all duration-300">
+          <div className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 shadow-lg shadow-emerald-500/20 backdrop-blur">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/80 text-xs">
+              ✅
+            </span>
+            <span className="flex-1">Produto adicionado ao carrinho</span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Botão Ir para o carrinho */}
+      {/* Botão Ir para o carrinho - espaço bem menor agora */}
       <button
         type="button"
         className="mt-4 w-full rounded-full border border-emerald-500 py-4 text-center text-base font-semibold text-emerald-400"
