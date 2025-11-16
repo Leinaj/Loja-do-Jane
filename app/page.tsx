@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/lib/products"; // 👈 arrumado
+import { products } from "@/lib/products";
+
+// funçãozinha pra formatar em R$ bonitinho
+function formatPrice(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
 
 export default function HomePage() {
   return (
@@ -32,13 +40,15 @@ export default function HomePage() {
             <p className="text-gray-400 text-sm">{product.description}</p>
 
             <div className="mt-3 flex items-center gap-3">
+              {/* preço atual formatado */}
               <span className="text-green-400 font-bold text-xl">
-                {product.priceFormatted}
+                {formatPrice(product.price)}
               </span>
 
-              {product.oldPriceFormatted && (
+              {/* preço antigo, se existir */}
+              {product.oldPrice && (
                 <span className="text-gray-500 line-through">
-                  {product.oldPriceFormatted}
+                  {formatPrice(product.oldPrice)}
                 </span>
               )}
             </div>
