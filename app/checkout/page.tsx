@@ -1,131 +1,144 @@
 // app/checkout/page.tsx
 "use client";
 
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
+import { useCart } from "@/contexts/CartContext";
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/contexts/CartContext";
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+const WHATSAPP_NUMBER = "5544999999999"; // se quiser, troca aqui pelo seu número com DDI/DDD
 
 export default function CheckoutPage() {
   const { cart, getCartTotal, clearCart } = useCart();
+
+  const [fullName, setFullName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [cep, setCep] = useState("");
+  const [street, setStreet] = useState("");
+  const [number, setNumber] = useState("");
+  const [complement, setComplement] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [city, setCity] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
   const total = getCartTotal();
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
 
-    const data = new FormData(e.currentTarget);
-    const name = (data.get("name") || "").toString();
-    const phone = (data.get("whatsapp") || "").toString();
-    const cep = (data.get("cep") || "").toString();
-    const street = (data.get("street") || "").toString();
-    const number = (data.get("number") || "").toString();
-    const complement = (data.get("complement") || "").toString();
-    const neighborhood = (data.get("neighborhood") || "").toString();
-    const city = (data.get("city") || "").toString();
+    if (!cart.length) {
+      alert("Seu carrinho está vazio.");
+      return;
+    }
 
-    const itemsText = cart
+    if (!fullName || !whatsapp || !cep || !street || !number || !city) {
+      alert("Preencha os campos obrigatórios para enviar o pedido.");
+      return;
+    }
+
+    setIsSending(true);
+
+    const itensTexto = cart
       .map(
-        (item) =>
-          `• ${item.name} (Qtd: ${item.quantity}) — ${formatCurrency(
-            item.price * item.quantity
-          )}`
+        (item, index) =>
+          `${index + 1}. ${item.name} — Qtd: ${item.quantity} — R$ ${(item.price * item.quantity)
+            .toFixed(2)
+            .replace(".", ",")}`
       )
-      .join("%0A");
+      .join("\n");
 
-    const address = `${street}, ${number} ${complement} - ${neighborhood} - ${city} - CEP ${cep}`;
+    const mensagemWhatsApp = `✨ *Pedido confirmado na Loja do Jane* ✨
 
-    const message = `Olá, tenho interesse nesses produtos na Loja do Jane:%0A%0A${itemsText}%0A%0ATotal: ${formatCurrency(
-      total
-    )}%0A%0ANome: ${name}%0AWhatsApp: ${phone}%0AEndereço: ${address}`;
+🛒 *Resumo do pedido*
+${itensTexto}
 
-    // COLOQUE AQUI SEU NÚMERO DE WHATSAPP COM DDD, SEM +55
-    const storePhone = "44999999999";
-    const url = `https://wa.me/55${storePhone}?text=${message}`;
+💰 *Total:* R$ ${total.toFixed(2).replace(".", ",")}
 
-    window.open(url, "_blank");
+👤 *Dados do cliente*
+Nome: ${fullName}
+WhatsApp: ${whatsapp}
+
+📍 *Endereço para entrega*
+Rua: ${street}, ${number}${complement ? " - " + complement : ""}
+Bairro: ${neighborhood || "-"}
+Cidade: ${city}
+CEP: ${cep}
+
+⏱ *Próximos passos*
+Por favor, confirme a disponibilidade dos produtos, o valor do frete e o prazo de entrega.
+
+Muito obrigado! 🙌`;
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      mensagemWhatsApp
+    )}`;
+
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank");
+    }
+
+    // limpa o carrinho depois de enviar o pedido
     clearCart();
+    setIsSending(false);
   }
 
-  if (cart.length === 0) {
+  if (!cart.length) {
     return (
-      <main className="px-4 pb-20 pt-6">
-        <header className="mb-6 flex justify-end">
-          <Link
-            href="/"
-            className="rounded-full border border-emerald-500/60 bg-black/60 px-4 py-2 text-sm font-semibold text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.6)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-[0.97]"
-          >
-            Voltar para a loja
-          </Link>
-        </header>
-
-        <p className="text-center text-gray-300">
-          Seu carrinho está vazio. Adicione algum produto para finalizar o
-          pedido.
-        </p>
+      <main className="px-4 pb-20 pt-6 max-w-xl mx-auto">
+        <h1 className="text-3xl font-bold text-white mb-4">
+          Seu carrinho está vazio
+        </h1>
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center rounded-full border border-emerald-400/60 px-6 py-3 text-emerald-300 hover:bg-emerald-500/10 transition"
+        >
+          Voltar para a loja
+        </Link>
       </main>
     );
   }
 
   return (
-    <main className="px-4 pb-20 pt-6">
-      {/* SÓ O BOTÃO, SEM O TÍTULO DUPLICADO */}
-      <header className="mb-6 flex justify-end">
-        <Link
-          href="/"
-          className="rounded-full border border-emerald-500/60 bg-black/60 px-4 py-2 text-sm font-semibold text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.6)] transition-all duration-150 hover:bg-emerald-500/10 active:scale-[0.97]"
-        >
-          Voltar para a loja
-        </Link>
-      </header>
-
-      <h1 className="mb-4 text-3xl font-semibold">Finalizar pedido</h1>
+    <main className="px-4 pb-24 pt-6 max-w-xl mx-auto">
+      <h1 className="text-4xl font-bold text-white mb-6">Finalizar pedido</h1>
 
       {/* RESUMO DO PEDIDO */}
-      <section className="mb-8 rounded-3xl border border-emerald-500/30 bg-black/70 p-4 shadow-[0_0_30px_rgba(16,185,129,0.7)]">
-        <h2 className="mb-4 text-xl font-semibold text-emerald-300">
+      <section className="mb-8 rounded-3xl border border-emerald-400/25 bg-black/70 p-5 shadow-[0_0_80px_rgba(16,185,129,0.35)]">
+        <h2 className="text-xl font-semibold text-emerald-300 mb-4">
           Resumo do pedido
         </h2>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {cart.map((item) => (
             <div
               key={item.slug}
-              className="flex items-center justify-between rounded-2xl bg-emerald-500/5 px-3 py-2"
+              className="flex items-center gap-4 rounded-2xl bg-emerald-900/25 px-4 py-3"
             >
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-emerald-500/40 bg-black/60">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    sizes="48px"
-                    className="object-cover"
-                  />
-                </div>
+              <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-emerald-500/40 bg-black/40">
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  fill
+                  className="object-cover"
+                  sizes="56px"
+                />
+              </div>
 
-                <div>
-                  <p className="text-sm font-semibold">{item.name}</p>
-                  <p className="text-xs text-gray-300">
-                    Qtd: {item.quantity} ·{" "}
-                    {formatCurrency(item.price * item.quantity)}
-                  </p>
-                </div>
+              <div className="flex-1">
+                <p className="text-white font-medium">{item.name}</p>
+                <p className="text-xs text-emerald-200/80">
+                  Qtd: {item.quantity} · R${" "}
+                  {(item.price * item.quantity).toFixed(2).replace(".", ",")}
+                </p>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-emerald-500/20 pt-3">
-          <span className="text-sm font-medium">Total</span>
+        <div className="mt-4 flex items-center justify-between border-t border-emerald-500/30 pt-3">
+          <span className="text-sm text-emerald-200">Total</span>
           <span className="text-lg font-bold text-emerald-400">
-            {formatCurrency(total)}
+            R$ {total.toFixed(2).replace(".", ",")}
           </span>
         </div>
       </section>
@@ -133,116 +146,113 @@ export default function CheckoutPage() {
       {/* FORMULÁRIO */}
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-3xl border border-emerald-500/20 bg-black/70 p-4"
+        className="space-y-4 rounded-3xl border border-emerald-500/20 bg-black/70 p-5"
       >
         <div>
-          <label className="mb-1 block text-sm" htmlFor="name">
+          <label className="mb-1 block text-sm text-emerald-100">
             Nome completo *
           </label>
           <input
-            id="name"
-            name="name"
-            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="Seu nome completo"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+            required
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm" htmlFor="whatsapp">
+          <label className="mb-1 block text-sm text-emerald-100">
             WhatsApp *
           </label>
           <input
-            id="whatsapp"
-            name="whatsapp"
-            required
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="(44) 9 9999-9999"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+            required
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm" htmlFor="cep">
-            CEP *
-          </label>
+          <label className="mb-1 block text-sm text-emerald-100">CEP *</label>
           <input
-            id="cep"
-            name="cep"
-            required
+            value={cep}
+            onChange={(e) => setCep(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="00000-000"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+            required
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm" htmlFor="street">
-            Rua *
-          </label>
+          <label className="mb-1 block text-sm text-emerald-100">Rua *</label>
           <input
-            id="street"
-            name="street"
-            required
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="Nome da rua"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+            required
           />
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-sm" htmlFor="number">
+            <label className="mb-1 block text-sm text-emerald-100">
               Número *
             </label>
             <input
-              id="number"
-              name="number"
-              required
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
               placeholder="123"
-              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+              required
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-sm" htmlFor="complement">
+            <label className="mb-1 block text-sm text-emerald-100">
               Complemento
             </label>
             <input
-              id="complement"
-              name="complement"
+              value={complement}
+              onChange={(e) => setComplement(e.target.value)}
+              className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
               placeholder="Apto, bloco, casa..."
-              className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm" htmlFor="neighborhood">
+          <label className="mb-1 block text-sm text-emerald-100">
             Bairro
           </label>
           <input
-            id="neighborhood"
-            name="neighborhood"
+            value={neighborhood}
+            onChange={(e) => setNeighborhood(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="Seu bairro"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm" htmlFor="city">
+          <label className="mb-1 block text-sm text-emerald-100">
             Cidade *
           </label>
           <input
-            id="city"
-            name="city"
-            required
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="w-full rounded-full border border-emerald-500/40 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/40"
             placeholder="Sua cidade"
-            className="w-full rounded-full border border-emerald-500/30 bg-black/60 px-4 py-3 text-sm outline-none transition-all focus:border-emerald-400"
+            required
           />
         </div>
 
         <button
           type="submit"
-          className="mt-2 w-full rounded-full bg-emerald-500 py-3 text-center text-base font-semibold text-black shadow-[0_0_26px_rgba(16,185,129,0.8)] transition-all duration-150 hover:bg-emerald-400 active:scale-[0.97]"
+          disabled={isSending}
+          className="mt-3 flex w-full items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-black shadow-[0_0_45px_rgba(16,185,129,0.75)] transition hover:bg-emerald-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Enviar pedido pelo WhatsApp
+          {isSending ? "Enviando pedido..." : "Enviar pedido pelo WhatsApp"}
         </button>
       </form>
     </main>
