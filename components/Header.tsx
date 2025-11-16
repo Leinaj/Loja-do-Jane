@@ -1,51 +1,58 @@
-// components/Header.tsx
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useCart } from '@/lib/cart';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ShoppingCart } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
 
-// Ícone do carrinho (SVG inline, sem dependência externa)
-function CartIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" {...props}>
-      <path
-        d="M6 6h15l-1.5 9h-12L6 6Zm0 0L5 3H2"
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="9" cy="20" r="1.8" fill="currentColor" />
-      <circle cx="18" cy="20" r="1.8" fill="currentColor" />
-    </svg>
+export function Header() {
+  const pathname = usePathname();
+  const { items } = useCart();
+
+  const itemsCount = items.reduce(
+    (total: number, item: { quantity: number }) => total + item.quantity,
+    0
   );
-}
 
-export default function Header() {
-  const { items } = useCart();       // pega itens do carrinho
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-  const count = mounted ? items.length : 0;
+  const isCheckout = pathname.startsWith("/checkout");
 
   return (
-    <header className="sticky top-0 z-40 bg-neutral-900/70 backdrop-blur border-b border-white/10">
-      <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
-        <Link href="/" className="text-white font-semibold text-lg">
-          Loja da Jane
+    <header className="border-b border-zinc-900 bg-black/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+        <Link
+          href="/"
+          className="text-lg font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+        >
+          Loja do Jane
         </Link>
 
-        <Link href="/checkout" className="relative inline-flex items-center gap-2 text-white">
-          <CartIcon className="w-5 h-5" />
-          <span className="text-sm">Carrinho</span>
-
-          <span className="absolute -right-3 -top-2 rounded-full bg-emerald-500 text-black text-[10px] px-1.5 py-0.5 font-bold">
-            {count}
-          </span>
-        </Link>
+        {isCheckout ? (
+          // Checkout → botão "Voltar para a loja"
+          <Link
+            href="/"
+            className="rounded-full border border-emerald-500/60 bg-emerald-500/10 px-4 py-1 text-sm text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.45)] transition
+                       hover:bg-emerald-500/20 active:scale-95"
+          >
+            Voltar para a loja
+          </Link>
+        ) : (
+          // Demais páginas → botão do carrinho com quantidade de itens
+          <Link
+            href="/checkout"
+            className="flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-500/10 px-4 py-1 text-sm text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.45)] transition
+                       hover:bg-emerald-500/20 active:scale-95"
+          >
+            <ShoppingCart size={16} />
+            <span>
+              {itemsCount} {itemsCount === 1 ? "item" : "itens"}
+            </span>
+          </Link>
+        )}
       </div>
     </header>
   );
 }
+
+// Export default também, pra funcionar tanto import default quanto named
+export default Header;
+```0
