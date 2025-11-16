@@ -6,7 +6,13 @@ import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
 
 export default function CheckoutPage() {
-  const { cart, total, clearCart } = useCart();
+  const { cart, clearCart } = useCart();
+
+  // calcula o total com base no carrinho
+  const total = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -232,7 +238,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     <span className="text-sm font-medium text-emerald-400">
-                      R${" "}
+                      R{"$ "}
                       {(item.price * item.quantity)
                         .toFixed(2)
                         .replace(".", ",")}
