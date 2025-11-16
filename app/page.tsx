@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import products from "@/lib/products";
+import { products } from "@/lib/products"; // 👈 arrumado
 
 export default function HomePage() {
   return (
