@@ -47,10 +47,12 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   function handleAddToCart() {
-    addToCart(product, quantity);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  }
+  if (!product) return; // segurança pro TypeScript e pro app
+
+  addToCart(product, quantity);
+  setAdded(true);
+  setTimeout(() => setAdded(false), 2000);
+}
 
   return (
     <main className="px-4 pb-20 pt-6">
