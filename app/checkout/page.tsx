@@ -106,13 +106,13 @@ export default function CheckoutPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold mb-6">Endereço</h1>
+      <h1 className="text-2xl font-semibold mb-2">Endereço</h1>
       <p className="text-sm text-zinc-400 mb-6">
         Preencha seus dados para finalizar o pedido.
       </p>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)]">
-        {/* RESUMO DO PEDIDO (AGORA EM CIMA NO MOBILE / ESQUERDA NO DESKTOP) */}
+        {/* RESUMO DO PEDIDO */}
         <aside className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-4">
           <h2 className="text-lg font-semibold mb-2">Resumo do pedido</h2>
 
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
           </Link>
         </aside>
 
-        {/* FORMULÁRIO (AGORA EMBAIXO NO MOBILE / DIREITA NO DESKTOP) */}
+        {/* FORMULÁRIO */}
         <form
           onSubmit={handleSubmit}
           className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 flex flex-col gap-4"
@@ -200,9 +200,6 @@ export default function CheckoutPage() {
               onBlur={handleCepBlur}
               className="w-full rounded-xl bg-black border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-emerald-500"
             />
-            <p className="text-xs text-zinc-500 mt-1">
-              Ao sair do campo, tentamos buscar o endereço automaticamente.
-            </p>
           </div>
 
           <div>
