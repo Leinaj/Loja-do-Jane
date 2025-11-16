@@ -18,7 +18,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const product = products.find((p) => p.slug === params.slug);
 
-  // se não achar o produto, manda 404 e sai da página
+  // Se não achou o produto, manda 404
   if (!product) {
     notFound();
     return null;
@@ -36,7 +36,9 @@ export default function ProductPage({ params }: ProductPageProps) {
   }
 
   function handleAddToCart() {
-    // aqui o TS já sabe que product NÃO é undefined
+    // Extra: garante pro TypeScript que existe produto
+    if (!product) return;
+
     addToCart(
       {
         id: product.id,
@@ -121,7 +123,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         Adicionar ao carrinho
       </button>
 
-      {/* Toast bonito, animado e translúcido */}
+      {/* Toast "Produto adicionado" */}
       <div
         className={`mt-3 flex w-full items-center justify-center transition-all duration-500 ${
           added ? "opacity-100 translate-y-0" : "pointer-events-none -translate-y-2 opacity-0"
@@ -140,7 +142,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         type="button"
         className="mt-4 w-full rounded-full border border-emerald-500 py-4 text-center text-base font-semibold text-emerald-400"
         onClick={() => {
-          // navegação simples via URL
           window.location.href = "/checkout";
         }}
       >
