@@ -1,62 +1,67 @@
-"use client";
-
+// app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
 import { products } from "@/lib/products";
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export default function HomePage() {
   return (
-    <main className="px-4 pb-20 pt-6">
-      <h1 className="text-2xl font-bold mb-2">Loja do Jane — Ofertas e Moda</h1>
-      <p className="text-gray-300 mb-6">
-        Escolha seu produto e clique na foto ou em "Ver" para abrir a página de detalhes.
-      </p>
+    <main className="min-h-screen bg-black text-white pb-10">
+      {/* TÍTULO DA LOJA */}
+      <div className="max-w-3xl mx-auto px-4 pt-6 pb-4">
+        <h1 className="text-3xl font-bold mb-1">
+          Loja do Jane — Ofertas e Moda
+        </h1>
+        <p className="text-gray-300">
+          Escolha seu produto e clique na foto ou em &quot;Ver&quot; para abrir
+          a página de detalhes.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      {/* LISTA DE PRODUTOS */}
+      <div className="max-w-3xl mx-auto px-4 space-y-6">
         {products.map((product) => (
           <div
-            key={product.slug}
-            className="bg-black/40 p-4 rounded-2xl border border-white/10 shadow-lg"
+            key={product.id}
+            className="bg-black/40 rounded-3xl p-4 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.15)]"
           >
-            {/* IMAGEM DO PRODUTO */}
-            <div className="rounded-xl overflow-hidden">
+            {/* FOTO CLICÁVEL */}
+            <Link
+              href={`/produto/${product.slug}`}
+              className="block rounded-2xl overflow-hidden mb-4 bg-black/40"
+            >
               <Image
                 src={product.image}
                 alt={product.name}
                 width={800}
                 height={800}
-                className="w-full h-auto object-cover"
+                className="w-full h-auto"
               />
-            </div>
+            </Link>
 
-            <h2 className="text-xl font-semibold mt-3">{product.name}</h2>
-            <p className="text-gray-400 text-sm">{product.description}</p>
+            {/* NOME E DESCRIÇÃO */}
+            <h2 className="text-2xl font-semibold">{product.name}</h2>
+            <p className="text-gray-300 mt-1">{product.description}</p>
 
+            {/* PREÇOS */}
             <div className="mt-3 flex items-center gap-3">
               <span className="text-green-400 font-bold text-xl">
-                {formatPrice(product.price)}
+                {product.priceFormatted}
               </span>
-
-              {product.oldPrice && (
+              {product.oldPriceFormatted && (
                 <span className="text-gray-500 line-through">
-                  {formatPrice(product.oldPrice)}
+                  {product.oldPriceFormatted}
                 </span>
               )}
             </div>
 
-            <Link
-              href={`/produto/${product.slug}`}
-              className="mt-4 block w-full text-center py-3 rounded-full border border-green-500 text-green-500 hover:bg-green-500 hover:text-black transition-all font-medium shadow-[0_0_10px_rgba(0,255,128,0.3)]"
-            >
-              Ver
-            </Link>
+            {/* BOTÃO VER */}
+            <div className="mt-4">
+              <Link href={`/produto/${product.slug}`}>
+                <button className="w-full rounded-full border border-green-400 px-4 py-3 text-center text-green-400 font-semibold shadow-[0_0_25px_rgba(34,197,94,0.65)]">
+                  Ver
+                </button>
+              </Link>
+            </div>
           </div>
         ))}
       </div>
