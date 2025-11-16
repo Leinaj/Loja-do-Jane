@@ -1,9 +1,7 @@
-// app/produto/[slug]/page.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { products } from "@/data/products";
@@ -16,144 +14,168 @@ type ProductPageProps = {
 
 export default function ProductPage({ params }: ProductPageProps) {
   const { slug } = params;
+
+  // Garantimos pro TypeScript que SEMPRE existe um produto válido
   const product = products.find((p) => p.slug === slug);
-  const { addToCart } = useCart();
-
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
-
   if (!product) {
-    notFound();
-  }
-
-  function handleDecrease() {
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
-  }
-
-  function handleIncrease() {
-    setQuantity((prev) => prev + 1);
-  }
-
-  function handleAddToCart() {
-    addToCart(
-      {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-      },
-      quantity
-    );
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* BOTÃO DE VOLTAR COM SETA */}
-      <header className="w-full border-b border-emerald-900/40 bg-black/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-3xl items-center justify-start px-4 py-3">
+    // Se alguém acessar um slug inválido, só mostra nada (ou você pode criar uma página 404 depois)
+    return (
+      <div className="px-4 py-10">
+        <p className="text-center text-gray-400">
+          Produto não encontrado. 😔
+        </p>
+        <div className="mt-6 flex justify-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 transition active:scale-95 hover:bg-emerald-500/20 hover:border-emerald-400"
+            className="inline-flex items-center gap-2 rounded-full px-5 py-2 bg-emerald-500/10 border border-emerald-500/60 text-emerald-300 font-semibold shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-95 transition"
           >
             <span className="text-lg">←</span>
             <span>Voltar para a loja</span>
           </Link>
         </div>
-      </header>
+      </div>
+    );
+  }
 
-      <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-10 pt-6">
-        {/* Imagem do produto com feedback ao toque */}
-        <button
-          type="button"
-          onClick={handleIncrease} // só pra ter um feedback se quiser, pode trocar
-          className="relative overflow-hidden rounded-3xl border border-emerald-900/60 bg-zinc-900/80 shadow-[0_0_60px_rgba(16,185,129,0.25)] transition active:scale-[0.98]"
+  const { addToCart } = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToCart = () => {
+    addToCart({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity,
+    });
+
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
+  };
+
+  const handleDecrease = () => {
+    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+  };
+
+  const handleIncrease = () => {
+    setQuantity((prev) => prev + 1);
+  };
+
+  const priceFormatted = product.price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+  const oldPriceFormatted =
+    product.oldPrice &&
+    product.oldPrice.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+
+  return (
+    <div className="px-4 pb-10">
+      {/* Topinho da página de produto: só seta de voltar */}
+      <div className="flex items-center justify-between pt-4 pb-2">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-emerald-500/10 border border-emerald-500/60 text-emerald-300 font-semibold shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-95 transition"
         >
-          <div className="relative h-[340px] w-full">
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(min-width: 768px) 640px, 100vw"
-              className="object-cover"
-              priority
-            />
+          <span className="text-lg">←</span>
+          <span>Voltar</span>
+        </Link>
+      </div>
+
+      <div className="mt-2 rounded-3xl bg-gradient-to-b from-emerald-500/5 via-black to-black shadow-[0_0_60px_rgba(16,185,129,0.25)] overflow-hidden">
+        {/* Foto do produto com feedback ao toque */}
+        <div className="bg-black">
+          <div className="p-4">
+            <div className="overflow-hidden rounded-3xl bg-black/80 shadow-[0_0_50px_rgba(16,185,129,0.45)]">
+              <button
+                type="button"
+                className="block w-full active:scale-[0.97] transition-transform duration-150"
+              >
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  width={800}
+                  height={800}
+                  className="w-full h-auto object-contain"
+                  priority
+                />
+              </button>
+            </div>
           </div>
-        </button>
+        </div>
 
-        <section className="rounded-3xl border border-emerald-900/60 bg-zinc-950/80 p-5 shadow-[0_0_80px_rgba(16,185,129,0.18)]">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {product.name}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-300">{product.description}</p>
+        {/* Infos do produto */}
+        <div className="px-6 pb-6 pt-2">
+          <h1 className="text-3xl font-semibold mb-1">{product.name}</h1>
+          <p className="text-gray-400 text-sm mb-4">{product.description}</p>
 
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="text-2xl font-bold text-emerald-400">
-              {product.priceFormatted}
+          <div className="flex items-end gap-3 mb-6">
+            <span className="text-emerald-400 text-3xl font-bold">
+              {priceFormatted}
             </span>
-            {product.oldPriceFormatted && (
-              <span className="text-sm text-zinc-500 line-through">
-                {product.oldPriceFormatted}
+            {oldPriceFormatted && (
+              <span className="text-gray-500 line-through">
+                {oldPriceFormatted}
               </span>
             )}
           </div>
 
           {/* Quantidade */}
-          <div className="mt-6">
-            <span className="text-sm text-zinc-300">Quantidade:</span>
-            <div className="mt-3 flex items-center gap-4">
+          <div className="mb-6">
+            <span className="block text-gray-300 mb-2">Quantidade:</span>
+            <div className="flex items-center gap-4">
               <button
-                type="button"
                 onClick={handleDecrease}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/50 bg-black/60 text-2xl text-emerald-300 transition active:scale-95 hover:bg-emerald-500/10"
+                className="w-12 h-12 border border-emerald-500/40 rounded-full flex items-center justify-center text-2xl text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.4)] active:scale-95 transition"
+                aria-label="Diminuir quantidade"
               >
-                –
+                −
               </button>
-              <span className="w-6 text-center text-lg font-medium">
-                {quantity}
-              </span>
+              <span className="w-8 text-center text-lg">{quantity}</span>
               <button
-                type="button"
                 onClick={handleIncrease}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/50 bg-black/60 text-2xl text-emerald-300 transition active:scale-95 hover:bg-emerald-500/10"
+                className="w-12 h-12 border border-emerald-500/40 rounded-full flex items-center justify-center text-2xl text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.4)] active:scale-95 transition"
+                aria-label="Aumentar quantidade"
               >
                 +
               </button>
             </div>
           </div>
 
-          {/* Botões de ação */}
-          <div className="mt-8 flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              className="h-14 rounded-full bg-emerald-500 text-base font-semibold text-black shadow-[0_0_40px_rgba(16,185,129,0.7)] transition active:scale-95 hover:bg-emerald-400"
-            >
-              Adicionar ao carrinho
-            </button>
-
-            <Link
-              href="/cart"
-              className="flex h-14 items-center justify-center rounded-full border border-emerald-500/60 bg-black/80 text-base font-semibold text-emerald-300 transition active:scale-95 hover:bg-emerald-500/10"
-            >
-              Ir para o carrinho
-            </Link>
-          </div>
-
-          {/* Toast de confirmação */}
+          {/* Badge de “produto adicionado” */}
           {added && (
-            <div className="mt-4 flex items-center justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/60 bg-black/80 px-4 py-2 text-sm text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.5)]">
+            <div className="mb-3 flex justify-center">
+              <div className="flex items-center gap-2 rounded-full bg-emerald-600/15 border border-emerald-500/60 px-4 py-2 text-sm text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.45)]">
                 <span>✅</span>
                 <span>Produto adicionado ao carrinho</span>
               </div>
             </div>
           )}
-        </section>
-      </main>
+
+          {/* Botões principais */}
+          <div className="space-y-3 mt-4">
+            <button
+              onClick={handleAddToCart}
+              className="w-full rounded-full bg-emerald-500 text-black font-semibold py-3 shadow-[0_0_45px_rgba(16,185,129,0.9)] active:scale-[0.97] transition-transform duration-150"
+            >
+              Adicionar ao carrinho
+            </button>
+
+            <Link
+              href="/checkout"
+              className="block w-full rounded-full border border-emerald-500/70 text-emerald-300 font-semibold py-3 text-center bg-black/60 shadow-[0_0_35px_rgba(16,185,129,0.4)] active:scale-[0.97] transition-transform duration-150"
+            >
+              Ir para o carrinho
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
