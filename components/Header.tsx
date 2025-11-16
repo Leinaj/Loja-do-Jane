@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 
 export function Header() {
@@ -36,13 +35,13 @@ export function Header() {
             Voltar para a loja
           </Link>
         ) : (
-          // Demais páginas → botão do carrinho com quantidade de itens
+          // Home/lista de produtos → botão do carrinho com quantidade
           <Link
             href="/checkout"
             className="flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-500/10 px-4 py-1 text-sm text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.45)] transition
                        hover:bg-emerald-500/20 active:scale-95"
           >
-            <ShoppingCart size={16} />
+            <span className="text-base">🛒</span>
             <span>
               {itemsCount} {itemsCount === 1 ? "item" : "itens"}
             </span>
@@ -53,6 +52,4 @@ export function Header() {
   );
 }
 
-// Export default também, pra funcionar tanto import default quanto named
 export default Header;
-```0
