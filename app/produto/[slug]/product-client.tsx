@@ -1,9 +1,9 @@
 // app/produto/[slug]/product-client.tsx
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import type { Product } from "@/app/data/products";
 
@@ -14,115 +14,115 @@ type Props = {
 export default function ProductClient({ product }: Props) {
   const { addToCart } = useCart();
   const [qty, setQty] = useState(1);
-  const [msg, setMsg] = useState("");
-
-  const handleDecrease = () => {
-    setQty((prev) => (prev > 1 ? prev - 1 : 1));
-  };
-
-  const handleIncrease = () => {
-    setQty((prev) => prev + 1);
-  };
+  const [added, setAdded] = useState(false);
 
   const handleAddToCart = () => {
+    if (qty <= 0) return;
+
+    // usa a função nova (ela já soma quantidade lá dentro)
     addToCart(product, qty);
-    setMsg("Produto adicionado ao carrinho ✅");
-    setTimeout(() => setMsg(""), 2000);
+
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
   };
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="max-w-3xl mx-auto px-4 pb-16 pt-8">
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* VOLTAR PARA A LOJA */}
+      <div className="mb-4">
         <Link
           href="/"
-          className="text-sm text-emerald-400 hover:underline inline-flex items-center gap-1"
+          className="text-sm text-zinc-400 hover:text-emerald-400 transition-colors"
         >
           ← Voltar para a loja
         </Link>
+      </div>
 
-        <div className="mt-4 rounded-3xl bg-zinc-950 border border-zinc-800 overflow-hidden">
-          {/* Imagem grande */}
-          <div className="relative w-full aspect-[4/5] bg-black">
+      <div className="grid md:grid-cols-2 gap-8 items-start">
+        {/* Imagem */}
+        <div className="w-full rounded-3xl overflow-hidden bg-zinc-900 border border-zinc-800">
+          <div className="relative aspect-[4/5] w-full">
             <Image
               src={product.image}
               alt={product.name}
               fill
               className="object-cover"
               sizes="(min-width: 1024px) 50vw, 100vw"
-              priority
             />
           </div>
+        </div>
 
-          {/* Infos */}
-          <div className="p-6 space-y-4">
-            <div>
-              <h1 className="text-2xl font-semibold">{product.name}</h1>
-              {product.description && (
-                <p className="text-sm text-zinc-400 mt-1">
-                  {product.description}
-                </p>
-              )}
-            </div>
+        {/* Infos + carrinho */}
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">{product.name}</h1>
+            {product.description && (
+              <p className="text-sm text-zinc-400 mt-2">
+                {product.description}
+              </p>
+            )}
+          </div>
 
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-emerald-400">
-                {product.priceFormatted}
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-semibold text-emerald-400">
+              {product.priceFormatted ?? `R$ ${product.price.toFixed(2)}`}
+            </span>
+            {product.oldPriceFormatted && (
+              <span className="text-sm text-zinc-500 line-through">
+                {product.oldPriceFormatted}
               </span>
-              {product.oldPriceFormatted && (
-                <span className="text-sm text-zinc-500 line-through">
-                  {product.oldPriceFormatted}
-                </span>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* Quantidade */}
-            <div className="pt-2">
-              <span className="text-sm text-zinc-300">Quantidade:</span>
-              <div className="mt-2 inline-flex items-center rounded-full border border-zinc-700 px-3 py-1 gap-4">
-                <button
-                  type="button"
-                  onClick={handleDecrease}
-                  className="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center text-lg"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center text-base">{qty}</span>
-                <button
-                  type="button"
-                  onClick={handleIncrease}
-                  className="w-8 h-8 rounded-full border border-emerald-500 flex items-center justify-center text-lg"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {/* Botões */}
-            <div className="pt-4 space-y-3">
+          {/* Quantidade */}
+          <div className="mt-4">
+            <span className="block text-sm text-zinc-300 mb-1">
+              Quantidade:
+            </span>
+            <div className="inline-flex items-center gap-3 rounded-full border border-zinc-700 px-4 py-2">
               <button
                 type="button"
-                onClick={handleAddToCart}
-                className="w-full rounded-full bg-emerald-500 text-black font-medium py-3 shadow-[0_0_40px_rgba(16,185,129,0.7)] active:scale-[0.99] transition-transform"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="w-8 h-8 rounded-full border border-zinc-600 flex items-center justify-center text-lg"
               >
-                Adicionar ao carrinho
+                −
               </button>
-
-              <Link
-                href="/checkout"
-                className="block w-full text-center rounded-full border border-emerald-500 text-emerald-400 font-medium py-3 hover:bg-emerald-500 hover:text-black transition-colors"
+              <span className="w-6 text-center">{qty}</span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="w-8 h-8 rounded-full border border-zinc-600 flex items-center justify-center text-lg"
               >
-                Ir para o carrinho
-              </Link>
-
-              {msg && (
-                <p className="text-xs text-emerald-400 text-center mt-1">
-                  {msg}
-                </p>
-              )}
+                +
+              </button>
             </div>
+          </div>
+
+          {/* Botões */}
+          <div className="mt-4 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="w-full rounded-full bg-emerald-500 text-black font-semibold py-3 shadow-[0_0_35px_rgba(16,185,129,0.35)] hover:bg-emerald-400 transition-colors"
+            >
+              Adicionar ao carrinho
+            </button>
+
+            <Link
+              href="/checkout"
+              className="w-full text-center rounded-full border border-emerald-500/70 py-3 text-emerald-400 hover:bg-emerald-500 hover:text-black transition-colors"
+            >
+              Ir para o carrinho
+            </Link>
+
+            {added && (
+              <p className="text-sm text-emerald-400 text-center">
+                Produto adicionado ao carrinho ✅
+              </p>
+            )}
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
