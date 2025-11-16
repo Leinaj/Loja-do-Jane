@@ -2,60 +2,47 @@
 "use client";
 
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { notFound } from "next/navigation";
+import { useState } from "react";
 import { products } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
 
-export default function ProductPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
+type ProductPageProps = {
+  params: {
+    slug: string;
+  };
+};
+
+export default function ProductPage({ params }: ProductPageProps) {
   const { addToCart } = useCart();
 
-  const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
+  const product = products.find((p) => p.slug === params.slug);
 
-  // Acha o produto pelo slug
-  const product = useMemo(
-    () => products.find((p) => p.slug === slug),
-    [slug]
-  );
-
-  function formatPrice(value: number) {
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+  // se não achar o produto, manda 404 e sai da página
+  if (!product) {
+    notFound();
+    return null;
   }
 
-  // Se não achou o produto, mostra uma telinha 404 estilosa
-  if (!product) {
-    return (
-      <main className="px-4 py-10 text-center text-gray-100">
-        <h1 className="text-2xl font-semibold mb-3">Produto não encontrado</h1>
-        <p className="mb-6 text-gray-400">
-          Parece que esse item saiu da vitrine.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-medium text-black hover:bg-emerald-400 transition"
-        >
-          Voltar para a loja
-        </button>
-      </main>
-    );
+  const [quantity, setQuantity] = useState<number>(1);
+  const [added, setAdded] = useState<boolean>(false);
+
+  function handleDecrease() {
+    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+  }
+
+  function handleIncrease() {
+    setQuantity((prev) => prev + 1);
   }
 
   function handleAddToCart() {
-    if (!product) return;
-
+    // aqui o TS já sabe que product NÃO é undefined
     addToCart(
       {
         id: product.id,
         slug: product.slug,
         name: product.name,
         price: product.price,
-        oldPrice: product.oldPrice,
         description: product.description,
         image: product.image,
       },
@@ -66,94 +53,99 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 2000);
   }
 
-  function handleGoToCart() {
-    if (!product) return;
-    if (!added) {
-      handleAddToCart();
-    }
-    router.push("/checkout");
-  }
-
   return (
     <main className="px-4 pb-24 pt-6">
       {/* Imagem do produto */}
-      <div className="rounded-2xl overflow-hidden mb-4 bg-black/40">
+      <div className="mb-4 overflow-hidden rounded-3xl bg-black/40">
         <Image
           src={product.image}
           alt={product.name}
           width={800}
           height={800}
-          className="w-full h-auto object-cover"
+          className="h-auto w-full object-cover"
+          priority
         />
       </div>
 
       {/* Título e descrição */}
       <h1 className="text-2xl font-semibold text-white">{product.name}</h1>
-      <p className="mt-1 text-sm text-gray-400">{product.description}</p>
+      <p className="mt-1 text-sm text-gray-300">{product.description}</p>
 
       {/* Preço */}
       <div className="mt-3 flex items-center gap-3">
-        <span className="text-green-400 font-bold text-xl">
-          {formatPrice(product.price)}
+        <span className="text-xl font-bold text-green-400">
+          {new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }).format(product.price)}
         </span>
 
         {product.oldPrice && (
-          <span className="text-gray-500 line-through text-sm">
-            {formatPrice(product.oldPrice)}
+          <span className="text-sm text-gray-500 line-through">
+            {new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(product.oldPrice)}
           </span>
         )}
       </div>
 
       {/* Quantidade */}
       <div className="mt-6">
-        <p className="text-sm text-gray-300 mb-2">Quantidade:</p>
-        <div className="inline-flex items-center gap-4 rounded-full border border-gray-700 px-4 py-2">
+        <p className="mb-2 text-sm text-gray-200">Quantidade:</p>
+        <div className="flex items-center gap-6">
           <button
-            onClick={() =>
-              setQuantity((prev) => (prev > 1 ? prev - 1 : prev))
-            }
-            className="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center text-lg text-gray-100"
+            type="button"
+            onClick={handleDecrease}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-gray-600 text-2xl text-white"
           >
-            –
+            −
           </button>
-          <span className="w-4 text-center text-base text-gray-100">
-            {quantity}
-          </span>
+          <span className="text-lg font-semibold text-white">{quantity}</span>
           <button
-            onClick={() => setQuantity((prev) => prev + 1)}
-            className="w-8 h-8 rounded-full border border-emerald-500 flex items-center justify-center text-lg text-emerald-400"
+            type="button"
+            onClick={handleIncrease}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500 text-2xl text-emerald-400"
           >
             +
           </button>
         </div>
       </div>
 
-      {/* Botões + aviso */}
-      <div className="mt-6 flex flex-col gap-3">
-        <button
-          onClick={handleAddToCart}
-          className="rounded-full bg-emerald-500 px-6 py-3 text-center text-base font-semibold text-black shadow-[0_0_25px_rgba(16,185,129,0.7)] hover:bg-emerald-400 transition"
-        >
-          Adicionar ao carrinho
-        </button>
+      {/* Botão Adicionar ao carrinho */}
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        className="mt-8 w-full rounded-full bg-emerald-500 py-4 text-center text-base font-semibold text-black shadow-[0_0_25px_rgba(16,185,129,0.7)] active:scale-[0.98] transition-transform"
+      >
+        Adicionar ao carrinho
+      </button>
 
-        {/* AVISO LOGO ABAIXO DO BOTÃO VERDE */}
-        {added && (
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-400/40 px-4 py-2 text-[11px] font-medium text-emerald-200 shadow-[0_0_14px_rgba(34,197,94,0.35)]">
-              <span className="text-sm">✅</span>
-              <span>Produto adicionado ao carrinho</span>
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={handleGoToCart}
-          className="rounded-full border border-emerald-500 px-6 py-3 text-center text-base font-semibold text-emerald-400 hover:bg-emerald-500/10 transition"
-        >
-          Ir para o carrinho
-        </button>
+      {/* Toast bonito, animado e translúcido */}
+      <div
+        className={`mt-3 flex w-full items-center justify-center transition-all duration-500 ${
+          added ? "opacity-100 translate-y-0" : "pointer-events-none -translate-y-2 opacity-0"
+        }`}
+      >
+        <div className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 shadow-lg shadow-emerald-500/20 backdrop-blur">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/80 text-xs">
+            ✅
+          </span>
+          <span className="flex-1">Produto adicionado ao carrinho</span>
+        </div>
       </div>
+
+      {/* Botão Ir para o carrinho */}
+      <button
+        type="button"
+        className="mt-4 w-full rounded-full border border-emerald-500 py-4 text-center text-base font-semibold text-emerald-400"
+        onClick={() => {
+          // navegação simples via URL
+          window.location.href = "/checkout";
+        }}
+      >
+        Ir para o carrinho
+      </button>
     </main>
   );
 }
