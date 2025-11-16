@@ -1,27 +1,24 @@
+// contexts/CartContext.tsx
 "use client";
 
 import {
   createContext,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
+import type { Product } from "@/app/data/products";
 
-export type CartItem = {
-  id: number;
-  slug: string;
-  name: string;
-  price: number;
-  image: string;
+export type CartItem = Product & {
   quantity: number;
 };
 
-export type CartContextType = {
+type CartContextType = {
   items: CartItem[];
-  addToCart: (item: CartItem) => void;
-  removeFromCart: (slug: string) => void;
-  clearCart: () => void;
   total: number;
+  addToCart: (product: Product, quantity?: number) => void;
+  clearCart: () => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -29,37 +26,38 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  function addToCart(item: CartItem) {
+  const addToCart = (product: Product, quantity = 1) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.slug === item.slug);
-      if (existing) {
-        return prev.map((i) =>
-          i.slug === item.slug
-            ? { ...i, quantity: i.quantity + item.quantity }
-            : i
-        );
+      const index = prev.findIndex((item) => item.id === product.id);
+
+      // já existe no carrinho -> soma a quantidade
+      if (index >= 0) {
+        const clone = [...prev];
+        clone[index] = {
+          ...clone[index],
+          quantity: clone[index].quantity + quantity,
+        };
+        return clone;
       }
-      return [...prev, item];
+
+      // não existe -> adiciona
+      return [...prev, { ...product, quantity }];
     });
-  }
+  };
 
-  function removeFromCart(slug: string) {
-    setItems((prev) => prev.filter((i) => i.slug !== slug));
-  }
+  const clearCart = () => setItems([]);
 
-  function clearCart() {
-    setItems([]);
-  }
-
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
+  const total = useMemo(
+    () =>
+      items.reduce(
+        (sum, item) => sum + item.price * (item.quantity ?? 1),
+        0
+      ),
+    [items]
   );
 
   return (
-    <CartContext.Provider
-      value={{ items, addToCart, removeFromCart, clearCart, total }}
-    >
+    <CartContext.Provider value={{ items, total, addToCart, clearCart }}>
       {children}
     </CartContext.Provider>
   );
