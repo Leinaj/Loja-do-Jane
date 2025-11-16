@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import CartProviderRoot from "./cart-provider";
+import TopBar from "@/components/TopBar";
 
 export const metadata: Metadata = {
   title: "Loja do Jane",
@@ -16,7 +17,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="bg-black text-white">
-        <CartProviderRoot>{children}</CartProviderRoot>
+        <CartProviderRoot>
+          <TopBar />
+          <main className="min-h-screen pb-10">{children}</main>
+        </CartProviderRoot>
       </body>
     </html>
   );
