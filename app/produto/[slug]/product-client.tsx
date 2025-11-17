@@ -7,7 +7,14 @@ import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 
 type Props = {
-  product: any; // deixa flexível pra bater com o products.ts
+  product: {
+    id: number;
+    slug: string;
+    name: string;
+    description?: string;
+    price: number;
+    oldPrice?: number;
+  };
 };
 
 export default function ProductClient({ product }: Props) {
@@ -17,46 +24,41 @@ export default function ProductClient({ product }: Props) {
 
   if (!product) return null;
 
-  // 1) tenta pegar algum campo de imagem
-  const directImage: string | undefined =
-    product.image ||
-    product.imageUrl ||
-    product.img ||
-    product.photo;
+  // --- IMAGEM FIXA PELO SLUG (usando arquivos de /public) ---
+  const slugToImage: Record<string, string> = {
+    "camiseta-branca": "/camiseta-branca.jpg",
+    "camiseta-preta": "/camiseta-preta.jpg",
+    "moletom-cinza": "/moletom.jpg",
+    "bone-preto": "/bone.jpg",
+  };
 
-  // 2) se não tiver, monta pela slug: /brands/slug.png ou .jpg
-  let imageSrc: string | undefined = directImage;
+  const imageSrc = slugToImage[product.slug] ?? "/banner.jpg";
 
-  if (!imageSrc && product.slug) {
-    const slug = String(product.slug);
-    imageSrc = `/brands/${slug}.png`;
-  }
-
-  if (!imageSrc && product.slug) {
-    const slug = String(product.slug);
-    imageSrc = `/brands/${slug}.jpg`;
-  }
-
-  const priceText =
-    product.priceFormatted ??
-    (typeof product.price === "number"
-      ? product.price.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        })
-      : "");
+  // --- FORMATAÇÃO DOS PREÇOS ---
+  const priceText = product.price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
   const oldPriceText =
-    product.oldPriceFormatted ??
-    (typeof product.oldPrice === "number"
+    typeof product.oldPrice === "number"
       ? product.oldPrice.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })
-      : "");
+      : "";
 
   function handleAddToCart() {
-    addToCart(product, quantity);
+    addToCart(
+      {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.price,
+        image: imageSrc,
+      },
+      quantity
+    );
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
@@ -78,20 +80,14 @@ export default function ProductClient({ product }: Props) {
       <section className="rounded-3xl bg-gradient-to-b from-emerald-900/20 via-black to-black/90 p-4 shadow-[0_0_40px_rgba(16,185,129,0.25)] mb-8">
         {/* Imagem */}
         <div className="mb-4 overflow-hidden rounded-3xl bg-black/60">
-          {imageSrc ? (
-            <Image
-              src={imageSrc}
-              alt={product.name}
-              width={800}
-              height={800}
-              className="w-full h-auto object-cover"
-              priority
-            />
-          ) : (
-            <div className="w-full aspect-[4/3] flex items-center justify-center text-sm text-zinc-400">
-              (imagem não encontrada)
-            </div>
-          )}
+          <Image
+            src={imageSrc}
+            alt={product.name}
+            width={800}
+            height={800}
+            className="w-full h-auto object-cover"
+            priority
+          />
         </div>
 
         {/* Nome e descrição */}
@@ -100,13 +96,11 @@ export default function ProductClient({ product }: Props) {
           <p className="text-sm text-zinc-300 mb-4">{product.description}</p>
         )}
 
-        {/* Preço */}
+        {/* Preços */}
         <div className="mt-2 flex items-baseline gap-2 mb-6">
-          {priceText && (
-            <span className="text-3xl font-semibold text-emerald-400">
-              {priceText}
-            </span>
-          )}
+          <span className="text-3xl font-semibold text-emerald-400">
+            {priceText}
+          </span>
           {oldPriceText && (
             <span className="text-sm text-zinc-500 line-through">
               {oldPriceText}
